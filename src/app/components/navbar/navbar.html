@@ -1,32 +1,50 @@
-<nav class="navbar" [class.scrolled]="isScrolled">
-  <div class="nav-container">
-    <div class="logo" routerLink="/home" style="cursor: pointer">
-      <span class="brand">LENS</span><span class="accent">&</span>ART
+<nav class="navbar navbar-expand-lg navbar-dark shadow">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold" routerLink="/home">Servicios BS</a>
+
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#navbarNav"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto align-items-center">
+        <li class="nav-item">
+          <a class="nav-link" routerLink="/home" routerLinkActive="active">Inicio</a>
+        </li>
+
+        <li class="nav-item" *ngIf="authService.userSignal()">
+          <a class="nav-link" routerLink="/agenda" routerLinkActive="active">📅 Mi Agenda</a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" routerLink="/contacto" routerLinkActive="active">Contacto</a>
+        </li>
+
+        <li class="nav-item ms-lg-3">
+          <a
+            *ngIf="!authService.userSignal()"
+            class="btn btn-outline-light btn-sm"
+            routerLink="/login"
+          >
+            Ingresar
+          </a>
+
+          <div *ngIf="authService.userSignal()" class="d-flex align-items-center gap-3">
+            <span class="navbar-text text-white small d-none d-md-inline">
+              {{ authService.usuarioLogueado() }}
+              <span *ngIf="authService.esAdmin()" class="badge bg-warning text-dark ms-1"
+                >Admin</span
+              >
+            </span>
+            <button class="btn btn-light btn-sm" (click)="onLogout()">Salir</button>
+          </div>
+        </li>
+      </ul>
     </div>
-
-    <input type="checkbox" id="menu-toggle" class="menu-checkbox" />
-    <label for="menu-toggle" class="hamburger-lines">
-      <span class="line line1"></span>
-      <span class="line line2"></span>
-      <span class="line line3"></span>
-    </label>
-
-    <ul class="menu-items">
-      <li>
-        <a [routerLink]="['/home']">Inicio</a>
-      </li>
-
-      <li>
-        <a [routerLink]="['/contacto']" [routerLinkActive]="['active-link']">Contacto</a>
-      </li>
-
-      <li>
-        <a [routerLink]="['/agenda']" [routerLinkActive]="['active-link']">Mi Agenda</a>
-      </li>
-
-      <li class="nav-cta">
-        <a [routerLink]="['/validate']" class="btn-validate">Acceso Cliente</a>
-      </li>
-    </ul>
   </div>
 </nav>

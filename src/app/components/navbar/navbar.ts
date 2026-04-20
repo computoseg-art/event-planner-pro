@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common'; // Para @for, @if, etc.
 import { RouterLink, RouterLinkActive } from '@angular/router'; // <--- ESTO ES LO QUE FALTA
-import { Component, HostListener } from '@angular/core';
+import { Component, inject, HostListener } from '@angular/core';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-navbar',
@@ -14,10 +15,17 @@ import { Component, HostListener } from '@angular/core';
   styleUrls: ['./navbar.css'],
 })
 export class Navbar {
+  // Usamos inject para seguir el estilo de tu servicio
+  public authService = inject(AuthService);
+
   isScrolled = false;
 
   @HostListener('window:scroll', [])
   onWindowScroll() {
     this.isScrolled = window.scrollY > 50;
+  }
+
+  async onLogout() {
+    await this.authService.logout();
   }
 }

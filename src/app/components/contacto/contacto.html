@@ -1,20 +1,69 @@
-<main>
-  <h1>Contacto</h1>
-  <form (ngSubmit)="enviarFormulario()" #miForm="ngForm">
-    <div class="form-group">
-      <input type="text" [(ngModel)]="nombre" name="nombre" required placeholder="Tu nombre" />
-    </div>
-    <div class="form-group">
-      <input
-        type="email"
-        [(ngModel)]="email"
-        name="email"
-        required
-        placeholder="ejemplo@correo.com"
-      />
-    </div>
-    <button type="submit" [disabled]="!miForm.valid" class="mt-2">Enviar Datos</button>
-  </form>
+<div class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-10">
+      <div class="card shadow-lg border-0 overflow-hidden">
+        <div class="row g-0">
+          <div class="col-lg-4 bg-primary text-white p-5 d-flex flex-column justify-content-center">
+            <h3 class="fw-bold mb-4">Contacto</h3>
+            <p class="opacity-75 mb-5">
+              Estamos disponibles para ayudarte con tu reserva o cualquier duda técnica.
+            </p>
 
-  <!-- <pre>{{ { nombre: nombre(), email: email() } | json }}</pre> -->
-</main>
+            <div class="d-flex align-items-start mb-4">
+              <i class="bi bi-geo-alt-fill me-3 fs-4"></i>
+              <div>
+                <h6 class="mb-0">Ubicación</h6>
+                <small class="opacity-75">Montevideo, Uruguay</small>
+              </div>
+            </div>
+
+            <div class="d-flex align-items-start mb-4">
+              <i class="bi bi-envelope-fill me-3 fs-4"></i>
+              <div>
+                <h6 class="mb-0">Email</h6>
+                <small class="opacity-75">soporte&#64;flp.uy</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-8 p-5 bg-white">
+            <h4 class="text-secondary mb-4">Envianos un mensaje</h4>
+            <form>
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label text-muted small fw-bold">NOMBRE</label>
+                  <input
+                    type="text"
+                    class="form-control form-control-lg bg-light border-0"
+                    placeholder="Esteban Garriga"
+                  />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label text-muted small fw-bold">EMAIL</label>
+                  <input
+                    type="email"
+                    class="form-control form-control-lg bg-light border-0"
+                    placeholder="nombre&#64;ejemplo.com"
+                  />
+                </div>
+                <div class="col-12 mt-4">
+                  <label class="form-label text-muted small fw-bold">MENSAJE</label>
+                  <textarea
+                    class="form-control bg-light border-0"
+                    rows="4"
+                    placeholder="¿En qué podemos ayudarte?"
+                  ></textarea>
+                </div>
+                <div class="col-12 mt-4 d-grid">
+                  <button type="submit" class="btn btn-primary btn-lg shadow-sm">
+                    Enviar Consulta
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

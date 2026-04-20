@@ -1,9 +1,13 @@
 import { Component, signal } from '@angular/core';
+import { RouterLink, RouterLinkActive } from '@angular/router'; // Importamos para usar [routerLink] y [routerLinkActive]
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [],
+  imports: [
+    RouterLink, // Importante para [routerLink]
+    RouterLinkActive, // Importante para [routerLinkActive]
+  ],
   templateUrl: './home.html',
   styleUrl: './home.css',
 })
