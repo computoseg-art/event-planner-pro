@@ -1,13 +1,9 @@
 import { Component, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ReservaService } from '../../services/reserva.service';
+import { ReservaService, Reserva } from '../../services/reserva.service';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
-// 1. IMPORTANTE: Revisa esta ruta.
-// Si la interfaz está dentro del mismo archivo de servicio,
-// cámbialo a: import { Reserva } from '../../services/reserva.service';
-import { Reserva } from '../../services/reserva.service';
 
 @Component({
   selector: 'app-agenda',
@@ -30,6 +26,17 @@ export class AgendaComponent {
   totalParaReserva = computed(() => this.cart.totalCarrito());
   pagoSenia = computed(() => this.cart.montoSenia());
 
+  // ✅ CORREGIDO: Maneja strings de forma segura para no romper con toISOString()
+  esDiaOcupado(fecha: string): boolean {
+    if (!fecha) return false;
+    const fechaLimpia = fecha.split('T')[0];
+
+    return Array.from(this.rs.fechasOcupadas()).some((f: any) => {
+      const fStr = typeof f === 'string' ? f.split('T')[0] : new Date(f).toISOString().split('T')[0];
+      return fStr === fechaLimpia;
+    });
+  }
+
   getFechaCabecera() {
     return this.fechaHoy();
   }
@@ -46,7 +53,7 @@ export class AgendaComponent {
     return primerDia === 0 ? 6 : primerDia - 1;
   }
 
-  diasDelMes() {
+  diasDelMes(): string[] {
     const fecha = this.fechaHoy();
     const año = fecha.getFullYear();
     const mes = fecha.getMonth();
@@ -54,7 +61,6 @@ export class AgendaComponent {
 
     return Array.from({ length: cantidadDias }, (_, i) => {
       const d = new Date(año, mes, i + 1);
-      // Formato YYYY-MM-DD
       const y = d.getFullYear();
       const m = (d.getMonth() + 1).toString().padStart(2, '0');
       const day = d.getDate().toString().padStart(2, '0');
@@ -62,22 +68,22 @@ export class AgendaComponent {
     });
   }
 
-  // Ajusta la comparación en esMiReserva
   esMiReserva(dia: string): boolean {
     const reserva = this.rs.reservas().find((r: Reserva) => {
-      // Cortamos la fecha de la reserva por si viene con hora de Firebase
       const fechaReserva = r.fecha.split('T')[0];
       return fechaReserva === dia;
     });
     return !!reserva && reserva.usuario === this.auth.usuarioLogueado();
   }
 
+  // ✅ CORREGIDO: 'dia' llega como string desde diasDelMes()
   seleccionarDia(dia: string) {
+    if (this.esDiaOcupado(dia)) {
+      this.fechaSeleccionada.set(null);
+      return;
+    }
+
     this.fechaSeleccionada.set(dia);
-    this.cart.reset();
-    this.categoriaPrevia.set(null); // Esto ya lo tienes, ¡bien!
-    this.cart.setCategoria('extras'); // Opcional: resetear el filtro del carrito a extras por defecto
-    this.miDescripcion.set('');
   }
 
   toggleEditar(id: string) {
@@ -98,7 +104,6 @@ export class AgendaComponent {
       res.servicios.push(servicio);
     }
 
-    // CORRECCIÓN DE TIPOS EN REDUCE:
     res.total = res.servicios.reduce((acc: number, s: any) => acc + (s.precio || 0), 0);
   }
 
@@ -114,9 +119,10 @@ export class AgendaComponent {
         this.miDescripcion(),
         this.totalParaReserva(),
         [...this.cart.serviciosSeleccionados()],
-        this.categoriaPrevia()!,
+        this.categoriaPrevia()!
       );
       this.fechaSeleccionada.set(null);
+      this.miDescripcion.set('');
       this.cart.reset();
       alert('¡Reserva confirmada!');
     } catch (e) {

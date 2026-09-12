@@ -2,19 +2,40 @@
   <h1>Contacto</h1>
   <form (ngSubmit)="enviarFormulario()" #miForm="ngForm">
     <div class="form-group">
-      <input type="text" [(ngModel)]="nombre" name="nombre" required placeholder="Tu nombre" />
+      <input
+        type="text"
+        [ngModel]="nombre()"
+        (input)="nombre.set($any($event.target).value)"
+        name="nombre"
+        required
+        placeholder="Tu nombre"
+      />
     </div>
+
     <div class="form-group">
       <input
         type="email"
-        [(ngModel)]="email"
+        [ngModel]="email()"
+        (input)="email.set($any($event.target).value)"
         name="email"
         required
         placeholder="ejemplo@correo.com"
       />
     </div>
-    <button type="submit" [disabled]="!miForm.valid" class="mt-2">Enviar Datos</button>
-  </form>
 
-  <!-- <pre>{{ { nombre: nombre(), email: email() } | json }}</pre> -->
+    <div class="form-group">
+      <textarea
+        [ngModel]="mensaje()"
+        (input)="mensaje.set($any($event.target).value)"
+        name="mensaje"
+        required
+        placeholder="Escribe tu mensaje..."
+        rows="4"
+      ></textarea>
+    </div>
+
+    <button type="submit" [disabled]="!miForm.valid" class="mt-2">
+      Enviar Datos
+    </button>
+  </form>
 </main>

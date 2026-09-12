@@ -6,6 +6,7 @@ import { FormsModule } from '@angular/forms';
   standalone: true,
   imports: [FormsModule],
   templateUrl: './contacto.html',
+  styleUrl: './contacto.css',
 })
 export class ContactoComponent {
   // Definimos el estado del formulario con un Signal
@@ -16,12 +17,16 @@ export class ContactoComponent {
 
   enviarFormulario() {
     const datos = {
-      nombre: this.nombre(),
-      email: this.email(),
-      mensaje: this.mensaje(),
+      nombre: this.nombre().trim(),
+      email: this.email().trim(),
+      mensaje: this.mensaje().trim(),
     };
 
     console.log('Datos enviados:', datos);
-    // Aquí podrías usar httpResource() para enviar los datos al servidor
+
+    // Limpieza de formulario
+    this.nombre.set('');
+    this.email.set('');
+    this.mensaje.set('');
   }
 }

@@ -1,8 +1,6 @@
 <div class="agenda-wrapper">
   <header class="agenda-header">
-    <span
-      >Bienvenido, <strong>{{ auth.usuarioLogueado() }}</strong></span
-    >
+    <span>Bienvenido, <strong>{{ auth.usuarioLogueado() }}</strong></span>
     <button (click)="auth.logout()" class="btn-salir">Cerrar Sesión</button>
   </header>
 
@@ -25,11 +23,13 @@
         <div class="dia-nombre">Sá</div>
         <div class="dia-nombre">Do</div>
 
-        @for (vacio of [].constructor(diasEnBlanco()); track $index) {
+        <!-- Celdas vacías: rastreamos por $index para obtener claves únicas (0, 1, 2...) -->
+        @for (i of [].constructor(diasEnBlanco()); track $index) {
           <div class="dia-celda vacio"></div>
         }
 
-        @for (dia of diasDelMes(); track dia) {
+        <!-- Días del mes: rastreamos con $index o String(dia) -->
+        @for (dia of diasDelMes(); track $index) {
           <div
             class="dia-celda"
             [class.ocupado]="rs.fechasOcupadas().has(dia)"
@@ -42,10 +42,7 @@
         }
       </div>
 
-      @if (
-        fechaSeleccionada() &&
-        (!rs.fechasOcupadas().has(fechaSeleccionada()!) || esMiReserva(fechaSeleccionada()!))
-      ) {
+     @if (fechaSeleccionada() && !esDiaOcupado(fechaSeleccionada()!)) {
         <div class="confirmacion-box">
           <h4>Nueva Reserva: {{ fechaSeleccionada() | date: 'dd/MM/yyyy' }}</h4>
           <div class="input-group">
@@ -121,7 +118,9 @@
     </section>
 
     <aside class="mis-reservas-section">
-      <h3 style="text-align: center; color: #1e293b; margin-bottom: 15px">Mis Reservas</h3>
+      <h3 style="text-align: center; color: #1e293b; margin-bottom: 15px">
+        {{ auth.esAdmin() ? 'Todas las Reservas' : 'Mis Reservas' }}
+      </h3>
 
       @if (rs.deudaTotal() > 0 && !auth.esAdmin()) {
         <div class="pago-general-container">
@@ -142,9 +141,7 @@
               <div class="reserva-titulo">{{ res.descripcion }}</div>
               @if (auth.esAdmin()) {
                 <div class="user-badge">
-                  <small
-                    >👤 Cliente: <strong>{{ res.usuario }}</strong></small
-                  >
+                  <small>👤 Cliente: <strong>{{ res.usuario }}</strong></small>
                 </div>
               }
             </div>
@@ -209,7 +206,7 @@
                     <input type="number" [(ngModel)]="res.pagado" class="input-edit" />
                   } @else {
                     <p>
-                      Abonado: <strong class="pagado-mini">${{ res.pagado || 0 | number }}</strong>
+                      Abonado: <strong class="pagado-mini">${{ (res.pagado || 0) | number }}</strong>
                     </p>
                   }
 
@@ -243,7 +240,7 @@
             }
           </div>
         } @empty {
-          <p class="no-data">No tienes reservas aún.</p>
+          <p class="no-data">No hay reservas registradas.</p>
         }
       </div>
     </aside>
