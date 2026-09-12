@@ -22,6 +22,7 @@ export class AgendaComponent {
   reservaExpandida = signal<string | null>(null);
   fechaHoy = signal<Date>(new Date());
   categoriaPrevia = signal<'15_años' | 'bodas' | null>(null);
+  estaCerrando = signal<boolean>(false);
 
   totalParaReserva = computed(() => this.cart.totalCarrito());
   pagoSenia = computed(() => this.cart.montoSenia());
@@ -76,15 +77,33 @@ export class AgendaComponent {
     return !!reserva && reserva.usuario === this.auth.usuarioLogueado();
   }
 
-  // ✅ CORREGIDO: 'dia' llega como string desde diasDelMes()
-  seleccionarDia(dia: string) {
-    if (this.esDiaOcupado(dia)) {
-      this.fechaSeleccionada.set(null);
-      return;
-    }
+seleccionarDia(dia: string) {
+  if (this.esDiaOcupado(dia)) {
+    this.cerrarConAnimacion();
+    return;
+  }
 
+  // Si hace clic en el mismo día, activa animación de cierre
+  if (this.fechaSeleccionada() === dia) {
+    this.cerrarConAnimacion();
+  } else {
+    this.estaCerrando.set(false);
     this.fechaSeleccionada.set(dia);
   }
+}
+
+// Helper para animar la salida
+cerrarConAnimacion() {
+  if (!this.fechaSeleccionada()) return;
+
+  this.estaCerrando.set(true);
+
+  // Espera a que termine la animación CSS (250ms) antes de quitar el elemento
+  setTimeout(() => {
+    this.fechaSeleccionada.set(null);
+    this.estaCerrando.set(false);
+  }, 250);
+}
 
   toggleEditar(id: string) {
     this.reservaExpandida.update((v) => (v === id ? null : id));
@@ -108,27 +127,27 @@ export class AgendaComponent {
   }
 
   async confirmar() {
-    if (!this.fechaSeleccionada() || !this.miDescripcion() || !this.categoriaPrevia()) {
-      alert('Faltan datos obligatorios');
-      return;
-    }
-
-    try {
-      await this.rs.agregar(
-        this.fechaSeleccionada()!,
-        this.miDescripcion(),
-        this.totalParaReserva(),
-        [...this.cart.serviciosSeleccionados()],
-        this.categoriaPrevia()!
-      );
-      this.fechaSeleccionada.set(null);
-      this.miDescripcion.set('');
-      this.cart.reset();
-      alert('¡Reserva confirmada!');
-    } catch (e) {
-      console.error('Error al confirmar:', e);
-    }
+  if (!this.fechaSeleccionada() || !this.miDescripcion() || !this.categoriaPrevia()) {
+    alert('Faltan datos obligatorios');
+    return;
   }
+
+  try {
+    await this.rs.agregar(
+      this.fechaSeleccionada()!,
+      this.miDescripcion(),
+      this.totalParaReserva(),
+      [...this.cart.serviciosSeleccionados()],
+      this.categoriaPrevia()!
+    );
+    this.cart.reset();
+    this.miDescripcion.set('');
+    alert('¡Reserva confirmada!');
+    this.cerrarConAnimacion(); // ✅ Cierre con animación al guardar
+  } catch (e) {
+    console.error('Error al confirmar:', e);
+  }
+}
 
   async actualizar(res: Reserva) {
     const sinServicios = !res.servicios || res.servicios.length === 0;

@@ -43,7 +43,7 @@
       </div>
 
      @if (fechaSeleccionada() && !esDiaOcupado(fechaSeleccionada()!)) {
-        <div class="confirmacion-box">
+        <div class="confirmacion-box" [class.cerrando]="estaCerrando()">
           <h4>Nueva Reserva: {{ fechaSeleccionada() | date: 'dd/MM/yyyy' }}</h4>
           <div class="input-group">
             <label>Nombre del evento:</label>
