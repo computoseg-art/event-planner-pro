@@ -5,17 +5,33 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Servidor y cliente MP
 const app = express();
 const PORT = process.env.PORT || 3000;
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:4200';
 
 const client = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN,
 });
 
-// Middlewares
-app.use(cors({ origin: CLIENT_URL }));
+// Dominios permitidos (Producción y Desarrollo local)
+const allowedOrigins = [
+  'https://fotos-44002.web.app',
+  'https://fotos-44002.firebaseapp.com',
+  'http://localhost:4200',
+  'http://localhost:4500'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Permitir peticiones sin origen (como Postman o curl) o si están en la lista
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 
 // Endpoint de preferencia de pago
@@ -29,6 +45,8 @@ app.post('/create_preference', async (req, res) => {
       });
     }
 
+    const clientUrl = process.env.CLIENT_URL || 'https://fotos-44002.web.app';
+
     const body = {
       items: [
         {
@@ -39,9 +57,9 @@ app.post('/create_preference', async (req, res) => {
         },
       ],
       back_urls: {
-        success: `${CLIENT_URL}/agenda`,
-        failure: `${CLIENT_URL}/agenda`,
-        pending: `${CLIENT_URL}/agenda`,
+        success: `${clientUrl}/agenda`,
+        failure: `${clientUrl}/agenda`,
+        pending: `${clientUrl}/agenda`,
       },
       auto_return: 'approved',
     };
@@ -52,7 +70,7 @@ app.post('/create_preference', async (req, res) => {
     res.json({
       id: result.id,
       init_point: result.init_point,
-      sandbox_init_point: result.sandbox_init_point, // Útil en entornos de prueba
+      sandbox_init_point: result.sandbox_init_point,
     });
 
   } catch (error) {
