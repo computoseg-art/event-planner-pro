@@ -1,6 +1,7 @@
-import { Component, signal, computed, inject } from '@angular/core';
+import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ReservaService, Reserva } from '../../services/reserva.service';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
@@ -12,10 +13,12 @@ import { CartService } from '../../services/cart.service';
   templateUrl: './agenda.html',
   styleUrls: ['./agenda.css'],
 })
-export class AgendaComponent {
+export class AgendaComponent implements OnInit {
   rs = inject(ReservaService);
   auth = inject(AuthService);
   cart = inject(CartService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
   fechaSeleccionada = signal<string | null>(null);
   miDescripcion = signal<string>('');
@@ -26,6 +29,28 @@ export class AgendaComponent {
 
   totalParaReserva = computed(() => this.cart.totalCarrito());
   pagoSenia = computed(() => this.cart.montoSenia());
+
+ngOnInit() {
+  this.route.queryParams.subscribe((params) => {
+    const status = params['status'];
+    const paymentId = params['payment_id'];
+
+    if (status === 'approved') {
+      // Nos suscribimos a user$ para esperar a que Firebase devuelva la sesión activa
+      this.auth.user$.subscribe(async (u) => {
+        if (u && u.email) {
+          console.log('Procesando pago para:', u.email);
+          await this.rs.saldarDeudaUsuario(u.email, paymentId);
+
+          alert('¡Pago procesado con éxito! Deuda saldada.');
+
+          // Limpiamos los parámetros de la URL
+          this.router.navigate([], { queryParams: {} });
+        }
+      });
+    }
+  });
+}
 
   // ✅ CORREGIDO: Maneja strings de forma segura para no romper con toISOString()
   esDiaOcupado(fecha: string): boolean {
@@ -77,33 +102,30 @@ export class AgendaComponent {
     return !!reserva && reserva.usuario === this.auth.usuarioLogueado();
   }
 
-seleccionarDia(dia: string) {
-  if (this.esDiaOcupado(dia)) {
-    this.cerrarConAnimacion();
-    return;
+  seleccionarDia(dia: string) {
+    if (this.esDiaOcupado(dia)) {
+      this.cerrarConAnimacion();
+      return;
+    }
+
+    if (this.fechaSeleccionada() === dia) {
+      this.cerrarConAnimacion();
+    } else {
+      this.estaCerrando.set(false);
+      this.fechaSeleccionada.set(dia);
+    }
   }
 
-  // Si hace clic en el mismo día, activa animación de cierre
-  if (this.fechaSeleccionada() === dia) {
-    this.cerrarConAnimacion();
-  } else {
-    this.estaCerrando.set(false);
-    this.fechaSeleccionada.set(dia);
+  cerrarConAnimacion() {
+    if (!this.fechaSeleccionada()) return;
+
+    this.estaCerrando.set(true);
+
+    setTimeout(() => {
+      this.fechaSeleccionada.set(null);
+      this.estaCerrando.set(false);
+    }, 250);
   }
-}
-
-// Helper para animar la salida
-cerrarConAnimacion() {
-  if (!this.fechaSeleccionada()) return;
-
-  this.estaCerrando.set(true);
-
-  // Espera a que termine la animación CSS (250ms) antes de quitar el elemento
-  setTimeout(() => {
-    this.fechaSeleccionada.set(null);
-    this.estaCerrando.set(false);
-  }, 250);
-}
 
   toggleEditar(id: string) {
     this.reservaExpandida.update((v) => (v === id ? null : id));
@@ -127,27 +149,27 @@ cerrarConAnimacion() {
   }
 
   async confirmar() {
-  if (!this.fechaSeleccionada() || !this.miDescripcion() || !this.categoriaPrevia()) {
-    alert('Faltan datos obligatorios');
-    return;
-  }
+    if (!this.fechaSeleccionada() || !this.miDescripcion() || !this.categoriaPrevia()) {
+      alert('Faltan datos obligatorios');
+      return;
+    }
 
-  try {
-    await this.rs.agregar(
-      this.fechaSeleccionada()!,
-      this.miDescripcion(),
-      this.totalParaReserva(),
-      [...this.cart.serviciosSeleccionados()],
-      this.categoriaPrevia()!
-    );
-    this.cart.reset();
-    this.miDescripcion.set('');
-    alert('¡Reserva confirmada!');
-    this.cerrarConAnimacion(); // ✅ Cierre con animación al guardar
-  } catch (e) {
-    console.error('Error al confirmar:', e);
+    try {
+      await this.rs.agregar(
+        this.fechaSeleccionada()!,
+        this.miDescripcion(),
+        this.totalParaReserva(),
+        [...this.cart.serviciosSeleccionados()],
+        this.categoriaPrevia()!
+      );
+      this.cart.reset();
+      this.miDescripcion.set('');
+      alert('¡Reserva confirmada!');
+      this.cerrarConAnimacion();
+    } catch (e) {
+      console.error('Error al confirmar:', e);
+    }
   }
-}
 
   async actualizar(res: Reserva) {
     const sinServicios = !res.servicios || res.servicios.length === 0;

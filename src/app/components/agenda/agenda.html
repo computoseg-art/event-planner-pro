@@ -134,10 +134,10 @@
         @for (res of rs.reservasVisibles(); track res.id) {
           <div class="reserva-card" [class.expanded]="reservaExpandida() === res.id">
             <div class="card-main-info" (click)="toggleEditar(res.id!)">
-              <div class="card-header">
-                <span class="fecha-label">{{ res.fecha | date: 'dd/MM/yyyy' }}</span>
-                <span class="estado-tag" [attr.data-estado]="res.estado">{{ res.estado }}</span>
-              </div>
+            <div class="card-header">
+              <span class="fecha-label">{{ res.fecha | date: 'dd/MM/yyyy' }}</span>
+              <span class="estado-tag" [attr.data-estado]="res.estado">{{ res.estado }}</span>
+            </div>
               <div class="reserva-titulo">{{ res.descripcion }}</div>
               @if (auth.esAdmin()) {
                 <div class="user-badge">
