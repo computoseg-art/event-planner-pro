@@ -34,6 +34,11 @@ app.use(cors({
 
 app.use(express.json());
 
+// Endpoint de prueba para verificar que el backend está activo
+app.get('/', (req, res) => {
+  res.send({ status: 'OK', message: 'Backend de EventPlanner Pro activo' });
+});
+
 // Endpoint de preferencia de pago
 app.post('/create_preference', async (req, res) => {
   try {
