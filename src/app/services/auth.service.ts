@@ -59,15 +59,34 @@ export class AuthService {
       }
   }
 
-  async registrar(email: string, pass: string) {
-    try {
-      await createUserWithEmailAndPassword(this.auth, email, pass);
-      this.zone.run(() => this.router.navigate(['/agenda']));
-    } catch (e: any) {
-      alert('Error al registrar: ' + e.message);
-      throw e;
+ async registrar(email: string, pass: string) {
+  try {
+    await createUserWithEmailAndPassword(this.auth, email, pass);
+    this.zone.run(() => this.router.navigate(['/agenda']));
+  } catch (e: any) {
+    let mensaje = 'No se pudo completar el registro.';
+
+    switch (e.code) {
+      case 'auth/email-already-in-use':
+        mensaje = 'Este correo electrónico ya está registrado. Prueba iniciando sesión.';
+        break;
+      case 'auth/invalid-email':
+        mensaje = 'El correo electrónico ingresado no tiene un formato válido.';
+        break;
+      case 'auth/weak-password':
+        mensaje = 'La contraseña es muy débil. Debe tener al menos 6 caracteres.';
+        break;
+      case 'auth/operation-not-allowed':
+        mensaje = 'El registro con correo y contraseña no está habilitado en Firebase.';
+        break;
+      default:
+        mensaje = e.message || 'Ocurrió un error inesperado al registrar el usuario.';
     }
+
+    alert(`Error al registrar: ${mensaje}`);
+    throw e;
   }
+}
 
 
   async logout() {
