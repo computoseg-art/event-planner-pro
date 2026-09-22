@@ -1,0 +1,64 @@
+<div class="eventos-container">
+  <!-- Hero / Header de Bienvenida -->
+  <header class="hero-section">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <span class="subtitle">EVENT PLANNER PRO</span>
+      <h1>Fotografía y Video de Alta Gama</h1>
+      <p>Creando memorias inolvidables para tus momentos más especiales: Bodas y Cumpleaños de 15.</p>
+      <div class="hero-actions">
+        <button class="btn-primary" (click)="irAgenda()">
+          <i class="bi bi-calendar-check"></i> Ir a Mi Agenda / Reservar
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sección de Servicios Elegantes -->
+  <section class="services-section">
+    <div class="section-title">
+      <h2>Nuestros Servicios Exclusivos</h2>
+      <div class="divider"></div>
+    </div>
+
+    <div class="cards-grid">
+      <!-- Tarjeta Cumpleaños de 15 -->
+      <div class="card-event quince">
+        <div class="card-badge">POPULAR</div>
+        <div class="card-body">
+          <div class="card-icon">👑</div>
+          <h3>Cumpleaños de 15</h3>
+          <p class="description">
+            Una noche mágica capturada con elegancia. Cobertura completa de la recepción, vals, shows y book previo en exteriores.
+          </p>
+          <ul class="features">
+            <li><i class="bi bi-check2-circle"></i> Cobertura audiovisual completa</li>
+            <li><i class="bi bi-check2-circle"></i> Sesión previa en exteriores (Book 15)</li>
+            <li><i class="bi bi-check2-circle"></i> Álbum impreso HD + Galería Digital</li>
+            <li><i class="bi bi-check2-circle"></i> Video resumen para redes sociales</li>
+          </ul>
+          <button class="btn-secondary" (click)="irAgenda()">Reservar Fecha</button>
+        </div>
+      </div>
+
+      <!-- Tarjeta Bodas -->
+      <div class="card-event bodas">
+        <div class="card-badge premium">PREMIUM</div>
+        <div class="card-body">
+          <div class="card-icon">💍</div>
+          <h3>Bodas & Casamientos</h3>
+          <p class="description">
+            Documentamos el día más importante de sus vidas. Cada mirada, emoción y detalle preservado para siempre.
+          </p>
+          <ul class="features">
+            <li><i class="bi bi-check2-circle"></i> Pre-Boda (Getting Ready) y Fiesta</li>
+            <li><i class="bi bi-check2-circle"></i> Dron profesional en exteriores</li>
+            <li><i class="bi bi-check2-circle"></i> Fotolibro lujoso en tapa dura</li>
+            <li><i class="bi bi-check2-circle"></i> Entrega de fotos editadas en alta resolución</li>
+          </ul>
+          <button class="btn-secondary" (click)="irAgenda()">Reservar Fecha</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
