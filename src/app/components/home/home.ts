@@ -13,7 +13,6 @@ import { AuthService } from '../../services/auth.service';
 export class HomeComponent {
   auth = inject(AuthService);
 
-  // Volvemos a usar 'nombreUsuario' para que coincida con tu HTML
   nombreUsuario = signal('');
   passwordUsuario = signal('');
   esRegistro = signal(false);
@@ -31,5 +30,10 @@ export class HomeComponent {
     } else {
       alert('Por favor, ingresa un correo y una contraseña (mínimo 6 caracteres).');
     }
+  }
+
+  // --- NUEVO MÉTODO PARA GOOGLE ---
+  ingresarConGoogle() {
+    this.auth.loginConGoogle();
   }
 }

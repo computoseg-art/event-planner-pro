@@ -30,29 +30,26 @@ export class AgendaComponent implements OnInit {
   totalParaReserva = computed(() => this.cart.totalCarrito());
   pagoSenia = computed(() => this.cart.montoSenia());
 
-ngOnInit() {
-  this.route.queryParams.subscribe((params) => {
-    const status = params['status'];
-    const paymentId = params['payment_id'];
+  ngOnInit() {
+    this.route.queryParams.subscribe((params) => {
+      const status = params['status'];
+      const paymentId = params['payment_id'];
 
-    if (status === 'approved') {
-      // Nos suscribimos a user$ para esperar a que Firebase devuelva la sesión activa
-      this.auth.user$.subscribe(async (u) => {
-        if (u && u.email) {
-          console.log('Procesando pago para:', u.email);
-          await this.rs.saldarDeudaUsuario(u.email, paymentId);
+      if (status === 'approved') {
+        this.auth.user$.subscribe(async (u) => {
+          if (u && u.email) {
+            console.log('Procesando pago para:', u.email);
+            await this.rs.saldarDeudaUsuario(u.email, paymentId);
 
-          alert('¡Pago procesado con éxito! Deuda saldada.');
+            alert('¡Pago procesado con éxito! Deuda saldada.');
 
-          // Limpiamos los parámetros de la URL
-          this.router.navigate([], { queryParams: {} });
-        }
-      });
-    }
-  });
-}
+            this.router.navigate([], { queryParams: {} });
+          }
+        });
+      }
+    });
+  }
 
-  // ✅ CORREGIDO: Maneja strings de forma segura para no romper con toISOString()
   esDiaOcupado(fecha: string): boolean {
     if (!fecha) return false;
     const fechaLimpia = fecha.split('T')[0];
@@ -186,6 +183,14 @@ ngOnInit() {
       alert('Cambios guardados');
     } catch (e) {
       console.error('Error al actualizar:', e);
+    }
+  }
+
+  // Corregido: Usa la referencia `this.rs`
+  pagarReservaIndividual(res: Reserva) {
+    const pendiente = res.total - (res.pagado || 0);
+    if (pendiente > 0) {
+      this.rs.procesarPago(pendiente, res);
     }
   }
 

@@ -23,12 +23,10 @@
         <div class="dia-nombre">Sá</div>
         <div class="dia-nombre">Do</div>
 
-        <!-- Celdas vacías: rastreamos por $index para obtener claves únicas (0, 1, 2...) -->
         @for (i of [].constructor(diasEnBlanco()); track $index) {
           <div class="dia-celda vacio"></div>
         }
 
-        <!-- Días del mes: rastreamos con $index o String(dia) -->
         @for (dia of diasDelMes(); track $index) {
           <div
             class="dia-celda"
@@ -122,6 +120,7 @@
         {{ auth.esAdmin() ? 'Todas las Reservas' : 'Mis Reservas' }}
       </h3>
 
+      <!-- Botón de Deuda Global -->
       @if (rs.deudaTotal() > 0 && !auth.esAdmin()) {
         <div class="pago-general-container">
           <button class="btn-pago-general" (click)="rs.procesarPago(rs.deudaTotal())">
@@ -134,10 +133,10 @@
         @for (res of rs.reservasVisibles(); track res.id) {
           <div class="reserva-card" [class.expanded]="reservaExpandida() === res.id">
             <div class="card-main-info" (click)="toggleEditar(res.id!)">
-            <div class="card-header">
-              <span class="fecha-label">{{ res.fecha | date: 'dd/MM/yyyy' }}</span>
-              <span class="estado-tag" [attr.data-estado]="res.estado">{{ res.estado }}</span>
-            </div>
+              <div class="card-header">
+                <span class="fecha-label">{{ res.fecha | date: 'dd/MM/yyyy' }}</span>
+                <span class="estado-tag" [attr.data-estado]="res.estado">{{ res.estado }}</span>
+              </div>
               <div class="reserva-titulo">{{ res.descripcion }}</div>
               @if (auth.esAdmin()) {
                 <div class="user-badge">
@@ -146,6 +145,7 @@
               }
             </div>
 
+            <!-- MODO EDICIÓN / EXPANDIDO -->
             @if (reservaExpandida() === res.id) {
               <div class="edit-form">
                 <label>Descripción:</label>
@@ -230,11 +230,21 @@
               </div>
             }
 
+            <!-- MODO COLAPSADO: Pie de tarjeta con botón de pago individual directo -->
             @if (reservaExpandida() !== res.id) {
               <div class="card-footer-mini">
                 <span>Total: ${{ res.total | number }}</span>
                 @if (res.pagado > 0) {
                   <span class="pagado-mini"> | Pagó: ${{ res.pagado | number }}</span>
+                }
+                
+                @if (res.total - (res.pagado || 0) > 0 && !auth.esAdmin()) {
+                  <button 
+                    class="btn-pagar-solo"
+                    (click)="pagarReservaIndividual(res); $event.stopPropagation()"
+                  >
+                    💳 Pagar esta reserva (${{ res.total - (res.pagado || 0) | number }})
+                  </button>
                 }
               </div>
             }

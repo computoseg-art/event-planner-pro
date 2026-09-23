@@ -6,7 +6,7 @@ import { AuthService } from '../../services/auth.service';
 @Component({
   selector: 'app-eventos',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   templateUrl: './eventos.html',
   styleUrl: './eventos.css'
 })

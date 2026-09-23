@@ -2,7 +2,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 70vh;
+  min-height: 80vh;
+  padding: 20px 0;
 }
 
 .login-card {
@@ -13,14 +14,28 @@
   text-align: center;
   width: 100%;
   max-width: 350px;
+  box-sizing: border-box;
+}
+
+.form-group {
+  text-align: left;
+  margin-bottom: 10px;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  color: #475569;
+  font-weight: 600;
 }
 
 .login-input {
   width: 100%;
   padding: 10px;
-  margin: 15px 0;
+  margin: 6px 0 12px 0;
   border: 1px solid #ddd;
   border-radius: 6px;
+  box-sizing: border-box;
+  font-size: 0.95rem;
 }
 
 .btn-primary {
@@ -31,11 +46,71 @@
   padding: 10px;
   border-radius: 6px;
   cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: background 0.2s ease;
+}
+
+.btn-primary:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+/* --- Estilos de Autenticación Social (Google) --- */
+.social-login-container {
+  margin-top: 15px;
+  width: 100%;
+}
+
+.divider-text {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 15px 0;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.divider-text::before,
+.divider-text::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.divider-text span {
+  padding: 0 8px;
+}
+
+.btn-google {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background-color: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  padding: 10px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-google:hover {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.google-icon {
+  flex-shrink: 0;
 }
 
 .toggle-link {
-  margin-top: 15px;
-  font-size: 0.9rem;
+  margin-top: 18px;
+  font-size: 0.85rem;
   color: #2563eb;
   cursor: pointer;
   text-decoration: underline;

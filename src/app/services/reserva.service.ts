@@ -229,6 +229,39 @@ export class ReservaService {
     return set(historialRef, pago);
   }
 
+  // Método para pagar una reserva individual específica
+async procesarPagoReservaIndividual(reserva: Reserva) {
+  const pendiente = Number(reserva.total) - Number(reserva.pagado || 0);
+  
+  if (pendiente <= 0) {
+    alert('Esta reserva ya se encuentra totalmente saldada.');
+    return;
+  }
+
+  try {
+    const body = {
+      total: pendiente,
+      id: reserva.id,
+      descripcion: `Pago de Reserva: ${reserva.tipoEvento === '15_años' ? '15 Años' : 'Boda'} - ${reserva.fecha}`,
+      usuario: reserva.usuario
+    };
+
+    const response = await fetch(`${environment.apiUrl}/create_preference`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    const data = await response.json();
+    if (data.init_point) {
+      window.location.href = data.init_point;
+    }
+  } catch (error) {
+    console.error('Error al procesar pago individual:', error);
+    alert('Error al conectar con el servidor de pagos.');
+  }
+}
+
   async saldarDeudaUsuario(email: string, paymentId: string) {
     if (!email) return;
 
