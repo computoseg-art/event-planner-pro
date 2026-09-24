@@ -35,51 +35,34 @@ export class ReservaService {
 
   // --- STREAM DE DATOS: RESERVAS ---
   private todasLasReservas$ = this.auth.user$.pipe(
-    switchMap((u) => {  // switchMap permite cambiar de un observable a otro, en este caso, de user$ a la lista de reservas del usuario.
-      if (!u || !u.email) return of([]); // Si no hay usuario logueado, retorna un observable de lista vacía. sirve para evitar errores cuando el usuario no está logueado y se intenta acceder a sus reservas.
+    switchMap((u) => {
+      if (!u || !u.email) return of([]);
 
-      const esAdmin = this.auth.esAdmin();
-      const emailSanitizado = u.email.replace(/\./g, ','); // Remplaza los puntos en el email por comas para usarlo como clave en Firebase, ya que Firebase no permite puntos en las claves de los nodos.
-      const dbPath = esAdmin ? 'reservas' : `reservas/${emailSanitizado}`; // Si el usuario es admin, se accede a todas las reservas, si no, solo a las reservas del usuario logueado.
+      // AHORA: Todos leen la ruta global 'reservas' para conocer los días ocupados
+      const dbPath = 'reservas';
 
-      return runInInjectionContext(this.injector, () => { // runInInjectionContext permite ejecutar el observable dentro del contexto de inyección de dependencias,
-                                                          // asegurando que los servicios inyectados estén disponibles dentro del observable.
-                                                          // Esto es importante porque los observables pueden ejecutarse fuera del contexto de Angular,
-                                                          // y sin esto, los servicios inyectados podrían no estar disponibles.
-        return (objectVal(ref(this.db, dbPath)) as Observable<any>).pipe( // objectVal obtiene el valor del nodo de Firebase como un observable,
-                                                                          // y ref crea una referencia al nodo especificado en la base de datos.
+      return runInInjectionContext(this.injector, () => {
+        return (objectVal(ref(this.db, dbPath)) as Observable<any>).pipe(
           map((data) => {
-            if (!data) return []; // Si no hay datos, retorna una lista vacía.
+            if (!data) return [];
             const listaPlana: Reserva[] = [];
 
-            if (esAdmin) {
-              Object.keys(data).forEach((userKey) => { // iterar sobre cada usuario en el nodo de reservas, ya que los admins pueden ver todas las reservas de todos los usuarios.
-                const nodoUsuario = data[userKey];
-                if (nodoUsuario && typeof nodoUsuario === 'object') { // Verifica que el nodo del usuario exista y sea un objeto antes de iterar sobre sus reservas.
-                  Object.keys(nodoUsuario).forEach((resKey) => {
-                    const res = nodoUsuario[resKey];
-                    if (res && res.fecha) {
-                      listaPlana.push({
-                        ...res,
-                        id: resKey,
-                        usuario: userKey.replace(/,/g, '.'),
-                      });
-                    }
-                  });
-                }
-              });
-            } else {
-              Object.keys(data).forEach((resKey) => {
-                const res = data[resKey];
-                if (res && res.fecha) {
-                  listaPlana.push({
-                    ...res,
-                    id: resKey,
-                    usuario: u.email || '',
-                  });
-                }
-              });
-            }
+            // Iteramos por todos los usuarios almacenados bajo el nodo /reservas
+            Object.keys(data).forEach((userKey) => {
+              const nodoUsuario = data[userKey];
+              if (nodoUsuario && typeof nodoUsuario === 'object') {
+                Object.keys(nodoUsuario).forEach((resKey) => {
+                  const res = nodoUsuario[resKey];
+                  if (res && res.fecha) {
+                    listaPlana.push({
+                      ...res,
+                      id: resKey,
+                      usuario: userKey.replace(/,/g, '.'),
+                    });
+                  }
+                });
+              }
+            });
 
             return listaPlana;
           }),
@@ -168,7 +151,28 @@ export class ReservaService {
     }, 0);
   });
 
-  fechasOcupadas = computed(() => new Set(this.reservas().map((r) => r.fecha)));
+fechasOcupadas = computed(() => {
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0); // Inicio del día de hoy (sin tomar en cuenta la hora)
+
+  const fechas = this.reservas()
+    .filter((r) => {
+      if (!r.fecha) return false;
+
+      // Normalizar la fecha de la reserva (YYYY-MM-DD)
+      const parts = r.fecha.split('T')[0].split('-');
+      if (parts.length < 3) return false;
+
+      const fechaReserva = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+
+      // La reserva bloquea el calendario desde hoy hasta el día del evento.
+      // Solo se libera a partir del día siguiente al evento (fechaReserva < hoy).
+      return fechaReserva >= hoy;
+    })
+    .map((r) => r.fecha.split('T')[0]);
+
+  return new Set(fechas);
+});
 
   // --- MÉTODOS CRUD DE RESERVAS ---
 
@@ -232,7 +236,7 @@ export class ReservaService {
   // Método para pagar una reserva individual específica
 async procesarPagoReservaIndividual(reserva: Reserva) {
   const pendiente = Number(reserva.total) - Number(reserva.pagado || 0);
-  
+
   if (pendiente <= 0) {
     alert('Esta reserva ya se encuentra totalmente saldada.');
     return;

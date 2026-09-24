@@ -50,15 +50,15 @@ export class AgendaComponent implements OnInit {
     });
   }
 
-  esDiaOcupado(fecha: string): boolean {
-    if (!fecha) return false;
-    const fechaLimpia = fecha.split('T')[0];
+esDiaOcupado(fecha: string): boolean {
+  if (!fecha) return false;
 
-    return Array.from(this.rs.fechasOcupadas()).some((f: any) => {
-      const fStr = typeof f === 'string' ? f.split('T')[0] : new Date(f).toISOString().split('T')[0];
-      return fStr === fechaLimpia;
-    });
-  }
+  // Limpia la fecha recibida por parámetro a formato YYYY-MM-DD
+  const fechaLimpia = fecha.split('T')[0];
+
+  // Compara contra el Set de fechas ocupadas activas que construimos en el servicio
+  return this.rs.fechasOcupadas().has(fechaLimpia);
+}
 
   getFechaCabecera() {
     return this.fechaHoy();

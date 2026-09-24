@@ -18,3 +18,20 @@ git add .
 git commit -m "feat: actualización x"
 git push origin main
 
+
+# ------------------------------------------------------------------------------
+# 1. Cambia a tu rama principal (usa 'master' si tu rama se llama master)
+git checkout main
+
+# 2. Trae los cambios de la rama pruebas a main
+git merge pruebas
+
+# 3. Sube la rama principal actualizada a GitHub
+git push origin main
+# -------------------------------------------------------------------------------
+
+# 1. Compila la aplicación para producción
+ng build
+
+# 2. Despliega en Firebase Hosting
+firebase deploy
