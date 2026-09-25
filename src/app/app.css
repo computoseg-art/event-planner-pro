@@ -1,0 +1,9 @@
+.main-content {
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+/* Si el navbar está presente, le damos un margen superior */
+app-navbar + .main-content {
+  padding-top: 70px;
+}

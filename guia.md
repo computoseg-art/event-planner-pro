@@ -35,3 +35,4 @@ ng build
 
 # 2. Despliega en Firebase Hosting
 firebase deploy
+# -------------------------------------------------------------------------------
