@@ -1,109 +1,47 @@
-<nav class="fixed top-0 left-0 w-full z-50 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 shadow-2xl transition-all">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex items-center justify-between h-16">
-
-      <!-- LOGO / BRANDING -->
-      <div class="flex items-center space-x-3 cursor-pointer" routerLink="/">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
-          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-          </svg>
-        </div>
-        <span class="text-xl font-bold bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">
-          EventPlanner<span class="text-indigo-400 font-black">Pro</span>
-        </span>
-      </div>
-
-      <!-- NAUVEGACIÓN PRINCIPAL (DESKTOP) -->
-      <div class="hidden md:flex items-center space-x-1">
-        <a routerLink="/home" routerLinkActive="text-white bg-slate-800/80 border-indigo-500/50" [routerLinkActiveOptions]="{exact: true}"
-           class="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition border border-transparent">
-           Inicio
-        </a>
-        <a routerLink="/agenda" routerLinkActive="text-white bg-slate-800/80 border-indigo-500/50"
-           class="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition border border-transparent">
-           Reservar Fecha
-        </a>
-        <a routerLink="/mis-reservas" routerLinkActive="text-white bg-slate-800/80 border-indigo-500/50"
-           class="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition border border-transparent">
-           Mis Eventos
-        </a>
-      </div>
-
-      <!-- SECCIÓN DERECHA (CARRITO + AUTENTICACIÓN) -->
-      <div class="flex items-center space-x-4">
-
-        <!-- ÍCONO DE CARRITO CON BADGE -->
-        <button routerLink="/carrito"
-                class="relative p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition group border border-slate-800 hover:border-slate-700">
-          <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-          </svg>
-
-          <!-- Contador dinámico -->
-          @if (reservaService.reservasVisibles().length > 0) {
-            <span class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-rose-500 text-[10px] font-bold text-white shadow-lg shadow-pink-500/50 animate-pulse">
-              {{ reservaService.reservasVisibles().length }}
-            </span>
-          }
-        </button>
-
-        <!-- USUARIO LOGUEADO VS INVITADO -->
-        @if (auth.user$ | async; as user) {
-          <!-- Menú Perfil / Logout -->
-          <div class="flex items-center space-x-3 pl-2 border-l border-slate-800">
-            <div class="flex items-center space-x-2">
-              @if (user.photoURL) {
-                <img [src]="user.photoURL" [alt]="user.displayName" class="w-8 h-8 rounded-full ring-2 ring-indigo-500/50 object-cover">
-              } @else {
-                <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-xs">
-                  {{ user.email ? user.email[0].toUpperCase() : 'U' }}
-                </div>
-              }
-              <span class="hidden lg:inline-block text-xs font-medium text-slate-300 max-w-[120px] truncate">
-                {{ user.displayName || user.email }}
-              </span>
-            </div>
-
-            <button (click)="logout()"
-                    title="Cerrar Sesión"
-                    class="p-2 rounded-xl text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition border border-transparent hover:border-rose-500/20">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-              </svg>
-            </button>
-          </div>
-        } @else {
-          <!-- Botón Iniciar Sesión / Registro -->
-          <a routerLink="/login"
-             class="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 transition shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40">
-             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
-             </svg>
-             <span>Acceder</span>
-          </a>
-        }
-
-        <!-- BOTÓN MENÚ MÓVIL -->
-        <button (click)="toggleMobileMenu()" class="md:hidden p-2 rounded-lg text-slate-400 hover:text-white">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-          </svg>
-        </button>
-
-      </div>
+<header class="navbar">
+  <!-- LOGO / BRANDING -->
+  <div class="nav-brand" routerLink="/">
+    <div class="logo-icon">
+      <svg class="icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+      </svg>
     </div>
+    <span class="brand-title">EventPlanner<span class="brand-highlight">Pro</span></span>
   </div>
 
-  <!-- MENÚ DESPLEGABLE MÓVIL -->
-  @if (isMobileMenuOpen) {
-    <div class="md:hidden bg-slate-900/95 border-b border-slate-800 px-4 pt-2 pb-4 space-y-2">
-      <a routerLink="/home" (click)="isMobileMenuOpen = false" class="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800">Inicio</a>
-      <a routerLink="/agenda" (click)="isMobileMenuOpen = false" class="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800">Reservar Fecha</a>
-      <a routerLink="/mis-reservas" (click)="isMobileMenuOpen = false" class="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800">Mis Eventos</a>
-    </div>
-  }
-</nav>
+  <!-- NAVEGACIÓN PRINCIPAL -->
+  <nav class="nav-links">
+    <a routerLink="/home" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">Inicio</a>
+    <a routerLink="/agenda" routerLinkActive="active" class="nav-item">Agenda</a>
+  </nav>
 
-<!-- SEPARADOR DE MARGEN SUPERIOR PARA EVITAR SUPERPOSICIÓN DE CONTENIDO -->
-<div class="h-16"></div>
+  <!-- SECCIÓN DERECHA (CARRITO Y BIENVENIDA) -->
+  <div class="nav-actions">
+    <!-- CARRITO -->
+    <button routerLink="/agenda" class="cart-btn" title="Ver Reservas">
+      <svg class="icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+      </svg>
+      @if (reservaService.reservasVisibles().length > 0) {
+        <span class="cart-badge">{{ reservaService.reservasVisibles().length }}</span>
+      }
+    </button>
+
+    <!-- USUARIO Y BIENVENIDO -->
+    @if (auth.user$ | async; as user) {
+      <div class="user-profile">
+        <span class="welcome-text">
+          Bienvenido, <strong>{{ user.displayName || user.email }}</strong>
+        </span>
+
+        <button (click)="logout()" class="btn-logout-red">
+          Cerrar Sesión
+        </button>
+      </div>
+    } @else {
+      <a routerLink="/login" class="btn-login">
+        <span>Acceder</span>
+      </a>
+    }
+  </div>
+</header>

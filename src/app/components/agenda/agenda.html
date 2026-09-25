@@ -1,8 +1,8 @@
 <div class="agenda-wrapper">
-  <header class="agenda-header">
+  <!-- <header class="agenda-header">
     <span>Bienvenido, <strong>{{ auth.usuarioLogueado() }}</strong></span>
     <button (click)="auth.logout()" class="btn-salir">Cerrar Sesión</button>
-  </header>
+  </header> -->
 
   <div class="main-layout">
     <section class="calendario-section">
@@ -237,9 +237,9 @@
                 @if (res.pagado > 0) {
                   <span class="pagado-mini"> | Pagó: ${{ res.pagado | number }}</span>
                 }
-                
+
                 @if (res.total - (res.pagado || 0) > 0 && !auth.esAdmin()) {
-                  <button 
+                  <button
                     class="btn-pagar-solo"
                     (click)="pagarReservaIndividual(res); $event.stopPropagation()"
                   >
