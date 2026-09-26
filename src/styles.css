@@ -1,7 +1,7 @@
 :root {
   --primary: #4f46e5;
   --primary-hover: #4338ca;
-  --bg-color: #f8fafc;
+  --bg-color: #0f172a; /* Fondo oscuro consistente */
   --card-bg: #ffffff;
   --text-main: #1e293b;
   --text-muted: #64748b;
@@ -9,35 +9,34 @@
   --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
-body {
-  font-family:
-    'Inter',
-    system-ui,
-    -apple-system,
-    sans-serif;
+html, body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background-color: var(--bg-color);
-  color: var(--text-main);
+  color: #f8fafc;
   margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+
+/* El elemento raíz de Angular debe abarcar el 100% de la ventana */
+app-root {
   display: flex;
-  justify-content: center;
-  align-items: center;
+  flex-direction: column;
+  width: 100%;
   min-height: 100vh;
 }
 
-/* Contenedor principal para tus rutas */
-main {
+/* Contenedor principal que se expande a todo el ancho del iPad */
+main.main-content {
   width: 100%;
-  max-width: 500px;
-  padding: 2rem;
-  background: var(--card-bg);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow);
-}
-
-h1 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-  text-align: center;
-  color: var(--primary);
+  flex: 1;
+  padding-top: 65px; /* Espacio para compensar la altura del Navbar fijo */
+  box-sizing: border-box;
 }

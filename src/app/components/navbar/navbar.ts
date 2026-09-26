@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../services/auth.service'; // Asegúrate de ajustar la ruta si difiere
@@ -17,10 +17,15 @@ export class NavbarComponent {
   private router = inject(Router);
 
   // Control para el menú desplegable en móviles
-  isMobileMenuOpen = false;
 
-  toggleMobileMenu() {
-    this.isMobileMenuOpen = !this.isMobileMenuOpen;
+ menuAbierto = signal<boolean>(false);
+
+  toggleMenu() {
+    this.menuAbierto.update(v => !v);
+  }
+
+  cerrarMenu() {
+    this.menuAbierto.set(false);
   }
 
   async logout() {

@@ -1,5 +1,5 @@
 <header class="navbar">
-  <!-- LOGO / BRANDING -->
+  <!-- BRANDING -->
   <div class="nav-brand" routerLink="/">
     <div class="logo-icon">
       <svg class="icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -9,15 +9,14 @@
     <span class="brand-title">EventPlanner<span class="brand-highlight">Pro</span></span>
   </div>
 
-  <!-- NAVEGACIÓN PRINCIPAL -->
-  <nav class="nav-links">
+  <!-- NAVEGACIÓN DESKTOP -->
+  <nav class="nav-links desktop-only">
     <a routerLink="/home" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">Inicio</a>
     <a routerLink="/agenda" routerLinkActive="active" class="nav-item">Agenda</a>
   </nav>
 
-  <!-- SECCIÓN DERECHA (CARRITO Y BIENVENIDA) -->
-  <div class="nav-actions">
-    <!-- CARRITO -->
+  <!-- ACCIONES DESKTOP -->
+  <div class="nav-actions desktop-only">
     <button routerLink="/agenda" class="cart-btn" title="Ver Reservas">
       <svg class="icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
@@ -27,21 +26,45 @@
       }
     </button>
 
-    <!-- USUARIO Y BIENVENIDO -->
     @if (auth.user$ | async; as user) {
       <div class="user-profile">
         <span class="welcome-text">
           Bienvenido, <strong>{{ user.displayName || user.email }}</strong>
         </span>
-
-        <button (click)="logout()" class="btn-logout-red">
-          Cerrar Sesión
-        </button>
+        <button (click)="logout()" class="btn-logout-red">Cerrar Sesión</button>
       </div>
     } @else {
-      <a routerLink="/login" class="btn-login">
-        <span>Acceder</span>
-      </a>
+      <a routerLink="/login" class="btn-login">Acceder</a>
     }
+  </div>
+
+  <!-- BOTÓN HAMBURGUESA (MÓVIL) -->
+  <button class="hamburger-btn mobile-only" (click)="toggleMenu()" aria-label="Abrir menú">
+    <svg class="icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      @if (menuAbierto()) {
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      } @else {
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+      }
+    </svg>
+  </button>
+
+  <!-- DESPLEGABLE MÓVIL -->
+  <div class="mobile-menu" [class.open]="menuAbierto()">
+    <nav class="mobile-nav-links">
+      <a routerLink="/home" (click)="cerrarMenu()" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Inicio</a>
+      <a routerLink="/agenda" (click)="cerrarMenu()" routerLinkActive="active">Agenda</a>
+    </nav>
+
+    <div class="mobile-user-section">
+      @if (auth.user$ | async; as user) {
+        <div class="mobile-welcome">
+          Bienvenido,<br><strong>{{ user.displayName || user.email }}</strong>
+        </div>
+        <button (click)="logout(); cerrarMenu()" class="btn-logout-red full-width">Cerrar Sesión</button>
+      } @else {
+        <a routerLink="/login" (click)="cerrarMenu()" class="btn-login full-width">Acceder</a>
+      }
+    </div>
   </div>
 </header>
