@@ -50,15 +50,11 @@ export class AgendaComponent implements OnInit {
     });
   }
 
-esDiaOcupado(fecha: string): boolean {
-  if (!fecha) return false;
-
-  // Limpia la fecha recibida por parámetro a formato YYYY-MM-DD
-  const fechaLimpia = fecha.split('T')[0];
-
-  // Compara contra el Set de fechas ocupadas activas que construimos en el servicio
-  return this.rs.fechasOcupadas().has(fechaLimpia);
-}
+  esDiaOcupado(fecha: string): boolean {
+    if (!fecha) return false;
+    const fechaLimpia = fecha.split('T')[0];
+    return this.rs.fechasOcupadas().has(fechaLimpia);
+  }
 
   getFechaCabecera() {
     return this.fechaHoy();
@@ -186,13 +182,21 @@ esDiaOcupado(fecha: string): boolean {
     }
   }
 
-  // Corregido: Usa la referencia `this.rs`
-  pagarReservaIndividual(res: Reserva) {
-    const pendiente = res.total - (res.pagado || 0);
-    if (pendiente > 0) {
-      this.rs.procesarPago(pendiente, res);
+  // Redirección directa para evitar bloqueos de CSP y lentitud en el clic
+  async pagarReservaIndividual(res: Reserva) {
+      const pendiente = res.total - (res.pagado || 0);
+      if (pendiente <= 0) {
+        alert('Esta reserva ya está totalmente saldada.');
+        return;
+      }
+
+      try {
+        // El servicio maneja directamente el fetch y la redirección con window.location.href
+        await this.rs.procesarPago(pendiente, res);
+      } catch (e) {
+        console.error('Error al procesar el pago:', e);
+      }
     }
-  }
 
   async eliminar(res: Reserva) {
     if (!res.id) return;
