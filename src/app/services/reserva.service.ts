@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, EnvironmentInjector, runInInjectionContext } from '@angular/core';
+import { Injectable, computed, inject, EnvironmentInjector, runInInjectionContext, signal } from '@angular/core';
 import { Database, ref, set, push, objectVal, remove, get } from '@angular/fire/database';
 import { AuthService } from './auth.service';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -26,53 +26,54 @@ export interface PagoHistorial {
   usuario: string;
 }
 
-@Injectable({ providedIn: 'root' }) // registrar el servicio como singleton en toda la aplicación. El singleton es importante para que las señales y observables se compartan entre componentes.
+@Injectable({ providedIn: 'root' })
 export class ReservaService {
   private db = inject(Database);
   private auth = inject(AuthService);
-  private injector = inject(EnvironmentInjector); // Inyectar EnvironmentInjector para usar runInInjectionContext y mantener el contexto de inyección de dependencias en los observables.
-                                                  // en pocas palabras, permite que los observables tengan acceso a los servicios inyectados como AuthService y Database.
+  private injector = inject(EnvironmentInjector);
+
+  // --- SEÑAL DE ESTADO DE CARGA GLOBAL DE PAGO ---
+  cargandoPago = signal<boolean>(false);
 
   // --- STREAM DE DATOS: RESERVAS ---
-private todasLasReservas$ = this.auth.user$.pipe(
-  switchMap((u) => {
-    if (!u || !u.email) return of([]);
+  private todasLasReservas$ = this.auth.user$.pipe(
+    switchMap((u) => {
+      if (!u || !u.email) return of([]);
 
-    const dbPath = 'reservas';
+      const dbPath = 'reservas';
 
-    return runInInjectionContext(this.injector, () => {
-      return (objectVal(ref(this.db, dbPath)) as Observable<any>).pipe(
-        map((data) => {
-          if (!data) return [];
-          const listaPlana: Reserva[] = [];
+      return runInInjectionContext(this.injector, () => {
+        return (objectVal(ref(this.db, dbPath)) as Observable<any>).pipe(
+          map((data) => {
+            if (!data) return [];
+            const listaPlana: Reserva[] = [];
 
-          Object.keys(data).forEach((userKey) => {
-            const nodoUsuario = data[userKey];
-            if (nodoUsuario && typeof nodoUsuario === 'object') {
-              Object.keys(nodoUsuario).forEach((resKey) => {
-                const res = nodoUsuario[resKey];
-                if (res && res.fecha) {
-                  listaPlana.push({
-                    ...res,
-                    id: resKey,
-                    // Priorizar res.usuario si existe en la BD; fallback a limpiar la key
-                    usuario: (res.usuario || userKey.replace(/,/g, '.')).trim(),
-                  });
-                }
-              });
-            }
-          });
+            Object.keys(data).forEach((userKey) => {
+              const nodoUsuario = data[userKey];
+              if (nodoUsuario && typeof nodoUsuario === 'object') {
+                Object.keys(nodoUsuario).forEach((resKey) => {
+                  const res = nodoUsuario[resKey];
+                  if (res && res.fecha) {
+                    listaPlana.push({
+                      ...res,
+                      id: resKey,
+                      usuario: (res.usuario || userKey.replace(/,/g, '.')).trim(),
+                    });
+                  }
+                });
+              }
+            });
 
-          return listaPlana;
-        }),
-        catchError((err) => {
-          console.error('Error al leer reservas:', err);
-          return of([]);
-        })
-      );
-    });
-  })
-);
+            return listaPlana;
+          }),
+          catchError((err) => {
+            console.error('Error al leer reservas:', err);
+            return of([]);
+          })
+        );
+      });
+    })
+  );
 
   reservas = toSignal(this.todasLasReservas$, { initialValue: [] as Reserva[] });
 
@@ -112,7 +113,6 @@ private todasLasReservas$ = this.auth.user$.pipe(
               });
             }
 
-            // Ordenar por fecha descendente (los más recientes primero)
             return lista.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
           }),
           catchError((err) => {
@@ -128,15 +128,15 @@ private todasLasReservas$ = this.auth.user$.pipe(
 
   // --- SEÑALES COMPUTADAS ---
 
-reservasVisibles = computed(() => {
-  const email = this.auth.usuarioLogueado()?.trim().toLowerCase();
-  const todas = this.reservas();
+  reservasVisibles = computed(() => {
+    const email = this.auth.usuarioLogueado()?.trim().toLowerCase();
+    const todas = this.reservas();
 
-  if (!email) return [];
-  if (this.auth.esAdmin()) return todas;
+    if (!email) return [];
+    if (this.auth.esAdmin()) return todas;
 
-  return todas.filter((r) => r.usuario?.trim().toLowerCase() === email);
-});
+    return todas.filter((r) => r.usuario?.trim().toLowerCase() === email);
+  });
 
   historialVisibles = computed(() => {
     const email = this.auth.usuarioLogueado();
@@ -152,17 +152,16 @@ reservasVisibles = computed(() => {
     }, 0);
   });
 
-fechasOcupadas = computed(() => {
-  // Obtener la fecha de hoy en formato 'YYYY-MM-DD' según la hora local
-  const hoyStr = new Date().toLocaleDateString('sv'); // 'sv' genera formato YYYY-MM-DD
+  fechasOcupadas = computed(() => {
+    const hoyStr = new Date().toLocaleDateString('sv');
 
-  const fechas = this.reservas()
-    .filter((r) => r && r.fecha)
-    .map((r) => r.fecha.split('T')[0].trim())
-    .filter((fechaStr) => fechaStr >= hoyStr);
+    const fechas = this.reservas()
+      .filter((r) => r && r.fecha)
+      .map((r) => r.fecha.split('T')[0].trim())
+      .filter((fechaStr) => fechaStr >= hoyStr);
 
-  return new Set(fechas);
-});
+    return new Set(fechas);
+  });
 
   // --- MÉTODOS CRUD DE RESERVAS ---
 
@@ -213,7 +212,7 @@ fechasOcupadas = computed(() => {
 
     const pago: PagoHistorial = {
       id: historialRef.key || undefined,
-      fecha: new Date().toISOString(), // Guarda en ISO UTC para mejores prácticas
+      fecha: new Date().toISOString(),
       monto: Number(monto),
       paymentId: paymentId || 'manual',
       descripcion,
@@ -223,38 +222,42 @@ fechasOcupadas = computed(() => {
     return set(historialRef, pago);
   }
 
-  // Método para pagar una reserva individual específica
-async procesarPagoReservaIndividual(reserva: Reserva) {
-  const pendiente = Number(reserva.total) - Number(reserva.pagado || 0);
+  async procesarPagoReservaIndividual(reserva: Reserva) {
+    const pendiente = Number(reserva.total) - Number(reserva.pagado || 0);
 
-  if (pendiente <= 0) {
-    alert('Esta reserva ya se encuentra totalmente saldada.');
-    return;
-  }
-
-  try {
-    const body = {
-      total: pendiente,
-      id: reserva.id,
-      descripcion: `Pago de Reserva: ${reserva.tipoEvento === '15_años' ? '15 Años' : 'Boda'} - ${reserva.fecha}`,
-      usuario: reserva.usuario
-    };
-
-    const response = await fetch(`${environment.apiUrl}/create_preference`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    const data = await response.json();
-    if (data.init_point) {
-      window.location.href = data.init_point;
+    if (pendiente <= 0) {
+      alert('Esta reserva ya se encuentra totalmente saldada.');
+      return;
     }
-  } catch (error) {
-    console.error('Error al procesar pago individual:', error);
-    alert('Error al conectar con el servidor de pagos.');
+
+    this.cargandoPago.set(true); // Se activa el loader
+
+    try {
+      const body = {
+        total: pendiente,
+        id: reserva.id,
+        descripcion: `Pago de Reserva: ${reserva.tipoEvento === '15_años' ? '15 Años' : 'Boda'} - ${reserva.fecha}`,
+        usuario: reserva.usuario
+      };
+
+      const response = await fetch(`${environment.apiUrl}/create_preference`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+      if (data.init_point) {
+        window.location.href = data.init_point;
+      } else {
+        this.cargandoPago.set(false);
+      }
+    } catch (error) {
+      console.error('Error al procesar pago individual:', error);
+      this.cargandoPago.set(false); // Se apaga si falla
+      alert('Error al conectar con el servidor de pagos.');
+    }
   }
-}
 
   async saldarDeudaUsuario(email: string, paymentId: string) {
     if (!email) return;
@@ -300,6 +303,8 @@ async procesarPagoReservaIndividual(reserva: Reserva) {
   }
 
   async procesarPago(monto: number, reserva?: any) {
+    this.cargandoPago.set(true); // Se activa el loader
+
     try {
       const body: any = {
         total: monto,
@@ -316,9 +321,12 @@ async procesarPagoReservaIndividual(reserva: Reserva) {
       const data = await response.json();
       if (data.init_point) {
         window.location.href = data.init_point;
+      } else {
+        this.cargandoPago.set(false);
       }
     } catch (error) {
       console.error('Error en pago:', error);
+      this.cargandoPago.set(false); // Se apaga si falla
       alert('Error al conectar con el servidor de pagos.');
     }
   }
