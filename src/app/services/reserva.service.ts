@@ -222,7 +222,7 @@ export class ReservaService {
     return set(historialRef, pago);
   }
 
-  async procesarPagoReservaIndividual(reserva: Reserva) {
+async procesarPagoReservaIndividual(reserva: Reserva) {
     const pendiente = Number(reserva.total) - Number(reserva.pagado || 0);
 
     if (pendiente <= 0) {
@@ -230,14 +230,18 @@ export class ReservaService {
       return;
     }
 
-    this.cargandoPago.set(true); // Se activa el loader
+    // 1. Activamos la señal de cargando
+    this.cargandoPago.set(true);
+
+    // 2. Damos un pequeño respiro al ciclo de eventos de JS para pintar el modal en el DOM
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     try {
       const body = {
         total: pendiente,
         id: reserva.id,
         descripcion: `Pago de Reserva: ${reserva.tipoEvento === '15_años' ? '15 Años' : 'Boda'} - ${reserva.fecha}`,
-        usuario: reserva.usuario
+        usuario: reserva.usuario,
       };
 
       const response = await fetch(`${environment.apiUrl}/create_preference`, {
@@ -254,7 +258,7 @@ export class ReservaService {
       }
     } catch (error) {
       console.error('Error al procesar pago individual:', error);
-      this.cargandoPago.set(false); // Se apaga si falla
+      this.cargandoPago.set(false);
       alert('Error al conectar con el servidor de pagos.');
     }
   }
@@ -302,8 +306,12 @@ export class ReservaService {
     }
   }
 
-  async procesarPago(monto: number, reserva?: any) {
-    this.cargandoPago.set(true); // Se activa el loader
+async procesarPago(monto: number, reserva?: any) {
+    // 1. Activamos la señal de cargando
+    this.cargandoPago.set(true);
+
+    // 2. Damos un pequeño respiro al ciclo de eventos de JS para pintar el modal en el DOM
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     try {
       const body: any = {
@@ -326,7 +334,7 @@ export class ReservaService {
       }
     } catch (error) {
       console.error('Error en pago:', error);
-      this.cargandoPago.set(false); // Se apaga si falla
+      this.cargandoPago.set(false);
       alert('Error al conectar con el servidor de pagos.');
     }
   }
