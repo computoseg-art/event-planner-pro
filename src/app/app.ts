@@ -1,6 +1,7 @@
 import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterOutlet, NavigationEnd } from '@angular/router';
+import { ReservaService } from './services/reserva.service';
 import { filter } from 'rxjs/operators';
 import { NavbarComponent } from './components/navbar/navbar';
 
@@ -14,7 +15,7 @@ import { NavbarComponent } from './components/navbar/navbar';
 export class App {
   protected readonly title = signal('agenda');
   mostrarNavbar = signal<boolean>(true);
-
+  public reservaService = inject(ReservaService);
   private router = inject(Router);
 
   constructor() {
