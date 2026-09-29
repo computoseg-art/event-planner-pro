@@ -34,46 +34,45 @@ export class ReservaService {
                                                   // en pocas palabras, permite que los observables tengan acceso a los servicios inyectados como AuthService y Database.
 
   // --- STREAM DE DATOS: RESERVAS ---
-  private todasLasReservas$ = this.auth.user$.pipe(
-    switchMap((u) => {
-      if (!u || !u.email) return of([]);
+private todasLasReservas$ = this.auth.user$.pipe(
+  switchMap((u) => {
+    if (!u || !u.email) return of([]);
 
-      // AHORA: Todos leen la ruta global 'reservas' para conocer los días ocupados
-      const dbPath = 'reservas';
+    const dbPath = 'reservas';
 
-      return runInInjectionContext(this.injector, () => {
-        return (objectVal(ref(this.db, dbPath)) as Observable<any>).pipe(
-          map((data) => {
-            if (!data) return [];
-            const listaPlana: Reserva[] = [];
+    return runInInjectionContext(this.injector, () => {
+      return (objectVal(ref(this.db, dbPath)) as Observable<any>).pipe(
+        map((data) => {
+          if (!data) return [];
+          const listaPlana: Reserva[] = [];
 
-            // Iteramos por todos los usuarios almacenados bajo el nodo /reservas
-            Object.keys(data).forEach((userKey) => {
-              const nodoUsuario = data[userKey];
-              if (nodoUsuario && typeof nodoUsuario === 'object') {
-                Object.keys(nodoUsuario).forEach((resKey) => {
-                  const res = nodoUsuario[resKey];
-                  if (res && res.fecha) {
-                    listaPlana.push({
-                      ...res,
-                      id: resKey,
-                      usuario: userKey.replace(/,/g, '.'),
-                    });
-                  }
-                });
-              }
-            });
+          Object.keys(data).forEach((userKey) => {
+            const nodoUsuario = data[userKey];
+            if (nodoUsuario && typeof nodoUsuario === 'object') {
+              Object.keys(nodoUsuario).forEach((resKey) => {
+                const res = nodoUsuario[resKey];
+                if (res && res.fecha) {
+                  listaPlana.push({
+                    ...res,
+                    id: resKey,
+                    // Priorizar res.usuario si existe en la BD; fallback a limpiar la key
+                    usuario: (res.usuario || userKey.replace(/,/g, '.')).trim(),
+                  });
+                }
+              });
+            }
+          });
 
-            return listaPlana;
-          }),
-          catchError((err) => {
-            console.error('Error al leer reservas:', err);
-            return of([]);
-          })
-        );
-      });
-    })
-  );
+          return listaPlana;
+        }),
+        catchError((err) => {
+          console.error('Error al leer reservas:', err);
+          return of([]);
+        })
+      );
+    });
+  })
+);
 
   reservas = toSignal(this.todasLasReservas$, { initialValue: [] as Reserva[] });
 
@@ -129,13 +128,15 @@ export class ReservaService {
 
   // --- SEÑALES COMPUTADAS ---
 
-  reservasVisibles = computed(() => {
-    const email = this.auth.usuarioLogueado();
-    const todas = this.reservas();
-    if (!email) return [];
-    if (this.auth.esAdmin()) return todas;
-    return todas.filter((r) => r.usuario?.toLowerCase() === email.toLowerCase());
-  });
+reservasVisibles = computed(() => {
+  const email = this.auth.usuarioLogueado()?.trim().toLowerCase();
+  const todas = this.reservas();
+
+  if (!email) return [];
+  if (this.auth.esAdmin()) return todas;
+
+  return todas.filter((r) => r.usuario?.trim().toLowerCase() === email);
+});
 
   historialVisibles = computed(() => {
     const email = this.auth.usuarioLogueado();
@@ -152,24 +153,13 @@ export class ReservaService {
   });
 
 fechasOcupadas = computed(() => {
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0); // Inicio del día de hoy (sin tomar en cuenta la hora)
+  // Obtener la fecha de hoy en formato 'YYYY-MM-DD' según la hora local
+  const hoyStr = new Date().toLocaleDateString('sv'); // 'sv' genera formato YYYY-MM-DD
 
   const fechas = this.reservas()
-    .filter((r) => {
-      if (!r.fecha) return false;
-
-      // Normalizar la fecha de la reserva (YYYY-MM-DD)
-      const parts = r.fecha.split('T')[0].split('-');
-      if (parts.length < 3) return false;
-
-      const fechaReserva = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-
-      // La reserva bloquea el calendario desde hoy hasta el día del evento.
-      // Solo se libera a partir del día siguiente al evento (fechaReserva < hoy).
-      return fechaReserva >= hoy;
-    })
-    .map((r) => r.fecha.split('T')[0]);
+    .filter((r) => r && r.fecha)
+    .map((r) => r.fecha.split('T')[0].trim())
+    .filter((fechaStr) => fechaStr >= hoyStr);
 
   return new Set(fechas);
 });
