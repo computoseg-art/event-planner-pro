@@ -29,6 +29,8 @@ app.use(cors({
       callback(new Error('No permitido por CORS'));
     }
   },
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
 
@@ -67,6 +69,7 @@ app.post('/create_preference', async (req, res) => {
         pending: `${clientUrl}/agenda`,
       },
       auto_return: 'approved',
+      binary_mode: true, // Fuerza a Mercado Pago a aprobar/rechazar de forma inmediata
     };
 
     const preference = new Preference(client);
