@@ -31,6 +31,7 @@
           <div
             class="dia-celda"
             [class.ocupado]="rs.fechasOcupadas().has(dia)"
+            [class.bloqueado]="esDiaBloqueado(dia)"
             [class.es-mia]="esMiReserva(dia)"
             [class.seleccionado]="fechaSeleccionada() === dia"
             (click)="seleccionarDia(dia)"
@@ -40,7 +41,7 @@
         }
       </div>
 
-     @if (fechaSeleccionada() && !esDiaOcupado(fechaSeleccionada()!)) {
+      @if (fechaSeleccionada() && !esDiaBloqueado(fechaSeleccionada()!)) {
         <div class="confirmacion-box" [class.cerrando]="estaCerrando()">
           <h4>Nueva Reserva: {{ fechaSeleccionada() | date: 'dd/MM/yyyy' }}</h4>
           <div class="input-group">
@@ -131,11 +132,19 @@
 
       <div class="lista-reservas">
         @for (res of rs.reservasVisibles(); track res.id) {
-          <div class="reserva-card" [class.expanded]="reservaExpandida() === res.id">
+          <div 
+            class="reserva-card" 
+            [class.expanded]="reservaExpandida() === res.id"
+            [class.caducada]="esReservaCaducada(res)"
+          >
             <div class="card-main-info" (click)="toggleEditar(res.id!)">
               <div class="card-header">
                 <span class="fecha-label">{{ res.fecha | date: 'dd/MM/yyyy' }}</span>
-                <span class="estado-tag" [attr.data-estado]="res.estado">{{ res.estado }}</span>
+                @if (esReservaCaducada(res)) {
+                  <span class="estado-tag caducada-tag">CADUCADA</span>
+                } @else {
+                  <span class="estado-tag" [attr.data-estado]="res.estado">{{ res.estado }}</span>
+                }
               </div>
               <div class="reserva-titulo">{{ res.descripcion }}</div>
               @if (auth.esAdmin()) {
@@ -217,9 +226,9 @@
 
                 <div class="card-actions">
                   <button (click)="actualizar(res)" class="btn-save">Guardar Cambios</button>
-                  @if (res.total - (res.pagado || 0) > 0 && !auth.esAdmin()) {
+                  @if (res.total - (res.pagado || 0) > 0 && !auth.esAdmin() && !esReservaCaducada(res)) {
                     <button
-                      (click)="rs.procesarPago(res.total - (res.pagado || 0), res)"
+                      (click)="pagarReservaIndividual(res)"
                       class="btn-pagar-card"
                     >
                       Pagar Saldo
@@ -238,13 +247,15 @@
                   <span class="pagado-mini"> | Pagó: ${{ res.pagado | number }}</span>
                 }
 
-                @if (res.total - (res.pagado || 0) > 0 && !auth.esAdmin()) {
+                @if (res.total - (res.pagado || 0) > 0 && !auth.esAdmin() && !esReservaCaducada(res)) {
                   <button
                     class="btn-pagar-solo"
                     (click)="pagarReservaIndividual(res); $event.stopPropagation()"
                   >
                     💳 Pagar esta reserva (${{ res.total - (res.pagado || 0) | number }})
                   </button>
+                } @else if (esReservaCaducada(res)) {
+                  <p class="aviso-caducado">Plazo de pago vencido (2 días previos).</p>
                 }
               </div>
             }

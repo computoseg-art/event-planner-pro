@@ -1,57 +1,36 @@
-/* Layout Principal */
+/* ==========================================================================
+   LAYOUT Y CONTENEDOR PRINCIPAL
+   ========================================================================== */
 .agenda-wrapper {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 24px;
+  color: #f8fafc;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color: #1e293b;
 }
 
-.agenda-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.btn-salir {
-  background: #ef4444;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: background 0.2s;
-}
-
-.btn-salir:hover {
-  background: #dc2626;
-}
-
-/* Grid de 2 Columnas */
 .main-layout {
   display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: 24px;
+  grid-template-columns: 1fr 400px;
+  gap: 28px;
   align-items: start;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 960px) {
   .main-layout {
     grid-template-columns: 1fr;
   }
 }
 
-/* Sección Calendario */
+/* ==========================================================================
+   SECCIÓN CALENDARIO
+   ========================================================================== */
 .calendario-section {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: #0f172a;
+  border: 1px solid #1e293b;
   border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
 }
 
 .calendario-header {
@@ -65,33 +44,37 @@
   font-size: 1.25rem;
   font-weight: 700;
   margin: 0;
+  color: #ffffff;
 }
 
 .btn-nav {
-  background: #f1f5f9;
-  border: none;
+  background: #1e293b;
+  border: 1px solid #334155;
   width: 36px;
   height: 36px;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 0.9rem;
-  transition: background 0.2s;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
 }
 
 .btn-nav:hover {
-  background: #e2e8f0;
+  background: #334155;
 }
 
 .calendario-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
   gap: 8px;
   text-align: center;
 }
 
 .dia-nombre {
   font-weight: 600;
-  color: #64748b;
+  color: #94a3b8;
   font-size: 0.85rem;
   padding-bottom: 8px;
 }
@@ -104,14 +87,17 @@
   border-radius: 10px;
   font-size: 0.95rem;
   cursor: pointer;
-  background: #f8fafc;
-  border: 1px solid #f1f5f9;
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #ffffff;
   transition: all 0.2s;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.dia-celda:hover:not(.vacio):not(.ocupado) {
-  background: #e0f2fe;
-  border-color: #38bdf8;
+.dia-celda:hover:not(.vacio):not(.ocupado):not(.bloqueado) {
+  background: #2563eb;
+  border-color: #3b82f6;
 }
 
 .dia-celda.vacio {
@@ -121,156 +107,103 @@
 }
 
 .dia-celda.ocupado {
-  background: #fee2e2;
-  color: #991b1b;
+  background: #451a1a;
+  border-color: #7f1d1d;
+  color: #fca5a5;
   cursor: not-allowed;
 }
 
+.dia-celda.bloqueado {
+  background: #1a2234 !important;
+  border-color: #26334d !important;
+  color: #64748b !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
 .dia-celda.es-mia {
-  background: #dcfce7;
-  color: #166534;
+  background: #064e3b;
+  border-color: #059669;
+  color: #6ee7b7;
   font-weight: bold;
 }
 
 .dia-celda.seleccionado {
   background: #2563eb;
+  border-color: #60a5fa;
   color: white;
   font-weight: bold;
 }
 
-/* Caja de Confirmación y Formulario Reserva */
-.confirmacion-box {
-  margin-top: 24px;
-  padding: 20px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.input-reserva, .input-edit {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  box-sizing: border-box;
-  font-size: 0.95rem;
-}
-
-.categorias-nav {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.categorias-nav button {
-  flex: 1;
-  padding: 8px;
-  border: 1px solid #cbd5e1;
-  background: white;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.85rem;
-}
-
-.categorias-nav button.active {
-  background: #1e293b;
-  color: white;
-  border-color: #1e293b;
-}
-
-.chips-container, .chips-container-mini {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.chip-servicio {
-  background: white;
-  border: 1px solid #cbd5e1;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.chip-servicio.active {
-  background: #3b82f6;
-  color: white;
-  border-color: #3b82f6;
-}
-
-.btn-confirmar {
-  background: #16a34a;
-  color: white;
-  border: none;
-  padding: 12px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.btn-confirmar:hover:not(:disabled) {
-  background: #15803d;
-}
-
-.btn-confirmar:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Sidebar Mis Reservas */
+/* ==========================================================================
+   SECCIÓN LATERAL DE TARJETAS (MIS RESERVAS)
+   ========================================================================== */
 .mis-reservas-section {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: #0f172a;
+  border: 1px solid #1e293b;
   border-radius: 16px;
   padding: 20px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
 }
 
+.mis-reservas-section h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f1f5f9 !important;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+/* Botón Deuda Total Global */
 .pago-general-container {
   margin-bottom: 16px;
 }
 
 .btn-pago-general {
   width: 100%;
-  background: #059669;
-  color: white;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
   border: none;
-  padding: 12px;
-  border-radius: 8px;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
+.btn-pago-general:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+}
+
+/* Lista de Tarjetas */
 .lista-reservas {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
+/* Tarjeta Individual */
 .reserva-card {
-  border: 1px solid #e2e8f0;
+  background: #1e293b;
+  border: 1px solid #334155;
   border-radius: 12px;
-  padding: 14px;
-  background: #fff;
-  transition: border-color 0.2s;
+  padding: 16px;
+  transition: border-color 0.2s, transform 0.2s;
+  box-sizing: border-box;
 }
 
 .reserva-card:hover {
-  border-color: #cbd5e1;
+  border-color: #475569;
 }
 
+/* Encabezado de la Tarjeta */
 .card-main-info {
   cursor: pointer;
 }
@@ -279,79 +212,221 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .fecha-label {
-  font-size: 0.8rem;
-  color: #64748b;
+  font-size: 0.85rem;
   font-weight: 600;
+  color: #94a3b8;
 }
 
+/* Tags de Estado */
 .estado-tag {
-  font-size: 0.75rem;
-  padding: 2px 8px;
-  border-radius: 12px;
-  background: #f1f5f9;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+
+.estado-tag[data-estado="pendiente"] {
+  background: rgba(234, 179, 8, 0.15);
+  color: #facc15;
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+.estado-tag[data-estado="completado"],
+.estado-tag[data-estado="confirmado"] {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.caducada-tag {
+  background: rgba(239, 68, 68, 0.2) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+}
+
+/* Título e Info de Reserva */
+.reserva-titulo {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f8fafc;
+  margin-bottom: 10px;
+}
+
+.user-badge {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+/* Pie de Tarjeta / Info de Pagos */
+.card-footer-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #334155;
+  font-size: 0.88rem;
+  color: #cbd5e1;
+}
+
+.pagado-mini {
+  color: #4ade80;
   font-weight: 600;
 }
 
-.reserva-titulo {
+/* Botón Pagar Solo Esta Reserva */
+.btn-pagar-solo {
+  width: 100%;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
   font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 4px;
+}
+
+.btn-pagar-solo:hover {
+  background: #1d4ed8;
+}
+
+/* Estilos de Tarjeta Caducada */
+.reserva-card.caducada {
+  background: #271418;
+  border-color: #7f1d1d;
+}
+
+.aviso-caducado {
+  margin-top: 4px;
+  font-size: 0.78rem;
+  color: #fca5a5;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   FORMULARIO NUEVA RESERVA Y EDICIÓN
+   ========================================================================== */
+.confirmacion-box {
+  margin-top: 20px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.confirmacion-box h4 {
+  margin-top: 0;
+  color: #38bdf8;
   font-size: 1rem;
 }
 
-.edit-form {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid #f1f5f9;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.input-reserva,
+.input-edit {
+  width: 100%;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #ffffff;
+  box-sizing: border-box;
+  margin-top: 4px;
+  font-size: 0.9rem;
 }
 
-.card-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
+.input-reserva:focus,
+.input-edit:focus {
+  outline: none;
+  border-color: #3b82f6;
 }
 
-.btn-save, .btn-delete, .btn-pagar-card {
-  flex: 1;
-  padding: 8px;
-  border: none;
+.categorias-nav {
+  display: flex;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.categorias-nav button {
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #94a3b8;
+  padding: 6px 10px;
   border-radius: 6px;
+  cursor: pointer;
   font-size: 0.8rem;
-  font-weight: 600;
+}
+
+.categorias-nav button.active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #3b82f6;
+}
+
+.chips-container,
+.chips-container-mini {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.chip-servicio {
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #cbd5e1;
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-size: 0.78rem;
   cursor: pointer;
 }
 
-.btn-save { background: #2563eb; color: white; }
-.btn-delete { background: #fee2e2; color: #991b1b; }
-.btn-pagar-card { background: #10b981; color: white; }
-
-.card-footer-mini {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px dashed #e2e8f0;
-  font-size: 0.85rem;
-  color: #475569;
+.chip-servicio.active {
+  background: #059669;
+  color: white;
+  border-color: #10b981;
 }
 
-.btn-pagar-solo {
-  display: block;
+.btn-confirmar,
+.btn-save {
   width: 100%;
-  margin-top: 8px;
-  background-color: #10b981;
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 12px;
+}
+
+.btn-confirmar:disabled {
+  background: #334155;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.btn-delete {
+  background: #ef4444;
   color: white;
   border: none;
   padding: 8px;
   border-radius: 6px;
-  font-weight: 600;
-  font-size: 0.8rem;
   cursor: pointer;
+  width: 100%;
+  margin-top: 6px;
 }
 
-.btn-pagar-solo:hover {
-  background-color: #059669;
+.no-data {
+  text-align: center;
+  color: #64748b;
+  font-size: 0.9rem;
+  padding: 20px 0;
 }
