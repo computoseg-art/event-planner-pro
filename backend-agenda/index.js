@@ -22,7 +22,6 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Permitir peticiones sin origen (como Postman o curl) o si están en la lista
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -36,20 +35,54 @@ app.use(cors({
 
 app.use(express.json());
 
-// Endpoint de prueba para verificar que el backend está activo
+// Endpoint de prueba
 app.get('/', (req, res) => {
   res.send({ status: 'OK', message: 'Backend de EventPlanner Pro activo' });
 });
 
-// Endpoint de preferencia de pago
+// Endpoint de preferencia de pago con VALIDACIÓN DE FECHAS SEGURA
 app.post('/create_preference', async (req, res) => {
   try {
-    const { total, descripcion } = req.body;
+    const { total, descripcion, fecha } = req.body;
 
+    // 1. Validación básica de monto
     if (!total || isNaN(Number(total)) || Number(total) <= 0) {
       return res.status(400).json({
         error: 'El monto total es requerido y debe ser mayor a 0.'
       });
+    }
+
+    // 2. VALIDACIONES DE FECHA (ANTI-F12 / CONTROL DE VENCIMIENTO)
+    if (fecha) {
+      // Obtener fecha actual del servidor (sin horas)
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+
+      // Parsear la fecha del evento (Formato esperado: "YYYY-MM-DD")
+      const [year, month, day] = fecha.split('T')[0].split('-').map(Number);
+      const fechaEvento = new Date(year, month - 1, day);
+      fechaEvento.setHours(0, 0, 0, 0);
+
+      // REGLA 1: La reserva debe realizarse con al menos 3 días de anticipación
+      const fechaMinimaReserva = new Date(hoy);
+      fechaMinimaReserva.setDate(hoy.getDate() + 3);
+
+      if (fechaEvento < fechaMinimaReserva) {
+        return res.status(400).json({
+          error: 'No se pueden realizar ni pagar reservas con menos de 3 días de anticipación.'
+        });
+      }
+
+      // REGLA 2: Vencimiento por falta de pago (Máximo hasta 2 días antes del evento)
+      const fechaLimitePago = new Date(fechaEvento);
+      fechaLimitePago.setDate(fechaEvento.getDate() - 2);
+
+      // Si hoy es posterior a la fecha límite de pago, la reserva caducó
+      if (hoy > fechaLimitePago) {
+        return res.status(400).json({
+          error: 'La reserva ha caducado. El plazo límite de pago era hasta 2 días antes del evento.'
+        });
+      }
     }
 
     const clientUrl = process.env.CLIENT_URL || 'https://fotos-44002.web.app';
@@ -69,7 +102,7 @@ app.post('/create_preference', async (req, res) => {
         pending: `${clientUrl}/agenda`,
       },
       auto_return: 'approved',
-      binary_mode: true, // Fuerza a Mercado Pago a aprobar/rechazar de forma inmediata
+      binary_mode: true, // Fuerza respuesta inmediata
     };
 
     const preference = new Preference(client);

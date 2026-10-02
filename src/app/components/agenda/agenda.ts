@@ -50,11 +50,58 @@ export class AgendaComponent implements OnInit {
     });
   }
 
+  // --- VALIDACIONES DE FECHA Y SEGURIDAD ---
+
   esDiaOcupado(fecha: string): boolean {
     if (!fecha) return false;
     const fechaLimpia = fecha.split('T')[0];
     return this.rs.fechasOcupadas().has(fechaLimpia);
   }
+
+  // REGLA 1: Verificar si un día está deshabilitado (ocupado o con menos de 3 días de anticipación)
+  esDiaBloqueado(dia: string): boolean {
+    if (!dia) return true;
+
+    // 1. Si ya está ocupado
+    if (this.esDiaOcupado(dia)) return true;
+
+    // 2. Control de los 3 días mínimos de anticipación
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const [year, month, day] = dia.split('T')[0].split('-').map(Number);
+    const fechaEval = new Date(year, month - 1, day);
+    fechaEval.setHours(0, 0, 0, 0);
+
+    const diffTiempo = fechaEval.getTime() - hoy.getTime();
+    const diffDias = diffTiempo / (1000 * 60 * 60 * 24);
+
+    return diffDias < 3;
+  }
+
+  // REGLA 2: Verificar si una reserva caducó por no saldarse/pagarse 2 días antes del evento
+  esReservaCaducada(reserva: Reserva): boolean {
+    const total = Number(reserva.total || 0);
+    const pagado = Number(reserva.pagado || 0);
+
+    // Si ya está 100% saldada, no caduca
+    if (pagado >= total) return false;
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const [year, month, day] = reserva.fecha.split('T')[0].split('-').map(Number);
+    const fechaEvento = new Date(year, month - 1, day);
+    fechaEvento.setHours(0, 0, 0, 0);
+
+    // Fecha límite de pago = 2 días antes del evento
+    const fechaLimite = new Date(fechaEvento);
+    fechaLimite.setDate(fechaEvento.getDate() - 2);
+
+    return hoy > fechaLimite;
+  }
+
+  // --- NAVEGACIÓN Y CALENDARIO ---
 
   getFechaCabecera() {
     return this.fechaHoy();
@@ -96,7 +143,8 @@ export class AgendaComponent implements OnInit {
   }
 
   seleccionarDia(dia: string) {
-    if (this.esDiaOcupado(dia)) {
+    // Si intentan forzar el clic en un día bloqueado (incluso editando DOM con F12)
+    if (this.esDiaBloqueado(dia)) {
       this.cerrarConAnimacion();
       return;
     }
@@ -147,6 +195,12 @@ export class AgendaComponent implements OnInit {
       return;
     }
 
+    // Doble validación previa antes de llamar a Firebase/Servidor
+    if (this.esDiaBloqueado(this.fechaSeleccionada()!)) {
+      alert('La reserva debe realizarse con al menos 3 días de anticipación.');
+      return;
+    }
+
     try {
       await this.rs.agregar(
         this.fechaSeleccionada()!,
@@ -182,21 +236,24 @@ export class AgendaComponent implements OnInit {
     }
   }
 
-  // Redirección directa para evitar bloqueos de CSP y lentitud en el clic
   async pagarReservaIndividual(res: Reserva) {
-      const pendiente = res.total - (res.pagado || 0);
-      if (pendiente <= 0) {
-        alert('Esta reserva ya está totalmente saldada.');
-        return;
-      }
-
-      try {
-        // El servicio maneja directamente el fetch y la redirección con window.location.href
-        await this.rs.procesarPago(pendiente, res);
-      } catch (e) {
-        console.error('Error al procesar el pago:', e);
-      }
+    if (this.esReservaCaducada(res)) {
+      alert('Esta reserva ha caducado por superar la fecha límite de pago (2 días antes del evento).');
+      return;
     }
+
+    const pendiente = res.total - (res.pagado || 0);
+    if (pendiente <= 0) {
+      alert('Esta reserva ya está totalmente saldada.');
+      return;
+    }
+
+    try {
+      await this.rs.procesarPago(pendiente, res);
+    } catch (e) {
+      console.error('Error al procesar el pago:', e);
+    }
+  }
 
   async eliminar(res: Reserva) {
     if (!res.id) return;
