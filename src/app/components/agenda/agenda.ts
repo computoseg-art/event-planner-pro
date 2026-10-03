@@ -101,6 +101,15 @@ export class AgendaComponent implements OnInit {
     return hoy > fechaLimite;
   }
 
+  // REGLA 3: Verificar si una reserva está completada o caducada (bloqueada para edición)
+  esReservaBloqueada(res: Reserva): boolean {
+    const esCompletada = res.estado === 'completado' || (res.total > 0 && (res.pagado || 0) >= res.total);
+    const esCaducada = this.esReservaCaducada(res);
+
+    // Los clientes no pueden editar si está completada o caducada. Los admin conservan permisos.
+    return (esCompletada || esCaducada) && !this.auth.esAdmin();
+  }
+
   // --- NAVEGACIÓN Y CALENDARIO ---
 
   getFechaCabecera() {
@@ -143,7 +152,6 @@ export class AgendaComponent implements OnInit {
   }
 
   seleccionarDia(dia: string) {
-    // Si intentan forzar el clic en un día bloqueado (incluso editando DOM con F12)
     if (this.esDiaBloqueado(dia)) {
       this.cerrarConAnimacion();
       return;
@@ -169,6 +177,13 @@ export class AgendaComponent implements OnInit {
   }
 
   toggleEditar(id: string) {
+    const res = this.rs.reservas().find((r) => r.id === id);
+
+    // Impedir desplegar el panel de edición si está completada o caducada
+    if (res && this.esReservaBloqueada(res)) {
+      return;
+    }
+
     this.reservaExpandida.update((v) => (v === id ? null : id));
   }
 
@@ -177,6 +192,8 @@ export class AgendaComponent implements OnInit {
   }
 
   toggleServicioEnReserva(res: Reserva, servicio: any) {
+    if (this.esReservaBloqueada(res)) return;
+
     if (!res.servicios) res.servicios = [];
 
     const index = res.servicios.findIndex((s: any) => s.id === servicio.id);
@@ -195,7 +212,6 @@ export class AgendaComponent implements OnInit {
       return;
     }
 
-    // Doble validación previa antes de llamar a Firebase/Servidor
     if (this.esDiaBloqueado(this.fechaSeleccionada()!)) {
       alert('La reserva debe realizarse con al menos 3 días de anticipación.');
       return;
@@ -219,6 +235,11 @@ export class AgendaComponent implements OnInit {
   }
 
   async actualizar(res: Reserva) {
+    if (this.esReservaBloqueada(res)) {
+      alert('Esta reserva está completada o caducada y no se puede modificar.');
+      return;
+    }
+
     const sinServicios = !res.servicios || res.servicios.length === 0;
     if (sinServicios && res.total === 0) {
       if (confirm('La reserva no tiene servicios. ¿Deseas eliminarla para liberar el día?')) {
@@ -257,6 +278,11 @@ export class AgendaComponent implements OnInit {
 
   async eliminar(res: Reserva) {
     if (!res.id) return;
+
+    if (this.esReservaBloqueada(res)) {
+      alert('No se pueden eliminar reservas completadas o caducadas.');
+      return;
+    }
 
     try {
       await this.rs.eliminar(res);

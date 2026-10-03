@@ -136,8 +136,13 @@
             class="reserva-card" 
             [class.expanded]="reservaExpandida() === res.id"
             [class.caducada]="esReservaCaducada(res)"
+            [class.no-editable]="esReservaBloqueada(res)"
           >
-            <div class="card-main-info" (click)="toggleEditar(res.id!)">
+            <div 
+              class="card-main-info" 
+              (click)="toggleEditar(res.id!)"
+              [style.cursor]="esReservaBloqueada(res) ? 'default' : 'pointer'"
+            >
               <div class="card-header">
                 <span class="fecha-label">{{ res.fecha | date: 'dd/MM/yyyy' }}</span>
                 @if (esReservaCaducada(res)) {
@@ -154,8 +159,8 @@
               }
             </div>
 
-            <!-- MODO EDICIÓN / EXPANDIDO -->
-            @if (reservaExpandida() === res.id) {
+            <!-- MODO EDICIÓN / EXPANDIDO (Solo si la reserva no está bloqueada) -->
+            @if (reservaExpandida() === res.id && !esReservaBloqueada(res)) {
               <div class="edit-form">
                 <label>Descripción:</label>
                 <input type="text" [(ngModel)]="res.descripcion" class="input-edit" />
@@ -239,7 +244,7 @@
               </div>
             }
 
-            <!-- MODO COLAPSADO: Pie de tarjeta con botón de pago individual directo -->
+            <!-- MODO COLAPSADO: Pie de tarjeta con botón de pago individual o mensaje según el estado -->
             @if (reservaExpandida() !== res.id) {
               <div class="card-footer-mini">
                 <span>Total: ${{ res.total | number }}</span>
@@ -256,6 +261,10 @@
                   </button>
                 } @else if (esReservaCaducada(res)) {
                   <p class="aviso-caducado">Plazo de pago vencido (2 días previos).</p>
+                } @else if (res.estado === 'completado' || (res.total > 0 && (res.pagado || 0) >= res.total)) {
+                  <p class="aviso-completado" style="margin-top: 4px; font-size: 0.78rem; color: #4ade80; font-weight: 600;">
+                    ✓ Reserva completada
+                  </p>
                 }
               </div>
             }
