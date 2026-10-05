@@ -4,6 +4,7 @@ import { Router, RouterOutlet, NavigationEnd } from '@angular/router';
 import { ReservaService } from './services/reserva.service';
 import { filter } from 'rxjs/operators';
 import { NavbarComponent } from './components/navbar/navbar';
+import { InactivityService } from './services/inactivity.service';
 
 @Component({
   selector: 'app-root',
@@ -17,6 +18,7 @@ export class App {
   mostrarNavbar = signal<boolean>(true);
   public reservaService = inject(ReservaService);
   private router = inject(Router);
+  private inactivity = inject(InactivityService); // Activa el monitoreo automático
 
   constructor() {
     this.router.events

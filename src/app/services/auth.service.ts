@@ -5,8 +5,10 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   user,
-  GoogleAuthProvider, // <-- Importar proveedor de Google
-  signInWithPopup     // <-- Importar función de popup
+  GoogleAuthProvider,
+  signInWithPopup,
+  setPersistence,
+  browserSessionPersistence
 } from '@angular/fire/auth';
 import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -28,16 +30,16 @@ export class AuthService {
     return email === 'admin@gmail.com' || email === 'estebangarriga@gmail.com';
   });
 
-  // --- NUEVO MÉTODO: LOGIN / REGISTRO CON GOOGLE ---
+  // --- LOGIN CON GOOGLE ---
   async loginConGoogle() {
     try {
-      const provider = new GoogleAuthProvider();
-      
+      await setPersistence(this.auth, browserSessionPersistence);
+
       await runInInjectionContext(this.injector, async () => {
+        const provider = new GoogleAuthProvider();
         await signInWithPopup(this.auth, provider);
       });
 
-      // Redirige automáticamente a la carátula de eventos
       this.zone.run(() => this.router.navigate(['/eventos']));
     } catch (e: any) {
       console.error('Error al iniciar sesión con Google:', e);
@@ -47,14 +49,21 @@ export class AuthService {
     }
   }
 
+  // --- LOGIN CON EMAIL / CONTRASEÑA ---
   async login(email: string, pass: string) {
     try {
+      // 1. Configurar la persistencia antes de autenticar
+      await setPersistence(this.auth, browserSessionPersistence);
+
+      // 2. Iniciar sesión
       await runInInjectionContext(this.injector, async () => {
         await signInWithEmailAndPassword(this.auth, email, pass);
       });
 
       this.zone.run(() => this.router.navigate(['/eventos']));
     } catch (e: any) {
+      console.error('Error exacto de Firebase Auth:', e); // Imprime el error real en consola
+
       let mensaje = 'Error al iniciar sesión.';
       switch (e.code) {
         case 'auth/invalid-credential':
@@ -75,9 +84,15 @@ export class AuthService {
 
   async registrar(email: string, pass: string) {
     try {
-      await createUserWithEmailAndPassword(this.auth, email, pass);
+      await setPersistence(this.auth, browserSessionPersistence);
+
+      await runInInjectionContext(this.injector, async () => {
+        await createUserWithEmailAndPassword(this.auth, email, pass);
+      });
+
       this.zone.run(() => this.router.navigate(['/eventos']));
     } catch (e: any) {
+      console.error('Error al registrar:', e);
       let mensaje = 'No se pudo completar el registro.';
       switch (e.code) {
         case 'auth/email-already-in-use':
