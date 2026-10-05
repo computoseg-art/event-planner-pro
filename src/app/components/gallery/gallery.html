@@ -1,0 +1,31 @@
+<div class="gallery-page-container">
+  <h1>Galería de Fotos del Evento</h1>
+
+  @if (isLoading) {
+    <div class="loading-spinner">Cargando fotos desde Google Photos... 📸</div>
+  } @else if (photos.length > 0) {
+    <div class="carousel-container">
+      <app-image-carousel
+        [images]="photoUrls"
+        [initialIndex]="currentImageIndex"
+        (imageChanged)="onImageChanged($event)"
+        (deletePhotoRequest)="deletePhoto()">
+      </app-image-carousel>
+    </div>
+
+    <div class="thumbnail-grid">
+      @for (photo of photos; track photo.id; let i = $index) {
+        <div
+          class="thumbnail-item"
+          [class.active]="i === currentImageIndex"
+          (click)="selectImage(i)">
+          <img [src]="photo.baseUrl" [alt]="photo.filename || 'Foto de evento'" />
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="no-photos-message">
+      <p>Aún no hay fotos disponibles en el álbum de este evento. 📷</p>
+    </div>
+  }
+</div>

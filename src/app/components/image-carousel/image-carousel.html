@@ -1,0 +1,21 @@
+<div class="carousel-wrapper" *ngIf="images.length > 0">
+  <button class="delete-button" (click)="onDelete()" title="Eliminar foto actual">
+    🗑️ Eliminar
+  </button>
+
+  <button class="nav-button prev-button" (click)="prevImage()" *ngIf="images.length > 1">
+    &#10094;
+  </button>
+
+  <div class="carousel-slide">
+    <img [src]="images[currentIndex]" alt="Imagen de la galería" />
+  </div>
+
+  <button class="nav-button next-button" (click)="nextImage()" *ngIf="images.length > 1">
+    &#10095;
+  </button>
+
+  <div class="carousel-counter">
+    {{ currentIndex + 1 }} / {{ images.length }}
+  </div>
+</div>

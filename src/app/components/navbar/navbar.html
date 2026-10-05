@@ -62,6 +62,8 @@
         <div class="mobile-welcome">
           Bienvenido,<br><strong>{{ user.displayName || user.email }}</strong>
         </div>
+     <a routerLink="/galeria" routerLinkActive="active" class="nav-btn">Galería</a>
+        <pre>{{ authService.user$ | async | json }}</pre>
         <button (click)="logout(); cerrarMenu()" class="btn-logout-red full-width">Cerrar Sesión</button>
       } @else {
         <a routerLink="/login" (click)="cerrarMenu()" class="btn-login full-width">Acceder</a>
