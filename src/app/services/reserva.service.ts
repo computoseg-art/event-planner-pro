@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, EnvironmentInjector, runInInjectionContext, signal } from '@angular/core';
-import { Database, ref, set, push, objectVal, remove, get } from '@angular/fire/database';
+import { Database, ref, set, push, objectVal, remove, get, update } from '@angular/fire/database';
 import { AuthService } from './auth.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Observable, map, of, catchError, switchMap } from 'rxjs';
@@ -34,22 +34,27 @@ export class ReservaService {
 
   // --- SEÑAL DE ESTADO DE CARGA GLOBAL DE PAGO ---
   cargandoPago = signal<boolean>(false);
+  private disponibilidadMigrada = false;
+  private migrandoDisponibilidad = false;
 
   // --- STREAM DE DATOS: RESERVAS ---
   private todasLasReservas$ = this.auth.user$.pipe(
     switchMap((u) => {
       if (!u || !u.email) return of([]);
 
-      const dbPath = 'reservas';
+      const esAdmin = this.auth.esAdmin();
+      const emailSanitizado = u.email.toLowerCase().replace(/\./g, ',');
+      const dbPath = esAdmin ? 'reservas' : `reservas/${emailSanitizado}`;
 
       return runInInjectionContext(this.injector, () => {
         return (objectVal(ref(this.db, dbPath)) as Observable<any>).pipe(
           map((data) => {
             if (!data) return [];
             const listaPlana: Reserva[] = [];
+            const usuarios = esAdmin ? data : { [emailSanitizado]: data };
 
-            Object.keys(data).forEach((userKey) => {
-              const nodoUsuario = data[userKey];
+            Object.keys(usuarios).forEach((userKey) => {
+              const nodoUsuario = usuarios[userKey];
               if (nodoUsuario && typeof nodoUsuario === 'object') {
                 Object.keys(nodoUsuario).forEach((resKey) => {
                   const res = nodoUsuario[resKey];
@@ -64,6 +69,7 @@ export class ReservaService {
               }
             });
 
+            if (esAdmin) this.migrarDisponibilidadInicial(listaPlana);
             return listaPlana;
           }),
           catchError((err) => {
@@ -77,13 +83,31 @@ export class ReservaService {
 
   reservas = toSignal(this.todasLasReservas$, { initialValue: [] as Reserva[] });
 
+  private readonly fechasOcupadas$ = this.auth.user$.pipe(
+    switchMap((u) => {
+      if (!u) return of([] as string[]);
+
+      return runInInjectionContext(this.injector, () =>
+        (objectVal(ref(this.db, 'fechas_ocupadas')) as Observable<Record<string, string> | null>).pipe(
+          map((data) => (data ? Object.values(data).map((fecha) => fecha.split('T')[0].trim()) : [])),
+          catchError((err) => {
+            console.error('Error al leer fechas ocupadas:', err);
+            return of([] as string[]);
+          })
+        )
+      );
+    })
+  );
+
+  private fechasOcupadasSignal = toSignal(this.fechasOcupadas$, { initialValue: [] as string[] });
+
   // --- STREAM DE DATOS: HISTORIAL DE PAGOS ---
   private todoElHistorial$ = this.auth.user$.pipe(
     switchMap((u) => {
       if (!u || !u.email) return of([]);
 
       const esAdmin = this.auth.esAdmin();
-      const emailSanitizado = u.email.replace(/\./g, ',');
+      const emailSanitizado = u.email.toLowerCase().replace(/\./g, ',');
       const dbPath = esAdmin ? 'historial_pagos' : `historial_pagos/${emailSanitizado}`;
 
       return runInInjectionContext(this.injector, () => {
@@ -154,21 +178,46 @@ export class ReservaService {
 
   fechasOcupadas = computed(() => {
     const hoyStr = new Date().toLocaleDateString('sv');
+    const fechas = new Set(this.fechasOcupadasSignal());
 
-    const fechas = this.reservas()
-      .filter((r) => r && r.fecha)
-      .map((r) => r.fecha.split('T')[0].trim())
-      .filter((fechaStr) => fechaStr >= hoyStr);
+    if (this.auth.esAdmin()) {
+      this.reservas()
+        .filter((r) => r && r.fecha)
+        .map((r) => r.fecha.split('T')[0].trim())
+        .forEach((fecha) => fechas.add(fecha));
+    }
 
-    return new Set(fechas);
+    return new Set([...fechas].filter((fecha) => fecha >= hoyStr));
   });
 
   // --- MÉTODOS CRUD DE RESERVAS ---
 
+  private async migrarDisponibilidadInicial(reservas: Reserva[]) {
+    if (this.disponibilidadMigrada || this.migrandoDisponibilidad) return;
+    this.migrandoDisponibilidad = true;
+
+    try {
+      const cambios: Record<string, string> = {};
+      for (const reserva of reservas) {
+        if (!reserva.id || !reserva.fecha) continue;
+        cambios[`fechas_ocupadas/${reserva.id}`] = reserva.fecha;
+      }
+
+      if (Object.keys(cambios).length > 0) {
+        await update(ref(this.db), cambios);
+      }
+      this.disponibilidadMigrada = true;
+    } catch (error) {
+      console.error('Error al inicializar el índice de fechas ocupadas:', error);
+    } finally {
+      this.migrandoDisponibilidad = false;
+    }
+  }
+
   async agregar(fecha: string, desc: string, total: number, servicios: any[], tipoEvento: string) {
     const email = this.auth.usuarioLogueado();
     if (!email) return;
-    const userPath = email.replace(/\./g, ',');
+    const userPath = email.toLowerCase().replace(/\./g, ',');
     const nuevaRef = push(ref(this.db, `reservas/${userPath}`));
 
     const nuevaReserva: Reserva = {
@@ -183,31 +232,70 @@ export class ReservaService {
       estado: 'pendiente',
     };
 
-    return set(nuevaRef, nuevaReserva);
+    await set(nuevaRef, nuevaReserva);
+    try {
+      await set(ref(this.db, `fechas_ocupadas/${nuevaRef.key}`), nuevaReserva.fecha);
+    } catch (error) {
+      console.error('No se pudo actualizar la disponibilidad de la reserva nueva:', error);
+      await remove(nuevaRef);
+      throw error;
+    }
   }
 
   async actualizar(res: Reserva) {
     if (!res.id || !res.usuario) return;
-    const userPath = res.usuario.replace(/\./g, ',');
+    const userPath = res.usuario.toLowerCase().replace(/\./g, ',');
     const itemRef = ref(this.db, `reservas/${userPath}/${res.id}`);
-    return set(itemRef, {
-      ...res,
-      total: Number(res.total),
-      pagado: Number(res.pagado),
-    });
+    const snapshot = await get(itemRef);
+    const anterior = snapshot.exists() ? (snapshot.val() as Reserva) : null;
+    const fechaAnterior = anterior?.fecha;
+    const fechaCambio = !!fechaAnterior && fechaAnterior !== res.fecha;
+
+    if (fechaCambio) {
+      await remove(ref(this.db, `fechas_ocupadas/${res.id}`));
+    }
+
+    try {
+      await set(itemRef, {
+        ...res,
+        total: Number(res.total),
+        pagado: Number(res.pagado),
+      });
+
+      if (fechaAnterior !== res.fecha) {
+        await set(ref(this.db, `fechas_ocupadas/${res.id}`), res.fecha);
+      }
+    } catch (error) {
+      if (fechaCambio && anterior) {
+        try {
+          await set(itemRef, anterior);
+          await set(ref(this.db, `fechas_ocupadas/${res.id}`), anterior.fecha);
+        } catch (rollbackError) {
+          console.error('No se pudo restaurar la reserva tras fallar la actualización:', rollbackError);
+        }
+      }
+      throw error;
+    }
   }
 
   async eliminar(res: Reserva) {
     if (!res.id || !res.usuario) return;
-    const userPath = res.usuario.replace(/\./g, ',');
+    const userPath = res.usuario.toLowerCase().replace(/\./g, ',');
     const itemRef = ref(this.db, `reservas/${userPath}/${res.id}`);
-    return remove(itemRef);
+    const disponibilidadRef = ref(this.db, `fechas_ocupadas/${res.id}`);
+    await remove(disponibilidadRef);
+    try {
+      await remove(itemRef);
+    } catch (error) {
+      await set(disponibilidadRef, res.fecha);
+      throw error;
+    }
   }
 
   // --- MÉTODOS DE PAGO E HISTORIAL ---
 
   async registrarEnHistorial(email: string, monto: number, paymentId: string, descripcion: string) {
-    const userPath = email.replace(/\./g, ',');
+    const userPath = email.toLowerCase().replace(/\./g, ',');
     const historialRef = push(ref(this.db, `historial_pagos/${userPath}`));
 
     const pago: PagoHistorial = {

@@ -1,5 +1,5 @@
 ## Hosting Firebase
-https://fotos-44002.web.app
+https://calendario-71490.web.app
 
 ## Servidor Backend 
 https://dashboard.render.com/
@@ -10,8 +10,21 @@ https://event-planner-pro-k978.onrender.com/
 ## Compilar para producción:
 ng build --configuration production
 
-## Subir los archivos compilados a Firebase:
-firebase deploy --only hosting
+## Proyecto Firebase de la agenda:
+calendario-71490
+
+## Publicar las reglas de Realtime Database:
+firebase deploy --only database --project calendario-71490
+
+## Subir los archivos compilados a Firebase Hosting:
+ng build --configuration production
+firebase deploy --only hosting --project calendario-71490
+
+## Antes de probar el acceso:
+- Habilita en Firebase Authentication de calendario-71490 los mismos proveedores de inicio de sesión.
+- Comprueba que admin@gmail.com exista en Authentication de calendario-71490.
+- Los archivos src/environments/environment.ts y environment.prod.ts están excluidos de Git; configura en ambos el Firebase config de calendario-71490 antes de compilar.
+- CLIENT_URL en Render debe ser la URL pública de Hosting de calendario-71490 para que los pagos vuelvan a la agenda publicada.
 
 # 2. Guardar y respaldar en GitHub
 git add .

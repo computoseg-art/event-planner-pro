@@ -41,9 +41,12 @@ try {
   process.exit(1);
 }
 
+const databaseURL = process.env.FIREBASE_DATABASE_URL
+  || `https://${serviceAccount.project_id}-default-rtdb.firebaseio.com`;
+
 initializeApp({
   credential: cert(serviceAccount),
-  databaseURL: 'https://fotos-44002-default-rtdb.firebaseio.com'
+  databaseURL
 });
 
 const db = getDatabase();
@@ -60,11 +63,14 @@ const client = new MercadoPagoConfig({
 
 // Dominios permitidos (Producción y Desarrollo local)
 const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'https://calendario-71490.web.app',
+  'https://calendario-71490.firebaseapp.com',
   'https://fotos-44002.web.app',
   'https://fotos-44002.firebaseapp.com',
   'http://localhost:4200',
   'http://localhost:4500'
-];
+].filter(Boolean);
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -194,7 +200,7 @@ app.post('/create_preference', async (req, res) => {
       }
     }
 
-    const clientUrl = process.env.CLIENT_URL || 'https://fotos-44002.web.app';
+    const clientUrl = process.env.CLIENT_URL || 'https://calendario-71490.web.app';
 
     const body = {
       items: [
