@@ -2,6 +2,9 @@
 
 # Ignorar credenciales reales
 .env
+credentials.json
+serviceAccountKey.json
+*-firebase-adminsdk-*.json
 
 #node_modules
 node_modules
