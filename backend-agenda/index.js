@@ -63,22 +63,25 @@ const client = new MercadoPagoConfig({
 
 // Dominios permitidos (Producción y Desarrollo local)
 const allowedOrigins = [
-  process.env.CLIENT_URL,
-  process.env.FRONTEND_URL,
   'https://calendario-71490.web.app',
   'https://calendario-71490.firebaseapp.com',
   'https://fotos-44002.web.app',
   'https://fotos-44002.firebaseapp.com',
   'http://localhost:4200',
   'http://localhost:4500'
-].filter(Boolean);
+];
+
+if (process.env.CLIENT_URL) {
+  allowedOrigins.push(process.env.CLIENT_URL.trim().replace(/\/$/, ''));
+}
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Permitir solicitudes sin origen (como Postman o apps móviles) o si está en la lista
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Si no hay origen (ej. Postman o llamadas server-to-server) o está en la lista permitida
+    if (!origin || allowedOrigins.includes(origin.trim().replace(/\/$/, ''))) {
       callback(null, true);
     } else {
+      console.warn(`⚠️ Origen bloqueado por CORS: ${origin}`);
       callback(new Error('No permitido por CORS'));
     }
   },
