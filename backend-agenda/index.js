@@ -77,12 +77,18 @@ if (process.env.CLIENT_URL) {
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Si no hay origen (ej. Postman o llamadas server-to-server) o está en la lista permitida
-    if (!origin || allowedOrigins.includes(origin.trim().replace(/\/$/, ''))) {
+    // Permitir peticiones sin origen (como Postman o llamadas internas)
+    // o verificar si el origen está en la lista permitida (ignorando barras al final)
+    const match = !origin || allowedOrigins.some(allowed =>
+      origin.trim().replace(/\/$/, '') === allowed.trim().replace(/\/$/, '')
+    );
+
+    if (match) {
       callback(null, true);
     } else {
       console.warn(`⚠️ Origen bloqueado por CORS: ${origin}`);
-      callback(new Error('No permitido por CORS'));
+      // Pasamos 'false' en lugar de un Error para que no crashee el servidor
+      callback(null, false);
     }
   },
   methods: ['GET', 'POST', 'OPTIONS'],
