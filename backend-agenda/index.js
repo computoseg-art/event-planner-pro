@@ -64,6 +64,7 @@ const client = new MercadoPagoConfig({
 // Dominios permitidos (Producción y Desarrollo local)
 const allowedOrigins = [
   process.env.CLIENT_URL,
+  process.env.FRONTEND_URL,
   'https://calendario-71490.web.app',
   'https://calendario-71490.firebaseapp.com',
   'https://fotos-44002.web.app',
@@ -74,6 +75,7 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
+    // Permitir solicitudes sin origen (como Postman o apps móviles) o si está en la lista
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {

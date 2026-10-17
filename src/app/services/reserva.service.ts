@@ -170,9 +170,33 @@ export class ReservaService {
     return todos.filter((h) => h.usuario?.toLowerCase() === email.toLowerCase());
   });
 
-  deudaTotal = computed(() => {
+deudaTotal = computed(() => {
+    const hoyStr = new Date().toLocaleDateString('sv'); // 'YYYY-MM-DD' actual
+
     return this.reservasVisibles().reduce((acc, res) => {
-      return acc + (res.total - (res.pagado || 0));
+      // Verificamos si la reserva está caducada por fecha o por estado
+      // (Asumiendo que las comparas con la fecha del evento o un indicador de caducidad)
+      const fechaEvento = res.fecha ? res.fecha.split('T')[0].trim() : '';
+
+      // Calculamos si ya pasó el plazo límite de pago (2 días antes del evento, igual que en tu backend)
+      const [year, month, day] = fechaEvento.split('-').map(Number);
+      const dEvento = new Date(year, month - 1, day);
+      dEvento.setHours(0, 0, 0, 0);
+
+      const limitePago = new Date(dEvento);
+      limitePago.setDate(dEvento.getDate() - 2);
+
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+
+      const estaCaducada = hoy > limitePago;
+
+      // Si está caducada o ya está pagada en su totalidad, no se suma a la deuda pendiente
+      if (estaCaducada || (res.estado && res.estado === 'caducada')) {
+        return acc;
+      }
+
+      return acc + (Number(res.total) - Number(res.pagado || 0));
     }, 0);
   });
 
