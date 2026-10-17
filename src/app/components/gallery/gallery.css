@@ -1,0 +1,152 @@
+.gallery-page-container {
+  width: min(1100px, calc(100% - 32px));
+  margin: 96px auto 48px;
+  color: #172033;
+}
+
+.gallery-page-container h1 {
+  margin: 0 0 24px;
+  font-size: clamp(1.75rem, 4vw, 2.4rem);
+  font-weight: 750;
+  text-align: center;
+}
+
+.gallery-admin-tools {
+  display: grid;
+  gap: 12px;
+  max-width: 720px;
+  margin: 0 auto 24px;
+  padding: 20px;
+  border: 1px solid #dbe3ef;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.gallery-admin-tools label {
+  font-weight: 650;
+}
+
+.gallery-target-row,
+.upload-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gallery-target-row input,
+.gallery-admin-tools input[type='file'] {
+  min-width: 0;
+  width: 100%;
+}
+
+.gallery-target-row input {
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+
+.gallery-admin-tools button,
+.photo-download a {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: #4f46e5;
+  color: white;
+  font-weight: 650;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.gallery-admin-tools button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.upload-label {
+  margin-top: 6px;
+}
+
+.upload-action {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.gallery-message,
+.no-photos-message {
+  margin: 20px auto;
+  padding: 18px;
+  text-align: center;
+  color: #475569;
+}
+
+.gallery-error {
+  max-width: 720px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.carousel-container {
+  width: 100%;
+}
+
+.photo-download {
+  display: flex;
+  justify-content: center;
+  margin: 16px 0 24px;
+}
+
+.thumbnail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.thumbnail-item {
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  border: 3px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.thumbnail-item.active {
+  border-color: #4f46e5;
+}
+
+.thumbnail-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 600px) {
+  .gallery-page-container {
+    width: min(100% - 20px, 1100px);
+    margin-top: 84px;
+  }
+
+  .gallery-admin-tools {
+    padding: 14px;
+  }
+
+  .gallery-target-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .gallery-target-row button {
+    width: 100%;
+  }
+
+  .thumbnail-grid {
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    gap: 6px;
+  }
+}

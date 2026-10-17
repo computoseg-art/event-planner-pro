@@ -1,16 +1,58 @@
 <div class="gallery-page-container">
-  <h1>Galería de Fotos del Evento</h1>
+  <h1>Galería de fotos</h1>
+
+  @if (auth.esAdmin()) {
+    <section class="gallery-admin-tools">
+      <label for="target-email">Email del cliente</label>
+      <div class="gallery-target-row">
+        <input
+          id="target-email"
+          type="email"
+          [value]="targetEmail"
+          (input)="setTargetEmail($event)"
+          placeholder="cliente@correo.com"
+        />
+        <button type="button" (click)="openTargetGallery()">Abrir galería</button>
+      </div>
+      <label for="photo-files" class="upload-label">Subir fotos originales (hasta 5 imágenes de 25 MB)</label>
+      <input
+        id="photo-files"
+        type="file"
+        accept="image/*"
+        multiple
+        (change)="setSelectedFiles($event)"
+      />
+      @if (selectedFiles.length > 0) {
+        <div class="upload-action">
+          <span>{{ selectedFiles.length }} foto(s) seleccionada(s)</span>
+          <button type="button" (click)="uploadPhotos()" [disabled]="isUploading">
+            {{ isUploading ? 'Subiendo…' : 'Subir a esta galería' }}
+          </button>
+        </div>
+      }
+    </section>
+  }
+
+  @if (errorMessage) {
+    <p class="gallery-message gallery-error" role="alert">{{ errorMessage }}</p>
+  }
 
   @if (isLoading) {
-    <div class="loading-spinner">Cargando fotos desde Google Photos... 📸</div>
+    <div class="gallery-message">Cargando fotos…</div>
   } @else if (photos.length > 0) {
     <div class="carousel-container">
       <app-image-carousel
         [images]="photoUrls"
         [initialIndex]="currentImageIndex"
+        [canDelete]="auth.esAdmin()"
         (imageChanged)="onImageChanged($event)"
         (deletePhotoRequest)="deletePhoto()">
       </app-image-carousel>
+    </div>
+    <div class="photo-download">
+      <a [href]="photos[currentImageIndex].downloadUrl" target="_blank" rel="noopener">
+        Descargar foto original
+      </a>
     </div>
 
     <div class="thumbnail-grid">
@@ -19,13 +61,13 @@
           class="thumbnail-item"
           [class.active]="i === currentImageIndex"
           (click)="selectImage(i)">
-          <img [src]="photo.baseUrl" [alt]="photo.filename || 'Foto de evento'" />
+          <img [src]="photo.thumbnailUrl" [alt]="photo.filename || 'Foto de evento'" loading="lazy" />
         </div>
       }
     </div>
   } @else {
     <div class="no-photos-message">
-      <p>Aún no hay fotos disponibles en el álbum de este evento. 📷</p>
+      <p>Aún no hay fotos disponibles en esta galería.</p>
     </div>
   }
 </div>

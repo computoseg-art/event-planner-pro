@@ -3,6 +3,7 @@ import cors from 'cors';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 
 import { initializeApp, cert } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 import { getDatabase } from 'firebase-admin/database';
 
 import nodemailer from 'nodemailer';
@@ -54,7 +55,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Configuración de Multer para archivos en memoria
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { files: 5, fileSize: 25 * 1024 * 1024 },
+});
 
 // Configuración de Mercado Pago
 const client = new MercadoPagoConfig({
@@ -103,6 +107,51 @@ app.use(express.urlencoded({ extended: true }));
 function encodeEmail(email) {
   if (!email) return '';
   return email.toLowerCase().trim().replace(/\./g, ',');
+}
+
+const adminEmails = new Set(
+  (process.env.ADMIN_EMAILS || 'admin@gmail.com,estebangarriga@gmail.com')
+    .split(',')
+    .map(email => email.trim().toLowerCase())
+    .filter(Boolean)
+);
+
+function isAdmin(email) {
+  return adminEmails.has(email);
+}
+
+function validEmail(email) {
+  return typeof email === 'string'
+    && email.length <= 254
+    && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+async function requireFirebaseAuth(req, res, next) {
+  const authorization = req.get('Authorization') || '';
+  const token = authorization.match(/^Bearer\s+(.+)$/i)?.[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Debes iniciar sesión para acceder a las fotos.' });
+  }
+
+  try {
+    const decodedToken = await getAuth().verifyIdToken(token);
+    if (!decodedToken.email) {
+      return res.status(401).json({ error: 'La cuenta autenticada no tiene un correo válido.' });
+    }
+    req.authenticatedEmail = decodedToken.email.toLowerCase().trim();
+  } catch (error) {
+    console.error('❌ No se pudo verificar el token de Firebase:', error.message);
+    return res.status(401).json({ error: 'La sesión no es válida o expiró. Inicia sesión nuevamente.' });
+  }
+  next();
+}
+
+function requireAdmin(req, res, next) {
+  if (!isAdmin(req.authenticatedEmail)) {
+    return res.status(403).json({ error: 'Solo un administrador puede realizar esta acción.' });
+  }
+  next();
 }
 
 // ---------------------------------------------
@@ -247,10 +296,13 @@ app.post('/create_preference', async (req, res) => {
 // ---------------------------------------------
 // GOOGLE PHOTOS: ASEGURAR / CREAR ÁLBUM
 // ---------------------------------------------
-app.post('/api/ensure-album', async (req, res) => {
+app.post('/api/ensure-album', requireFirebaseAuth, async (req, res) => {
   const { email } = req.body;
-  if (!email) {
-    return res.status(400).json({ error: 'El email es obligatorio.' });
+  if (!validEmail(email)) {
+    return res.status(400).json({ error: 'El email debe ser válido.' });
+  }
+  if (email.toLowerCase().trim() !== req.authenticatedEmail && !isAdmin(req.authenticatedEmail)) {
+    return res.status(403).json({ error: 'Solo puedes acceder a tu propio álbum.' });
   }
 
   const cleanEmail = encodeEmail(email);
@@ -293,8 +345,14 @@ app.post('/api/ensure-album', async (req, res) => {
 // ---------------------------------------------
 // GOOGLE PHOTOS: OBTENER FOTOS DE UN USUARIO
 // ---------------------------------------------
-app.get('/api/gallery/:email', async (req, res) => {
+app.get('/api/gallery/:email', requireFirebaseAuth, async (req, res) => {
   const rawEmail = req.params.email;
+  if (!validEmail(rawEmail)) {
+    return res.status(400).json({ error: 'El email debe ser válido.' });
+  }
+  if (rawEmail.toLowerCase().trim() !== req.authenticatedEmail && !isAdmin(req.authenticatedEmail)) {
+    return res.status(403).json({ error: 'Solo puedes acceder a tu propia galería.' });
+  }
   const cleanEmail = encodeEmail(rawEmail);
 
   try {
@@ -317,7 +375,8 @@ app.get('/api/gallery/:email', async (req, res) => {
     const photos = mediaItems.map(p => ({
       id: p.id,
       baseUrl: `${p.baseUrl}=w1200-h800`,
-      rawBaseUrl: p.baseUrl,
+      thumbnailUrl: `${p.baseUrl}=w320-h240`,
+      downloadUrl: `${p.baseUrl}=d`,
       filename: p.filename,
       mimeType: p.mimeType
     }));
@@ -333,12 +392,27 @@ app.get('/api/gallery/:email', async (req, res) => {
 // ---------------------------------------------
 // GOOGLE PHOTOS: SUBIR FOTOS AL ÁLBUM
 // ---------------------------------------------
-app.post('/api/upload-photos', upload.array('photos'), async (req, res) => {
+app.post('/api/upload-photos', requireFirebaseAuth, requireAdmin, (req, res, next) => {
+  upload.array('photos', 10)(req, res, error => {
+    if (!error) return next();
+    if (error instanceof multer.MulterError) {
+      const status = error.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+      const message = error.code === 'LIMIT_FILE_SIZE'
+        ? 'Cada foto debe pesar como máximo 25 MB.'
+        : 'Puedes subir hasta 5 fotos por vez.';
+      return res.status(status).json({ error: message });
+    }
+    next(error);
+  });
+}, async (req, res) => {
   const { targetEmail } = req.body;
   const files = req.files;
 
-  if (!targetEmail || !files || files.length === 0) {
+  if (!validEmail(targetEmail) || !files || files.length === 0) {
     return res.status(400).json({ error: 'Debes especificar el email del destinatario y adjuntar archivos.' });
+  }
+  if (!files.every(file => file.mimetype.startsWith('image/'))) {
+    return res.status(400).json({ error: 'Solo se permiten archivos de imagen.' });
   }
 
   const cleanEmail = encodeEmail(targetEmail);
@@ -395,11 +469,11 @@ app.post('/api/upload-photos', upload.array('photos'), async (req, res) => {
 // ---------------------------------------------
 // GOOGLE PHOTOS: ELIMINAR FOTO
 // ---------------------------------------------
-app.post('/api/delete-photo/:photoId', async (req, res) => {
+app.post('/api/delete-photo/:photoId', requireFirebaseAuth, requireAdmin, async (req, res) => {
   const { photoId } = req.params;
   const { email } = req.body;
 
-  if (!photoId || !email) {
+  if (!photoId || !validEmail(email)) {
     return res.status(400).json({ error: 'Falta photoId o email del usuario.' });
   }
 

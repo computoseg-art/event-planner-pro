@@ -1,7 +1,9 @@
 <div class="carousel-wrapper" *ngIf="images.length > 0">
-  <button class="delete-button" (click)="onDelete()" title="Eliminar foto actual">
-    🗑️ Eliminar
-  </button>
+  @if (canDelete) {
+    <button class="delete-button" (click)="onDelete()" title="Eliminar foto actual">
+      🗑️ Eliminar
+    </button>
+  }
 
   <button class="nav-button prev-button" (click)="prevImage()" *ngIf="images.length > 1">
     &#10094;

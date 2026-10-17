@@ -11,6 +11,7 @@ import { CommonModule } from '@angular/common';
 export class ImageCarousel {
   @Input() images: string[] = [];
   @Input() initialIndex: number = 0;
+  @Input() canDelete = false;
   @Output() imageChanged = new EventEmitter<number>();
   @Output() deletePhotoRequest = new EventEmitter<void>();
 

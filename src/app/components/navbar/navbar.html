@@ -15,6 +15,9 @@
       <a routerLink="/home" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">Inicio</a>
     }
     <a routerLink="/agenda" routerLinkActive="active" class="nav-item">Agenda</a>
+    @if (auth.user$ | async) {
+      <a routerLink="/galeria" routerLinkActive="active" class="nav-item">Galería</a>
+    }
   </nav>
 
   <!-- ACCIONES DESKTOP -->
@@ -65,7 +68,7 @@
         <div class="mobile-welcome">
           Bienvenido,<br><strong>{{ user.displayName || user.email }}</strong>
         </div>
-        <a routerLink="/galeria" (click)="cerrarMenu()" routerLinkActive="active" class="nav-btn">Galería</a>
+        <a routerLink="/galeria" (click)="cerrarMenu()" routerLinkActive="active" class="nav-item">Galería de fotos</a>
         <button (click)="logout(); cerrarMenu()" class="btn-logout-red full-width">Cerrar Sesión</button>
       } @else {
         <a routerLink="/login" (click)="cerrarMenu()" class="btn-login full-width">Acceder</a>

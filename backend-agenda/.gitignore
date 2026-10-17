@@ -2,6 +2,7 @@
 
 # Ignorar credenciales reales
 .env
+credentials.json
 
 #node_modules
 node_modules
