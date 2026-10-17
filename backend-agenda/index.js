@@ -63,8 +63,6 @@ const client = new MercadoPagoConfig({
 
 // Dominios permitidos (Producción y Desarrollo local)
 const allowedOrigins = [
-  'https://calendario-71490.web.app',
-  'https://calendario-71490.firebaseapp.com',
   'https://fotos-44002.web.app',
   'https://fotos-44002.firebaseapp.com',
   'http://localhost:4200',
