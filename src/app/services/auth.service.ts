@@ -1,3 +1,9 @@
+// src/app/services/auth.service.ts
+
+//Este servicio maneja la autenticación de usuarios en la aplicación, incluyendo inicio de sesión,
+//registro y cierre de sesión. Por google, email y contraseña. 
+//También proporciona señales reactivas para el estado del usuario y verifica si el usuario es admin.
+
 import { Injectable, computed, inject, NgZone, Injector, runInInjectionContext } from '@angular/core';
 import {
   Auth,
@@ -12,6 +18,7 @@ import {
 } from '@angular/fire/auth';
 import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -24,6 +31,14 @@ export class AuthService {
   userSignal = toSignal(this.user$);
 
   usuarioLogueado = computed(() => this.userSignal()?.email?.toLowerCase() || null);
+
+  async obtenerIdToken(): Promise<string> {
+    const currentUser = this.auth.currentUser || (await firstValueFrom(this.user$));
+    if (!currentUser) {
+      throw new Error('Debes iniciar sesión para continuar con el pago.');
+    }
+    return currentUser.getIdToken();
+  }
 
   esAdmin = computed(() => {
     const email = this.usuarioLogueado();

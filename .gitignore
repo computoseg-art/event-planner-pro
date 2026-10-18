@@ -1,8 +1,12 @@
 # See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
-# Ignorar credenciales reales
-src/environments/environment.ts
-src/environments/environment.prod.ts
+# La configuración del SDK web de Firebase es pública; la seguridad depende de reglas
+# de Firebase y restricciones de API, no de ocultar estos archivos.
+
+# Credenciales y variables locales
+**/.env
+**/.env.*
+!.env.example
 
 # Firebase cache & build artifacts
 .firebase/

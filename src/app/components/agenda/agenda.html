@@ -124,7 +124,7 @@
       <!-- Botón de Deuda Global -->
       @if (rs.deudaTotal() > 0 && !auth.esAdmin()) {
         <div class="pago-general-container">
-          <button class="btn-pago-general" (click)="rs.procesarPago(rs.deudaTotal())">
+          <button class="btn-pago-general" (click)="rs.procesarPago()">
             💳 Pagar Deuda Total: <strong>${{ rs.deudaTotal() | number }}</strong>
           </button>
         </div>

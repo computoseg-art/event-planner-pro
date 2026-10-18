@@ -1,3 +1,9 @@
+// src/app/components/eventos/eventos.ts
+
+//Este componente maneja la sección de eventos en la aplicación.
+//Proporciona un botón para navegar a la agenda de reservas de eventos.
+//También verifica si el usuario está logueado para permitir el acceso a la agenda.
+
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';

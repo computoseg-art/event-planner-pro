@@ -1,4 +1,9 @@
 // src/app/services/inactivity.service.ts
+// este servicio es para cerrar la sesión del usuario automáticamente 
+// después de 15 minutos de inactividad.
+//funciona escuchando eventos de actividad del usuario (como movimiento del mouse, 
+// clics, teclas presionadas, etc.) y reinicia un temporizador cada vez que se detecta actividad.
+
 import { Injectable, inject, NgZone } from '@angular/core';
 import { AuthService } from './auth.service';
 

@@ -334,7 +334,26 @@ deudaTotal = computed(() => {
     return set(historialRef, pago);
   }
 
-async procesarPagoReservaIndividual(reserva: Reserva) {
+  private async postPago(path: string, body: object) {
+    const idToken = await this.auth.obtenerIdToken();
+    const response = await fetch(`${environment.apiUrl}/${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${idToken}`,
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'No se pudo completar la operación de pago.');
+    }
+
+    return data;
+  }
+
+  async procesarPagoReservaIndividual(reserva: Reserva) {
     const pendiente = Number(reserva.total) - Number(reserva.pagado || 0);
 
     if (pendiente <= 0) {
@@ -342,112 +361,47 @@ async procesarPagoReservaIndividual(reserva: Reserva) {
       return;
     }
 
-    // 1. Activamos la señal de cargando
     this.cargandoPago.set(true);
-
-    // 2. Damos un pequeño respiro al ciclo de eventos de JS para pintar el modal en el DOM
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     try {
-      const body = {
-        total: pendiente,
-        id: reserva.id,
-        descripcion: `Pago de Reserva: ${reserva.tipoEvento === '15_años' ? '15 Años' : 'Boda'} - ${reserva.fecha}`,
-        usuario: reserva.usuario,
-      };
-
-      const response = await fetch(`${environment.apiUrl}/create_preference`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      const data = await response.json();
+      const data = await this.postPago('create_preference', { id: reserva.id });
       if (data.init_point) {
         window.location.href = data.init_point;
       } else {
-        this.cargandoPago.set(false);
+        throw new Error('Mercado Pago no devolvió el enlace de pago.');
       }
     } catch (error) {
       console.error('Error al procesar pago individual:', error);
       this.cargandoPago.set(false);
-      alert('Error al conectar con el servidor de pagos.');
+      alert(error instanceof Error ? error.message : 'Error al conectar con el servidor de pagos.');
     }
   }
 
-  async saldarDeudaUsuario(email: string, paymentId: string) {
-    if (!email) return;
-
-    const userPath = email.replace(/\./g, ',');
-    const itemRef = ref(this.db, `reservas/${userPath}`);
-
-    try {
-      const snapshot = await get(itemRef);
-
-      if (!snapshot.exists()) {
-        console.warn('No se encontraron reservas registradas para este usuario.');
-        return;
-      }
-
-      const data = snapshot.val();
-      let montoTotalSaldado = 0;
-
-      for (const resKey of Object.keys(data)) {
-        const res = data[resKey];
-        const total = Number(res.total || 0);
-        const pagado = Number(res.pagado || 0);
-
-        if (total > pagado) {
-          montoTotalSaldado += total - pagado;
-
-          const resRef = ref(this.db, `reservas/${userPath}/${resKey}`);
-          await set(resRef, {
-            ...res,
-            pagado: total,
-            estado: 'completado',
-          });
-        }
-      }
-
-      if (montoTotalSaldado > 0) {
-        await this.registrarEnHistorial(email, montoTotalSaldado, paymentId, 'Saldado de Deuda Total');
-        console.log('Deuda saldada e historial registrado con éxito');
-      }
-    } catch (error) {
-      console.error('Error al saldar la deuda en Firebase:', error);
-    }
+  async confirmarPago(paymentId: string, externalReference: string) {
+    return this.postPago('confirm_payment', {
+      payment_id: paymentId,
+      external_reference: externalReference,
+    });
   }
 
-async procesarPago(monto: number, reserva?: any) {
-    // 1. Activamos la señal de cargando
+  async procesarPago(reserva?: Pick<Reserva, 'id'>) {
     this.cargandoPago.set(true);
-
-    // 2. Damos un pequeño respiro al ciclo de eventos de JS para pintar el modal en el DOM
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     try {
-      const body: any = {
-        total: monto,
+      const data = await this.postPago('create_preference', {
         id: reserva?.id || 'pago-general',
-        descripcion: reserva?.descripcion || 'Pago de Deuda Total - Agenda',
-      };
-
-      const response = await fetch(`${environment.apiUrl}/create_preference`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
       });
-
-      const data = await response.json();
       if (data.init_point) {
         window.location.href = data.init_point;
       } else {
-        this.cargandoPago.set(false);
+        throw new Error('Mercado Pago no devolvió el enlace de pago.');
       }
     } catch (error) {
       console.error('Error en pago:', error);
       this.cargandoPago.set(false);
-      alert('Error al conectar con el servidor de pagos.');
+      alert(error instanceof Error ? error.message : 'Error al conectar con el servidor de pagos.');
     }
   }
 }

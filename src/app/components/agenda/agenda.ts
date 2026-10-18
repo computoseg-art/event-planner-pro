@@ -1,3 +1,12 @@
+// src/app/components/agenda/agenda.ts
+
+//Este componente maneja la agenda de reservas de eventos en la aplicación.
+//Proporciona funcionalidades para seleccionar fechas, agregar y actualizar reservas, 
+//procesar pagos y verificar el estado de las reservas.
+//También incluye validaciones para bloquear días ocupados o con menos de 3 días de anticipación, 
+// y para determinar si una reserva está completada o caducada. 
+// los estados pueden ser "pendiente", "completado" o "caducado".
+
 import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -5,6 +14,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ReservaService, Reserva } from '../../services/reserva.service';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
+import { take } from 'rxjs';
 
 @Component({
   selector: 'app-agenda',
@@ -31,23 +41,30 @@ export class AgendaComponent implements OnInit {
   pagoSenia = computed(() => this.cart.montoSenia());
 
   ngOnInit() {
-    this.route.queryParams.subscribe((params) => {
-      const status = params['status'];
-      const paymentId = params['payment_id'];
+    this.route.queryParams.pipe(take(1)).subscribe((params) => {
+      const paymentId = params['payment_id'] || params['collection_id'];
+      const externalReference = params['external_reference'];
 
-      if (status === 'approved') {
-        this.auth.user$.subscribe(async (u) => {
-          if (u && u.email) {
-            console.log('Procesando pago para:', u.email);
-            await this.rs.saldarDeudaUsuario(u.email, paymentId);
-
-            alert('¡Pago procesado con éxito! Deuda saldada.');
-
-            this.router.navigate([], { queryParams: {} });
-          }
-        });
+      if (paymentId && externalReference) {
+        this.confirmarRetornoPago(String(paymentId), String(externalReference));
       }
     });
+  }
+
+  private async confirmarRetornoPago(paymentId: string, externalReference: string) {
+    try {
+      const result = await this.rs.confirmarPago(paymentId, externalReference);
+      if (result.status === 'approved') {
+        alert('¡Pago confirmado por Mercado Pago!');
+      } else {
+        alert('El pago todavía está pendiente de confirmación. La agenda se actualizará cuando Mercado Pago lo apruebe.');
+      }
+    } catch (error) {
+      console.error('No se pudo verificar el pago:', error);
+      alert(error instanceof Error ? error.message : 'No se pudo verificar el pago con Mercado Pago.');
+    } finally {
+      await this.router.navigate([], { queryParams: {}, replaceUrl: true });
+    }
   }
 
   // --- VALIDACIONES DE FECHA Y SEGURIDAD ---
@@ -270,7 +287,7 @@ export class AgendaComponent implements OnInit {
     }
 
     try {
-      await this.rs.procesarPago(pendiente, res);
+      await this.rs.procesarPago(res);
     } catch (e) {
       console.error('Error al procesar el pago:', e);
     }
