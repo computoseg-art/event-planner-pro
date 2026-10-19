@@ -1,12 +1,13 @@
 <header class="navbar">
   <!-- BRANDING -->
   <div class="nav-brand" [routerLink]="(auth.user$ | async) ? '/eventos' : '/home'">
-    <div class="logo-icon">
-      <svg class="icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-      </svg>
-    </div>
-    <span class="brand-title">EventPlanner<span class="brand-highlight">Pro</span></span>
+    <img
+      class="brand-logo"
+      src="/brand-logo.png"
+      alt="BS Fotografía y Videografía"
+      width="1632"
+      height="641"
+      fetchpriority="high" />
   </div>
 
   <!-- NAVEGACIÓN DESKTOP -->

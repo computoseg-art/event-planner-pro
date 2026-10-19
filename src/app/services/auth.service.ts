@@ -57,8 +57,7 @@ export class AuthService {
         await signInWithPopup(this.auth, provider);
       });
 
-      await this.provisionGalleryFolder();
-      this.zone.run(() => this.router.navigate(['/eventos']));
+      this.afterAuthentication();
     } catch (e: any) {
       console.error('Error al iniciar sesión con Google:', e);
       if (e.code !== 'auth/popup-closed-by-user') {
@@ -78,8 +77,7 @@ export class AuthService {
         await signInWithEmailAndPassword(this.auth, email, pass);
       });
 
-      await this.provisionGalleryFolder();
-      this.zone.run(() => this.router.navigate(['/eventos']));
+      this.afterAuthentication();
     } catch (e: any) {
       console.error('Error exacto de Firebase Auth:', e); // Imprime el error real en consola
 
@@ -109,8 +107,7 @@ export class AuthService {
         await createUserWithEmailAndPassword(this.auth, email, pass);
       });
 
-      await this.provisionGalleryFolder();
-      this.zone.run(() => this.router.navigate(['/eventos']));
+      this.afterAuthentication();
     } catch (e: any) {
       console.error('Error al registrar:', e);
       let mensaje = 'No se pudo completar el registro.';
@@ -141,14 +138,18 @@ export class AuthService {
     });
   }
 
+  private afterAuthentication(): void {
+    this.zone.run(() => {
+      void this.router.navigate(['/eventos']);
+    });
+    void this.provisionGalleryFolder();
+  }
+
   private async provisionGalleryFolder(): Promise<void> {
     try {
       await firstValueFrom(this.galleryService.ensureOwnFolder());
     } catch (error) {
       console.error('No se pudo crear o recuperar la carpeta personal de Google Photos:', error);
-      alert(`Tu sesión se inició, pero no se pudo preparar tu carpeta de fotos. ${
-        this.galleryService.provisioningErrorMessage(error)
-      }`);
     }
   }
 }

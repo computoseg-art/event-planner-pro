@@ -417,9 +417,21 @@
 
 @media (max-width: 650px) {
   .hero-section {
-    min-height: 680px;
-    align-items: flex-start;
-    padding: 90px 25px 50px;
+    min-height: max(620px, calc(100svh - 68px));
+    align-items: center;
+    padding: 44px 25px 110px;
+  }
+
+  .hero-content {
+    text-align: center;
+  }
+
+  .eyebrow {
+    justify-content: center;
+  }
+
+  .hero-content h1 {
+    margin-top: 20px;
   }
 
   .hero-image {
@@ -436,13 +448,14 @@
   }
 
   .hero-actions {
-    align-items: flex-start;
+    align-items: center;
     flex-direction: column;
     gap: 20px;
   }
 
   .hero-signature {
     margin-top: 48px;
+    justify-content: center;
   }
 
   .hero-note {

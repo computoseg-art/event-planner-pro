@@ -592,7 +592,7 @@ async function createAlbumInGooglePhotos(token, albumTitle) {
 
 // Endpoint de prueba
 app.get('/', (req, res) => {
-  res.send({ status: 'OK', message: 'Backend de EventPlanner Pro activo' });
+  res.send({ status: 'OK', message: 'Backend de BSfotografia & Videografia activo' });
 });
 
 // ---------------------------------------------
@@ -1119,7 +1119,7 @@ app.post('/api/contact', async (req, res) => {
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; color: #333;">
         <div style="max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 8px;">
-          <h2 style="color: #722f4d; border-bottom: 2px solid #c2a16d; padding-bottom: 10px;">Nuevo mensaje de EventPlanner Pro</h2>
+          <h2 style="color: #722f4d; border-bottom: 2px solid #c2a16d; padding-bottom: 10px;">Nuevo mensaje de BSfotografia &amp; Videografia</h2>
           <p><strong>Nombre:</strong> ${escapeHtml(name)}</p>
           <p><strong>Correo:</strong> ${escapeHtml(email)}</p>
           <div style="border: 1px solid #ddd; padding: 15px; background: #fafafa; border-radius: 5px; margin-top: 15px;">
@@ -1136,7 +1136,7 @@ app.post('/api/contact', async (req, res) => {
           from: emailUser,
           to: process.env.EMAIL_TO?.trim() || 'esteban.garriga@gmail.com',
           replyTo: email,
-          subject: `Contacto EventPlanner Pro: ${name.slice(0, 80)}`,
+          subject: `Contacto BSfotografia & Videografia: ${name.slice(0, 80)}`,
           text: `Nombre: ${name}\nCorreo: ${email}\n\nMensaje:\n${message}`,
           html: htmlContent,
         }),
@@ -1177,5 +1177,5 @@ app.use((error, _req, res, _next) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Backend de EventPlanner Pro ejecutándose en el puerto ${PORT}`);
+  console.log(`Backend de BSfotografia & Videografia ejecutándose en el puerto ${PORT}`);
 });

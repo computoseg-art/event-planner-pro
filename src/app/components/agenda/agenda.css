@@ -65,6 +65,15 @@
   background: #334155;
 }
 
+.btn-nav:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.btn-nav:disabled:hover {
+  background: #1e293b;
+}
+
 .calendario-grid {
   display: grid !important;
   grid-template-columns: repeat(7, 1fr) !important;
@@ -474,6 +483,17 @@
   border-color: #722f4d;
   background: #722f4d;
   color: white;
+}
+
+.btn-nav:disabled {
+  border-color: #e8e1d8;
+  background: #f7f4ef;
+  color: #b9b1a9;
+}
+
+.btn-nav:disabled:hover {
+  border-color: #e8e1d8;
+  background: #f7f4ef;
 }
 
 .calendario-grid {

@@ -7,11 +7,21 @@
   <div class="main-layout">
     <section class="calendario-section">
       <div class="calendario-header">
-        <button (click)="cambiarMes(-1)" class="btn-nav">◀</button>
+        <button
+          type="button"
+          (click)="cambiarMes(-1)"
+          class="btn-nav"
+          aria-label="Mes anterior">◀</button>
         <h3 class="mes-titulo">
           {{ getFechaCabecera() | date: 'MMMM yyyy' : '' : 'es' | titlecase }}
         </h3>
-        <button (click)="cambiarMes(1)" class="btn-nav">▶</button>
+        <button
+          type="button"
+          (click)="cambiarMes(1)"
+          class="btn-nav"
+          aria-label="Mes siguiente"
+          [disabled]="limiteSuperiorAlcanzado()"
+          [attr.title]="limiteSuperiorAlcanzado() ? 'Límite de reservas a dos años' : null">▶</button>
       </div>
 
       <div class="calendario-grid">
@@ -36,84 +46,11 @@
             [class.seleccionado]="fechaSeleccionada() === dia"
             (click)="seleccionarDia(dia)"
           >
-            {{ dia | date: 'd' }}
+            {{ dia.slice(8) }}
           </div>
         }
       </div>
 
-      @if (fechaSeleccionada() && !esDiaBloqueado(fechaSeleccionada()!)) {
-        <div class="confirmacion-box" [class.cerrando]="estaCerrando()">
-          <h4>Nueva Reserva: {{ fechaSeleccionada() | date: 'dd/MM/yyyy' }}</h4>
-          <div class="input-group">
-            <label>Nombre del evento:</label>
-            <input
-              type="text"
-              [(ngModel)]="miDescripcion"
-              placeholder="Ej: Boda de Juan"
-              class="input-reserva"
-            />
-          </div>
-
-          <div class="servicios-selector">
-            <p class="label-mini">Selecciona una categoría:</p>
-            <div class="categorias-nav">
-              <button
-                type="button"
-                (click)="cart.setCategoria('15_años'); categoriaPrevia.set('15_años')"
-                [class.active]="categoriaPrevia() === '15_años'"
-              >
-                🎂 15 Años
-              </button>
-
-              <button
-                type="button"
-                (click)="cart.setCategoria('bodas'); categoriaPrevia.set('bodas')"
-                [class.active]="categoriaPrevia() === 'bodas'"
-              >
-                💍 Bodas
-              </button>
-
-              <button
-                type="button"
-                (click)="cart.setCategoria('extras')"
-                [class.active]="cart.categoriaSeleccionada() === 'extras'"
-              >
-                ✨ Extras
-              </button>
-            </div>
-            <div class="chips-container">
-              @for (s of cart.serviciosFiltrados(); track s.id) {
-                <button
-                  type="button"
-                  (click)="cart.toggleServicio(s)"
-                  [class.active]="cart.serviciosSeleccionados().includes(s)"
-                  class="chip-servicio"
-                >
-                  {{ s.icono }} {{ s.nombre }}
-                </button>
-              }
-            </div>
-          </div>
-
-          @if (totalParaReserva() > 0) {
-            <div class="resumen-pago">
-              <p>
-                Total: <strong>${{ totalParaReserva() | number }}</strong>
-              </p>
-              <p>
-                Seña mínima: <strong>${{ pagoSenia() | number }}</strong>
-              </p>
-            </div>
-          }
-          <button
-            (click)="confirmar()"
-            [disabled]="!miDescripcion() || totalParaReserva() === 0"
-            class="btn-confirmar"
-          >
-            Confirmar Reserva
-          </button>
-        </div>
-      }
     </section>
 
     <aside class="mis-reservas-section">
@@ -124,22 +61,22 @@
       <!-- Botón de Deuda Global -->
       @if (rs.deudaTotal() > 0 && !auth.esAdmin()) {
         <div class="pago-general-container">
-          <button class="btn-pago-general" (click)="rs.procesarPago()">
+          <div class="btn-pago-general">
             💳 Pagar Deuda Total: <strong>${{ rs.deudaTotal() | number }}</strong>
-          </button>
+          </div>
         </div>
       }
 
       <div class="lista-reservas">
         @for (res of rs.reservasVisibles(); track res.id) {
-          <div 
-            class="reserva-card" 
+          <div
+            class="reserva-card"
             [class.expanded]="reservaExpandida() === res.id"
             [class.caducada]="esReservaCaducada(res)"
             [class.no-editable]="esReservaBloqueada(res)"
           >
-            <div 
-              class="card-main-info" 
+            <div
+              class="card-main-info"
               (click)="toggleEditar(res.id!)"
               [style.cursor]="esReservaBloqueada(res) ? 'default' : 'pointer'"
             >
@@ -224,9 +161,11 @@
                     </p>
                   }
 
-                  <p class="saldo-pendiente" *ngIf="res.total - (res.pagado || 0) > 0">
-                    Saldo pendiente: <strong>${{ res.total - (res.pagado || 0) | number }}</strong>
-                  </p>
+                  @if (res.total - (res.pagado || 0) > 0) {
+                    <p class="saldo-pendiente">
+                      Saldo pendiente: <strong>${{ res.total - (res.pagado || 0) | number }}</strong>
+                    </p>
+                  }
                 </div>
 
                 <div class="card-actions">
@@ -242,6 +181,7 @@
                   <button (click)="eliminar(res)" class="btn-delete">Eliminar</button>
                 </div>
               </div>
+
             }
 
             <!-- MODO COLAPSADO: Pie de tarjeta con botón de pago individual o mensaje según el estado -->
@@ -276,3 +216,132 @@
     </aside>
   </div>
 </div>
+
+@if (fechaSeleccionada() && !esDiaBloqueado(fechaSeleccionada()!)) {
+  <div
+    class="booking-modal-backdrop"
+    [class.closing]="estaCerrando()"
+    (click)="cerrarConAnimacion()">
+    <section
+      class="booking-modal"
+      [class.closing]="estaCerrando()"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="booking-modal-title"
+      (click)="$event.stopPropagation()">
+      <header class="booking-modal-header">
+        <div>
+          <span class="booking-kicker">NUEVA CELEBRACIÓN</span>
+          <h2 id="booking-modal-title">Tu fecha, tu historia.</h2>
+          <p>{{ fechaSeleccionada() | date: 'EEEE d MMMM yyyy' : 'UTC' : 'es' | titlecase }}</p>
+        </div>
+        <button type="button" class="booking-close" aria-label="Cerrar reserva" (click)="cerrarConAnimacion()">×</button>
+      </header>
+
+      <div class="booking-modal-content">
+        <label class="booking-label" for="event-description">¿Qué vamos a celebrar?</label>
+        <input
+          id="event-description"
+          type="text"
+          [ngModel]="miDescripcion()"
+          (ngModelChange)="miDescripcion.set($event)"
+          placeholder="Ej.: Boda de Juan y Sofía"
+          maxlength="100"
+          autofocus
+          class="input-reserva" />
+
+        <div class="booking-category-section">
+          <div class="booking-section-heading">
+            <span class="booking-label">Elegí el tipo de celebración</span>
+            <span class="booking-step">01 / 02</span>
+          </div>
+          <div class="booking-categories" role="group" aria-label="Categoría de celebración">
+            <button
+              type="button"
+              class="booking-category quince-category"
+              [class.active]="categoriaServicios() === '15_años'"
+              [attr.aria-pressed]="categoriaServicios() === '15_años'"
+              (click)="seleccionarCategoria('15_años')">
+              <span class="category-icon" aria-hidden="true">✧</span>
+              <span class="category-copy"><strong>15 años</strong><small>Una noche mágica</small></span>
+              <span class="category-check" aria-hidden="true">✓</span>
+            </button>
+            <button
+              type="button"
+              class="booking-category bodas-category"
+              [class.active]="categoriaServicios() === 'bodas'"
+              [attr.aria-pressed]="categoriaServicios() === 'bodas'"
+              (click)="seleccionarCategoria('bodas')">
+              <span class="category-icon" aria-hidden="true">♡</span>
+              <span class="category-copy"><strong>Bodas</strong><small>Para toda la vida</small></span>
+              <span class="category-check" aria-hidden="true">✓</span>
+            </button>
+            <button
+              type="button"
+              class="booking-category extras-category"
+              [class.active]="categoriaServicios() === 'extras'"
+              [attr.aria-pressed]="categoriaServicios() === 'extras'"
+              (click)="seleccionarCategoria('extras')">
+              <span class="category-icon" aria-hidden="true">✺</span>
+              <span class="category-copy"><strong>Más servicios</strong><small>Detalles que sorprenden</small></span>
+              <span class="category-check" aria-hidden="true">✓</span>
+            </button>
+          </div>
+        </div>
+
+        @if (categoriaPrevia()) {
+          <p class="booking-event-type" aria-live="polite">
+            Evento seleccionado:
+            <strong>{{ categoriaPrevia() === '15_años' ? '15 años' : 'Boda' }}</strong>
+            <span> · Los servicios extra se pueden sumar a tu evento.</span>
+          </p>
+        } @else {
+          <p class="booking-event-type" aria-live="polite">
+            Elegí 15 años o Bodas para indicar el tipo de evento. Los extras son complementarios.
+          </p>
+        }
+
+        @if (categoriaServicios()) {
+          <div class="booking-services">
+            <div class="booking-section-heading">
+              <span class="booking-label">Sumá servicios a tu evento</span>
+              <span class="booking-step">02 / 02</span>
+            </div>
+            <div class="chips-container">
+              @for (s of cart.serviciosFiltrados(); track s.id) {
+                <button
+                  type="button"
+                  (click)="cart.toggleServicio(s)"
+                  [class.active]="cart.serviciosSeleccionados().includes(s)"
+                  class="chip-servicio">
+                  <span>{{ s.icono }}</span> {{ s.nombre }}
+                  @if (cart.serviciosSeleccionados().includes(s)) {
+                    <span class="service-check">✓</span>
+                  }
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <footer class="booking-modal-footer">
+        <div class="booking-price-summary">
+          @if (totalParaReserva() > 0) {
+            <span>Total estimado <strong>${{ totalParaReserva() | number }}</strong></span>
+            <span>Seña mínima <strong>${{ pagoSenia() | number }}</strong></span>
+          } @else {
+            <span>Seleccioná al menos un servicio para continuar</span>
+          }
+        </div>
+        <button
+          type="button"
+          (click)="confirmar()"
+          [disabled]="!miDescripcion().trim() || !categoriaPrevia() || totalParaReserva() === 0"
+          class="btn-confirmar">
+          Confirmar reserva <span aria-hidden="true">↗</span>
+        </button>
+      </footer>
+    </section>
+  </div>
+}

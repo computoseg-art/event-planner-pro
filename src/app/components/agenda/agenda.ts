@@ -7,7 +7,7 @@
 // y para determinar si una reserva está completada o caducada. 
 // los estados pueden ser "pendiente", "completado" o "caducado".
 
-import { Component, signal, computed, inject, OnInit } from '@angular/core';
+import { Component, signal, computed, inject, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -21,7 +21,7 @@ import { take } from 'rxjs';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './agenda.html',
-  styleUrls: ['./agenda.css'],
+  styleUrls: ['./agenda.css', './agenda-modal.css'],
 })
 export class AgendaComponent implements OnInit {
   rs = inject(ReservaService);
@@ -34,7 +34,9 @@ export class AgendaComponent implements OnInit {
   miDescripcion = signal<string>('');
   reservaExpandida = signal<string | null>(null);
   fechaHoy = signal<Date>(new Date());
+  readonly fechaMaximaReservas = this.calcularFechaMaxima();
   categoriaPrevia = signal<'15_años' | 'bodas' | null>(null);
+  categoriaServicios = signal<'15_años' | 'bodas' | 'extras' | null>(null);
   estaCerrando = signal<boolean>(false);
 
   totalParaReserva = computed(() => this.cart.totalCarrito());
@@ -79,6 +81,13 @@ export class AgendaComponent implements OnInit {
   esDiaBloqueado(dia: string): boolean {
     if (!dia) return true;
 
+    const [year, month, day] = dia.split('T')[0].split('-').map(Number);
+    const fechaEvaluada = new Date(year, month - 1, day);
+    fechaEvaluada.setHours(0, 0, 0, 0);
+    const fechaMaxima = new Date(this.fechaMaximaReservas);
+    fechaMaxima.setHours(0, 0, 0, 0);
+    if (fechaEvaluada > fechaMaxima) return true;
+
     // 1. Si ya está ocupado
     if (this.esDiaOcupado(dia)) return true;
 
@@ -86,11 +95,7 @@ export class AgendaComponent implements OnInit {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
 
-    const [year, month, day] = dia.split('T')[0].split('-').map(Number);
-    const fechaEval = new Date(year, month - 1, day);
-    fechaEval.setHours(0, 0, 0, 0);
-
-    const diffTiempo = fechaEval.getTime() - hoy.getTime();
+    const diffTiempo = fechaEvaluada.getTime() - hoy.getTime();
     const diffDias = diffTiempo / (1000 * 60 * 60 * 24);
 
     return diffDias < 3;
@@ -133,9 +138,27 @@ export class AgendaComponent implements OnInit {
     return this.fechaHoy();
   }
 
+  private calcularFechaMaxima(): Date {
+    const fechaMaxima = new Date();
+    fechaMaxima.setFullYear(fechaMaxima.getFullYear() + 2);
+    fechaMaxima.setHours(0, 0, 0, 0);
+    return fechaMaxima;
+  }
+
+  limiteSuperiorAlcanzado(): boolean {
+    const fechaActual = this.fechaHoy();
+    return (
+      fechaActual.getFullYear() > this.fechaMaximaReservas.getFullYear() ||
+      (fechaActual.getFullYear() === this.fechaMaximaReservas.getFullYear() &&
+        fechaActual.getMonth() >= this.fechaMaximaReservas.getMonth())
+    );
+  }
+
   cambiarMes(delta: number) {
-    const nuevaFecha = new Date(this.fechaHoy());
-    nuevaFecha.setMonth(nuevaFecha.getMonth() + delta);
+    if (delta > 0 && this.limiteSuperiorAlcanzado()) return;
+
+    const fechaActual = this.fechaHoy();
+    const nuevaFecha = new Date(fechaActual.getFullYear(), fechaActual.getMonth() + delta, 1);
     this.fechaHoy.set(nuevaFecha);
   }
 
@@ -178,12 +201,36 @@ export class AgendaComponent implements OnInit {
       this.cerrarConAnimacion();
     } else {
       this.estaCerrando.set(false);
+      this.cart.reset();
+      this.miDescripcion.set('');
+      this.categoriaPrevia.set(null);
+      this.categoriaServicios.set(null);
       this.fechaSeleccionada.set(dia);
     }
   }
 
+  seleccionarCategoria(categoria: '15_años' | 'bodas' | 'extras'): void {
+    this.categoriaServicios.set(categoria);
+    if (categoria !== 'extras') {
+      if (this.categoriaPrevia() && this.categoriaPrevia() !== categoria) {
+        this.cart.serviciosSeleccionados.update((seleccionados) =>
+          seleccionados.filter((servicio) => servicio.categoria === 'extras'),
+        );
+      }
+      this.categoriaPrevia.set(categoria);
+    }
+    this.cart.setCategoria(categoria);
+  }
+
+  @HostListener('document:keydown.escape')
+  cerrarModalConEscape(): void {
+    if (this.fechaSeleccionada()) {
+      this.cerrarConAnimacion();
+    }
+  }
+
   cerrarConAnimacion() {
-    if (!this.fechaSeleccionada()) return;
+    if (!this.fechaSeleccionada() || this.estaCerrando()) return;
 
     this.estaCerrando.set(true);
 
@@ -224,7 +271,12 @@ export class AgendaComponent implements OnInit {
   }
 
   async confirmar() {
-    if (!this.fechaSeleccionada() || !this.miDescripcion() || !this.categoriaPrevia()) {
+    if (
+      !this.fechaSeleccionada() ||
+      !this.miDescripcion().trim() ||
+      !this.categoriaPrevia() ||
+      this.totalParaReserva() === 0
+    ) {
       alert('Faltan datos obligatorios');
       return;
     }
@@ -244,6 +296,8 @@ export class AgendaComponent implements OnInit {
       );
       this.cart.reset();
       this.miDescripcion.set('');
+      this.categoriaPrevia.set(null);
+      this.categoriaServicios.set(null);
       alert('¡Reserva confirmada!');
       this.cerrarConAnimacion();
     } catch (e) {

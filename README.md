@@ -1,10 +1,10 @@
-# 📅 EventPlanner Pro — Sistema de Gestión de Reservas
+# 📅 BSfotografia & Videografia — Sistema de Gestión de Reservas
 
 ![Angular](https://img.shields.io/badge/Angular-19+-DD0031?style=for-the-badge&logo=angular&logoColor=white)
 ![Firebase](https://img.shields.io/badge/Firebase-Realtime%20DB-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 
-**EventPlanner Pro** es una aplicación de gestión de reservas diseñada para salones de fiestas y organizadores de eventos. Permite a los usuarios finales reservar fechas y servicios de forma intuitiva, mientras que ofrece a los administradores un control total sobre la agenda y el estado financiero de cada evento.
+**BSfotografia & Videografia** es una aplicación de gestión de reservas para servicios de fotografía, video y celebraciones. Permite a los clientes reservar fechas y servicios de forma intuitiva, mientras que ofrece a los administradores control sobre la agenda y el estado financiero de cada evento.
 
 ---
 
