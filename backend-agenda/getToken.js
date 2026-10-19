@@ -1,17 +1,16 @@
 import { google } from 'googleapis';
 import http from 'http';
-import { fileURLToPath } from 'url';
-import { promises as fs } from 'fs';
-import path from 'path';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import dotenv from 'dotenv';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const CREDENTIALS_PATH = path.join(__dirname, 'credentials.json');
 dotenv.config({ path: path.join(__dirname, '.env') });
-const CALLBACK_PORT = Number(process.env.OAUTH_CALLBACK_PORT) || 3000;
-const redirectUri = `http://127.0.0.1:${CALLBACK_PORT}/oauth2callback`;
-const EXPECTED_CLIENT_ID = '14838218294-0fq2cjr6tag6koq452oqhfe48egsj13h.apps.googleusercontent.com';
+const redirectUri = process.env.GOOGLE_REDIRECT_URI?.trim()
+  || 'http://127.0.0.1:3000/oauth2callback';
+const callbackUrl = new URL(redirectUri);
 
 const SCOPES = [
   'https://www.googleapis.com/auth/photoslibrary.appendonly',
@@ -20,48 +19,59 @@ const SCOPES = [
 ];
 
 async function main() {
-  const credentials = JSON.parse(await fs.readFile(CREDENTIALS_PATH, 'utf-8'));
-  const oauthCredentials = credentials.web;
-
-  if (!oauthCredentials?.client_id || !oauthCredentials?.client_secret) {
-    throw new Error('credentials.json debe contener credenciales OAuth de tipo web.');
+  const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+  if (!clientId || !clientSecret) {
+    throw new Error('Configura GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en backend-agenda/.env.');
   }
-  if (oauthCredentials.client_id !== EXPECTED_CLIENT_ID) {
+  if (
+    callbackUrl.protocol !== 'http:' ||
+    !['127.0.0.1', 'localhost'].includes(callbackUrl.hostname) ||
+    callbackUrl.pathname !== '/oauth2callback' ||
+    callbackUrl.search ||
+    callbackUrl.hash
+  ) {
     throw new Error(
-      'credentials.json no corresponde al OAuth client indicado. Descarga el JSON correcto desde Google Cloud y reemplaza el archivo local.'
+      'GOOGLE_REDIRECT_URI debe ser una URL local como http://127.0.0.1:3000/oauth2callback.'
     );
   }
-  if (process.env.GOOGLE_CLIENT_ID !== EXPECTED_CLIENT_ID) {
-    throw new Error('Actualiza GOOGLE_CLIENT_ID en backend-agenda/.env al OAuth client indicado.');
-  }
-  if (!process.env.GOOGLE_CLIENT_SECRET
-    || oauthCredentials.client_secret !== process.env.GOOGLE_CLIENT_SECRET) {
-    throw new Error('GOOGLE_CLIENT_SECRET debe coincidir con el secreto del credentials.json descargado.');
-  }
-  if (!oauthCredentials.redirect_uris?.includes(redirectUri)) {
-    throw new Error(`Registra ${redirectUri} como URI de redirección autorizada en Google Cloud.`);
-  }
 
+  const callbackHost = callbackUrl.hostname;
+  const callbackPort = Number(callbackUrl.port || 80);
   const oAuth2Client = new google.auth.OAuth2(
-    oauthCredentials.client_id,
-    oauthCredentials.client_secret,
+    clientId,
+    clientSecret,
     redirectUri
   );
+  const state = randomBytes(32).toString('hex');
   const authUrl = oAuth2Client.generateAuthUrl({
     access_type: 'offline',
     prompt: 'consent',
     include_granted_scopes: true,
-    scope: SCOPES
+    scope: SCOPES,
+    state
   });
   console.log('\nAbre esta URL para autorizar la cuenta de Google Photos:\n', authUrl, '\n');
 
   const server = http.createServer(async (req, res) => {
-    if (!req.url?.startsWith('/oauth2callback')) {
+    const callback = new URL(req.url || '/', redirectUri);
+    if (callback.pathname !== callbackUrl.pathname) {
       res.writeHead(404).end();
       return;
     }
 
-    const callback = new URL(req.url, redirectUri);
+    const returnedState = Buffer.from(callback.searchParams.get('state') || '');
+    const expectedState = Buffer.from(state);
+    if (
+      returnedState.length !== expectedState.length ||
+      !timingSafeEqual(returnedState, expectedState)
+    ) {
+      res.writeHead(400).end('La solicitud de autorización no coincide. Puedes cerrar esta ventana.');
+      server.close();
+      console.error('Google Photos devolvió un estado OAuth inválido.');
+      return;
+    }
+
     const code = callback.searchParams.get('code');
     const oauthError = callback.searchParams.get('error');
     if (oauthError || !code) {
@@ -83,9 +93,10 @@ async function main() {
       }
     } catch (error) {
       console.error('No se pudo obtener el refresh token:', error.message);
+      process.exitCode = 1;
     }
-  }).listen(CALLBACK_PORT, '127.0.0.1', () =>
-    console.log(`Servidor OAuth escuchando en http://127.0.0.1:${CALLBACK_PORT}`)
+  }).listen(callbackPort, callbackHost, () =>
+    console.log(`Servidor OAuth escuchando en ${redirectUri}`)
   );
 
   server.on('error', error => {

@@ -1,25 +1,25 @@
 {
   "rules": {
     "reservas": {
-      ".read": "auth != null && (auth.token.email.toLowerCase() == 'admin@gmail.com' || auth.token.email.toLowerCase() == 'estebangarriga@gmail.com')",
-      ".write": "auth != null && (auth.token.email.toLowerCase() == 'admin@gmail.com' || auth.token.email.toLowerCase() == 'estebangarriga@gmail.com')",
+      ".read": "auth != null && (auth.token.email == 'admin@gmail.com' || auth.token.email == 'estebangarriga@gmail.com')",
+      ".write": "auth != null && (auth.token.email == 'admin@gmail.com' || auth.token.email == 'estebangarriga@gmail.com')",
       "$userKey": {
-        ".read": "auth != null && (auth.token.email.toLowerCase() == 'admin@gmail.com' || auth.token.email.toLowerCase() == 'estebangarriga@gmail.com' || $userKey == auth.token.email.toLowerCase().replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ','))",
-        ".write": "auth != null && (auth.token.email.toLowerCase() == 'admin@gmail.com' || auth.token.email.toLowerCase() == 'estebangarriga@gmail.com' || $userKey == auth.token.email.toLowerCase().replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ','))"
+        ".read": "auth != null && (auth.token.email == 'admin@gmail.com' || auth.token.email == 'estebangarriga@gmail.com' || $userKey == auth.token.email.replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ','))",
+        ".write": "auth != null && (auth.token.email == 'admin@gmail.com' || auth.token.email == 'estebangarriga@gmail.com' || $userKey == auth.token.email.replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ','))"
       }
     },
     "historial_pagos": {
-      ".read": "auth != null && (auth.token.email.toLowerCase() == 'admin@gmail.com' || auth.token.email.toLowerCase() == 'estebangarriga@gmail.com')",
-      ".write": "auth != null && (auth.token.email.toLowerCase() == 'admin@gmail.com' || auth.token.email.toLowerCase() == 'estebangarriga@gmail.com')",
+      ".read": "auth != null && (auth.token.email == 'admin@gmail.com' || auth.token.email == 'estebangarriga@gmail.com')",
+      ".write": "auth != null && (auth.token.email == 'admin@gmail.com' || auth.token.email == 'estebangarriga@gmail.com')",
       "$userKey": {
-        ".read": "auth != null && (auth.token.email.toLowerCase() == 'admin@gmail.com' || auth.token.email.toLowerCase() == 'estebangarriga@gmail.com' || $userKey == auth.token.email.toLowerCase().replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ','))",
-        ".write": "auth != null && (auth.token.email.toLowerCase() == 'admin@gmail.com' || auth.token.email.toLowerCase() == 'estebangarriga@gmail.com' || $userKey == auth.token.email.toLowerCase().replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ','))"
+        ".read": "auth != null && (auth.token.email == 'admin@gmail.com' || auth.token.email == 'estebangarriga@gmail.com' || $userKey == auth.token.email.replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ','))",
+        ".write": "auth != null && (auth.token.email == 'admin@gmail.com' || auth.token.email == 'estebangarriga@gmail.com' || $userKey == auth.token.email.replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ','))"
       }
     },
     "fechas_ocupadas": {
       ".read": "auth != null",
       "$reservationId": {
-        ".write": "auth != null && (auth.token.email.toLowerCase() == 'admin@gmail.com' || auth.token.email.toLowerCase() == 'estebangarriga@gmail.com' || data.val() == root.child('reservas').child(auth.token.email.toLowerCase().replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',')).child($reservationId).child('fecha').val() || newData.val() == root.child('reservas').child(auth.token.email.toLowerCase().replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',')).child($reservationId).child('fecha').val())",
+        ".write": "auth != null && (auth.token.email == 'admin@gmail.com' || auth.token.email == 'estebangarriga@gmail.com' || data.val() == root.child('reservas').child(auth.token.email.replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',')).child($reservationId).child('fecha').val() || newData.val() == root.child('reservas').child(auth.token.email.replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',').replace('.', ',')).child($reservationId).child('fecha').val())",
         ".validate": "newData.isString()"
       }
     }

@@ -42,7 +42,9 @@ export class ReservaService {
     switchMap((u) => {
       if (!u || !u.email) return of([]);
 
-      const esAdmin = this.auth.esAdmin();
+      const esAdmin = ['admin@gmail.com', 'estebangarriga@gmail.com'].includes(
+        u.email.toLowerCase()
+      );
       const emailSanitizado = u.email.toLowerCase().replace(/\./g, ',');
       const dbPath = esAdmin ? 'reservas' : `reservas/${emailSanitizado}`;
 
@@ -106,7 +108,9 @@ export class ReservaService {
     switchMap((u) => {
       if (!u || !u.email) return of([]);
 
-      const esAdmin = this.auth.esAdmin();
+      const esAdmin = ['admin@gmail.com', 'estebangarriga@gmail.com'].includes(
+        u.email.toLowerCase()
+      );
       const emailSanitizado = u.email.toLowerCase().replace(/\./g, ',');
       const dbPath = esAdmin ? 'historial_pagos' : `historial_pagos/${emailSanitizado}`;
 
