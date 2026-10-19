@@ -19,6 +19,7 @@ import {
 import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
+import { GalleryService } from './gallery.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -26,6 +27,7 @@ export class AuthService {
   private router = inject(Router);
   private zone = inject(NgZone);
   private injector = inject(Injector);
+  private galleryService = inject(GalleryService);
 
   user$ = user(this.auth);
   userSignal = toSignal(this.user$);
@@ -55,6 +57,7 @@ export class AuthService {
         await signInWithPopup(this.auth, provider);
       });
 
+      await this.provisionGalleryFolder();
       this.zone.run(() => this.router.navigate(['/eventos']));
     } catch (e: any) {
       console.error('Error al iniciar sesión con Google:', e);
@@ -75,6 +78,7 @@ export class AuthService {
         await signInWithEmailAndPassword(this.auth, email, pass);
       });
 
+      await this.provisionGalleryFolder();
       this.zone.run(() => this.router.navigate(['/eventos']));
     } catch (e: any) {
       console.error('Error exacto de Firebase Auth:', e); // Imprime el error real en consola
@@ -105,6 +109,7 @@ export class AuthService {
         await createUserWithEmailAndPassword(this.auth, email, pass);
       });
 
+      await this.provisionGalleryFolder();
       this.zone.run(() => this.router.navigate(['/eventos']));
     } catch (e: any) {
       console.error('Error al registrar:', e);
@@ -134,5 +139,16 @@ export class AuthService {
         this.router.navigate(['/home']);
       });
     });
+  }
+
+  private async provisionGalleryFolder(): Promise<void> {
+    try {
+      await firstValueFrom(this.galleryService.ensureOwnFolder());
+    } catch (error) {
+      console.error('No se pudo crear o recuperar la carpeta personal de Google Photos:', error);
+      alert(`Tu sesión se inició, pero no se pudo preparar tu carpeta de fotos. ${
+        this.galleryService.provisioningErrorMessage(error)
+      }`);
+    }
   }
 }

@@ -12,6 +12,7 @@ export class ImageCarousel {
   @Input() images: string[] = [];
   @Input() initialIndex: number = 0;
   @Input() canDelete = false;
+  @Input() isDeleting = false;
   @Output() imageChanged = new EventEmitter<number>();
   @Output() deletePhotoRequest = new EventEmitter<void>();
 
@@ -32,6 +33,8 @@ export class ImageCarousel {
   }
 
   onDelete(): void {
-    this.deletePhotoRequest.emit();
+    if (!this.isDeleting) {
+      this.deletePhotoRequest.emit();
+    }
   }
 }

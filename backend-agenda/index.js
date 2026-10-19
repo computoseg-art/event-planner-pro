@@ -49,6 +49,7 @@ const db = getDatabase(firebaseApp);
 const preferenceClient = new Preference(new MercadoPagoConfig({ accessToken }));
 const paymentClient = new Payment(new MercadoPagoConfig({ accessToken }));
 const app = express();
+const personalAlbumProvisioning = new Map();
 const PORT = Number(process.env.PORT || 3000);
 const clientUrl = process.env.CLIENT_URL.replace(/\/+$/, '');
 const backendPublicUrl = process.env.BACKEND_PUBLIC_URL.replace(/\/+$/, '');
@@ -126,6 +127,58 @@ async function getGalleryAlbum(email, albumId) {
   return folder?.albumId === albumId ? folder : null;
 }
 
+async function ensurePersonalGalleryAlbum(email, uid, username) {
+  const cleanEmail = encodeEmail(email);
+  const albumRef = db.ref(`albumes/${cleanEmail}`);
+  const existingSnapshot = await albumRef.once('value');
+  const existingAlbum = existingSnapshot.val();
+  if (existingAlbum?.albumId) {
+    return existingAlbum;
+  }
+
+  const currentProvisioning = personalAlbumProvisioning.get(uid);
+  if (currentProvisioning) {
+    return currentProvisioning;
+  }
+
+  const provisioning = (async () => {
+    const latestSnapshot = await albumRef.once('value');
+    const latestAlbum = latestSnapshot.val();
+    if (latestAlbum?.albumId) {
+      return latestAlbum;
+    }
+
+    const safeUsername = String(username || email.split('@')[0])
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 80) || 'usuario';
+    const title = `Galería - ${safeUsername} - ${uid}`;
+    const token = await getGooglePhotosToken();
+    const albumId = await createAlbumInGooglePhotos(token, title);
+    if (!albumId) {
+      throw new Error('Google Photos no pudo crear la carpeta personal.');
+    }
+
+    const album = {
+      email,
+      albumId,
+      title,
+      createdAt: new Date().toISOString(),
+    };
+    await albumRef.set(album);
+    return album;
+  })();
+
+  personalAlbumProvisioning.set(uid, provisioning);
+  try {
+    return await provisioning;
+  } finally {
+    if (personalAlbumProvisioning.get(uid) === provisioning) {
+      personalAlbumProvisioning.delete(uid);
+    }
+  }
+}
+
 const adminEmails = new Set(
   (process.env.ADMIN_EMAILS || 'admin@gmail.com,estebangarriga@gmail.com')
     .split(',')
@@ -157,6 +210,8 @@ async function requireFirebaseAuth(req, res, next) {
       return res.status(401).json({ error: 'La cuenta autenticada no tiene un correo válido.' });
     }
     req.authenticatedEmail = decodedToken.email.toLowerCase().trim();
+    req.authenticatedUid = decodedToken.uid;
+    req.authenticatedName = decodedToken.name || '';
   } catch (error) {
     console.error('❌ No se pudo verificar el token de Firebase:', error.message);
     return res.status(401).json({ error: 'La sesión no es válida o expiró. Inicia sesión nuevamente.' });
@@ -642,6 +697,28 @@ app.post('/api/ensure-album', requireFirebaseAuth, requireAdmin, async (req, res
 // ---------------------------------------------
 // GOOGLE PHOTOS: LISTAR CARPETAS DE UN USUARIO
 // ---------------------------------------------
+app.post('/api/gallery/ensure-own-folder', requireFirebaseAuth, async (req, res) => {
+  try {
+    const album = await ensurePersonalGalleryAlbum(
+      req.authenticatedEmail,
+      req.authenticatedUid,
+      req.authenticatedName
+    );
+    return res.status(200).json({
+      albumId: album.albumId,
+      title: album.title || 'Galería general',
+      email: album.email || req.authenticatedEmail,
+      createdAt: album.createdAt,
+      isDefault: true,
+    });
+  } catch (error) {
+    console.error('❌ Error al preparar la carpeta personal de Google Photos:', error.message);
+    return res.status(500).json({
+      error: galleryErrorMessage(error, 'No se pudo crear la carpeta personal de Google Photos.'),
+    });
+  }
+});
+
 app.get('/api/gallery/:email/folders', requireFirebaseAuth, async (req, res) => {
   res.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
   const email = req.params.email;
@@ -664,7 +741,7 @@ app.get('/api/gallery/:email/folders', requireFirebaseAuth, async (req, res) => 
     if (defaultAlbum?.albumId) {
       folders.push({
         albumId: defaultAlbum.albumId,
-        title: 'Galería general',
+        title: defaultAlbum.title || 'Galería general',
         email: defaultAlbum.email || email.toLowerCase().trim(),
         createdAt: defaultAlbum.createdAt,
         isDefault: true,
@@ -933,12 +1010,15 @@ app.post('/api/upload-photos', requireFirebaseAuth, requireAdmin, (req, res, nex
 // ---------------------------------------------
 // GOOGLE PHOTOS: ELIMINAR FOTO
 // ---------------------------------------------
-app.post('/api/delete-photo/:photoId', requireFirebaseAuth, requireAdmin, async (req, res) => {
+app.post('/api/delete-photo/:photoId', requireFirebaseAuth, async (req, res) => {
   const { photoId } = req.params;
   const { email, albumId: requestedAlbumId } = req.body;
 
   if (!photoId || !validEmail(email) || !validAlbumId(requestedAlbumId)) {
     return res.status(400).json({ error: 'Falta photoId, email o carpeta válida.' });
+  }
+  if (email.toLowerCase().trim() !== req.authenticatedEmail && !isAdmin(req.authenticatedEmail)) {
+    return res.status(403).json({ error: 'Solo puedes eliminar fotos de tu propia galería.' });
   }
 
   const cleanEmail = encodeEmail(email);

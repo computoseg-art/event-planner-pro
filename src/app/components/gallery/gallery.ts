@@ -4,6 +4,7 @@ import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { GalleryFolder, GalleryService, Photo } from '../../services/gallery.service';
 import { ImageCarousel } from '../../components/image-carousel/image-carousel';
+import { firstValueFrom, take } from 'rxjs';
 
 @Component({
   selector: 'app-gallery',
@@ -32,15 +33,36 @@ export class GalleryComponent implements OnInit, OnDestroy {
   isUploading = false;
   isCreatingFolder = false;
   isAssigningFolder = false;
+  isDeletingPhoto = false;
   currentImageIndex: number = 0;
   private photoRefreshTimer?: ReturnType<typeof setInterval>;
   private lastPhotoRefreshAt = 0;
 
-  ngOnInit(): void {
-    const currentEmail = this.auth.usuarioLogueado();
+  async ngOnInit(): Promise<void> {
+    this.isLoading = true;
+    let currentEmail: string | undefined;
+    let provisioningError = '';
+    try {
+      const currentUser = await firstValueFrom(this.auth.user$.pipe(take(1)));
+      currentEmail = currentUser?.email?.trim().toLowerCase();
+    } catch (error) {
+      console.error('No se pudo comprobar la sesión para cargar la galería:', error);
+      this.isLoading = false;
+      this.errorMessage = 'No se pudo comprobar tu sesión. Intenta iniciar sesión nuevamente.';
+      return;
+    }
+
     if (!currentEmail) {
+      this.isLoading = false;
       this.errorMessage = 'Inicia sesión para ver tu galería.';
       return;
+    }
+
+    try {
+      await firstValueFrom(this.galleryService.ensureOwnFolder());
+    } catch (error) {
+      console.error('No se pudo preparar la carpeta personal de Google Photos:', error);
+      provisioningError = this.galleryService.provisioningErrorMessage(error);
     }
 
     const requestedEmail = this.route.snapshot.queryParamMap.get('email');
@@ -55,6 +77,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
     if (this.userEmail) {
       this.loadFolders(this.userEmail);
     }
+    this.errorMessage = provisioningError;
     this.photoRefreshTimer = setInterval(() => this.refreshExpiringPhotoUrls(), 50 * 60 * 1000);
   }
 
@@ -300,7 +323,8 @@ export class GalleryComponent implements OnInit, OnDestroy {
 
   deletePhoto(): void {
     if (
-      !this.auth.esAdmin() ||
+      this.isDeletingPhoto ||
+      (!this.auth.esAdmin() && this.userEmail !== this.auth.usuarioLogueado()) ||
       this.photos.length === 0 ||
       this.currentImageIndex < 0 ||
       !this.userEmail ||
@@ -311,18 +335,21 @@ export class GalleryComponent implements OnInit, OnDestroy {
 
     const photoToDelete = this.photos[this.currentImageIndex];
 
-    if (!confirm(`¿Estás seguro de que deseas eliminar esta foto?`)) {
+    if (!confirm('¿Seguro que deseas eliminar esta foto? Esta acción no se puede deshacer.')) {
       return;
     }
 
     const targetEmail = this.userEmail;
     const albumId = this.selectedAlbumId;
+    this.isDeletingPhoto = true;
     this.galleryService.deletePhoto(photoToDelete.id, targetEmail, albumId).subscribe({
       next: () => {
+        this.isDeletingPhoto = false;
         this.loadGallery(targetEmail, albumId);
       },
       error: (err) => {
         console.error('❌ Error al eliminar la foto:', err);
+        this.isDeletingPhoto = false;
         this.errorMessage = err.error?.error || 'No se pudo eliminar la foto. Intenta nuevamente.';
       }
     });

@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Auth } from '@angular/fire/auth';
 import { Observable, defer, switchMap } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -29,6 +29,22 @@ export class GalleryService {
   private auth = inject(Auth);
   private apiUrl = `${environment.apiUrl}/api`;
 
+  provisioningErrorMessage(error: unknown): string {
+    if (error instanceof HttpErrorResponse) {
+      if (error.status === 404) {
+        return 'El backend publicado todavía no tiene la creación automática de carpetas. ' +
+          'Despliega la última versión de backend-agenda en Render.';
+      }
+      if (typeof error.error?.error === 'string') {
+        return error.error.error;
+      }
+      if (error.status === 0) {
+        return 'No se pudo conectar con el backend. Comprueba que el servicio de Render esté disponible.';
+      }
+    }
+    return 'No se pudo crear o recuperar tu carpeta personal de Google Photos.';
+  }
+
   private authorizationHeaders(): Observable<HttpHeaders> {
     return defer(async () => {
       const currentUser = this.auth.currentUser;
@@ -38,6 +54,14 @@ export class GalleryService {
       const token = await currentUser.getIdToken();
       return new HttpHeaders({ Authorization: `Bearer ${token}` });
     });
+  }
+
+  ensureOwnFolder(): Observable<GalleryFolder> {
+    return this.authorizationHeaders().pipe(
+      switchMap(headers =>
+        this.http.post<GalleryFolder>(`${this.apiUrl}/gallery/ensure-own-folder`, {}, { headers })
+      )
+    );
   }
 
   getFolders(email: string): Observable<GalleryFolder[]> {

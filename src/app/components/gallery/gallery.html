@@ -99,14 +99,19 @@
     <div class="gallery-message">Cargando fotos…</div>
   } @else if (folders.length === 0) {
     <div class="no-photos-message">
-      <p>Aún no hay carpetas disponibles para esta galería.</p>
+      @if (auth.esAdmin()) {
+        <p>Aún no hay carpetas disponibles para esta galería.</p>
+      } @else {
+        <p>Todavía no hay fotos vinculadas a tu cuenta. Pide al administrador que comparta tu galería.</p>
+      }
     </div>
   } @else if (photos.length > 0) {
     <div class="carousel-container">
       <app-image-carousel
         [images]="photoUrls"
         [initialIndex]="currentImageIndex"
-        [canDelete]="auth.esAdmin()"
+        [canDelete]="true"
+        [isDeleting]="isDeletingPhoto"
         (imageChanged)="onImageChanged($event)"
         (deletePhotoRequest)="deletePhoto()">
       </app-image-carousel>
