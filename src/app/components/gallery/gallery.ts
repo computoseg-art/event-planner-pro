@@ -19,16 +19,19 @@ export class GalleryComponent implements OnInit, OnDestroy {
 
   photos: Photo[] = [];
   folders: GalleryFolder[] = [];
+  adminFolders: GalleryFolder[] = [];
   photoUrls: string[] = [];
   userEmail = '';
   targetEmail = '';
   selectedAlbumId = '';
+  sourceAlbumId = '';
   newFolderName = '';
   selectedFiles: File[] = [];
   errorMessage = '';
   isLoading = false;
   isUploading = false;
   isCreatingFolder = false;
+  isAssigningFolder = false;
   currentImageIndex: number = 0;
   private photoRefreshTimer?: ReturnType<typeof setInterval>;
   private lastPhotoRefreshAt = 0;
@@ -46,10 +49,25 @@ export class GalleryComponent implements OnInit, OnDestroy {
       ? requestedEmail?.trim().toLowerCase() || ''
       : currentEmail;
     this.targetEmail = this.userEmail;
+    if (esAdmin) {
+      this.loadAdminFolders(currentEmail);
+    }
     if (this.userEmail) {
       this.loadFolders(this.userEmail);
     }
     this.photoRefreshTimer = setInterval(() => this.refreshExpiringPhotoUrls(), 50 * 60 * 1000);
+  }
+
+  private loadAdminFolders(email: string): void {
+    this.galleryService.getFolders(email).subscribe({
+      next: folders => {
+        this.adminFolders = folders;
+      },
+      error: err => {
+        console.error('Error al cargar tus carpetas para asignarlas:', err);
+        this.errorMessage = err.error?.error || 'No se pudieron cargar tus carpetas existentes.';
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -161,6 +179,13 @@ export class GalleryComponent implements OnInit, OnDestroy {
     this.loadGallery(this.userEmail, this.selectedAlbumId);
   }
 
+  setSourceFolder(event: Event): void {
+    const select = event.target;
+    if (select instanceof HTMLSelectElement) {
+      this.sourceAlbumId = select.value;
+    }
+  }
+
   setNewFolderName(event: Event): void {
     const input = event.target;
     if (input instanceof HTMLInputElement) {
@@ -184,6 +209,33 @@ export class GalleryComponent implements OnInit, OnDestroy {
         console.error('Error al crear carpeta de galería:', err);
         this.isCreatingFolder = false;
         this.errorMessage = err.error?.error || 'No se pudo crear la carpeta.';
+      }
+    });
+  }
+
+  assignExistingFolder(): void {
+    if (
+      !this.auth.esAdmin() ||
+      !this.userEmail ||
+      !this.sourceAlbumId ||
+      this.isAssigningFolder
+    ) {
+      return;
+    }
+
+    this.isAssigningFolder = true;
+    this.errorMessage = '';
+    const targetEmail = this.userEmail;
+    const albumId = this.sourceAlbumId;
+    this.galleryService.assignFolderToUser(targetEmail, albumId).subscribe({
+      next: folder => {
+        this.isAssigningFolder = false;
+        this.loadFolders(targetEmail, folder.albumId);
+      },
+      error: err => {
+        console.error('Error al asignar carpeta existente al cliente:', err);
+        this.isAssigningFolder = false;
+        this.errorMessage = err.error?.error || 'No se pudo compartir la carpeta con el cliente.';
       }
     });
   }

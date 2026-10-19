@@ -731,6 +731,47 @@ app.post('/api/gallery/folders', requireFirebaseAuth, requireAdmin, async (req, 
 });
 
 // ---------------------------------------------
+// GOOGLE PHOTOS: ASIGNAR ÁLBUM DEL ADMIN A CLIENTE
+// ---------------------------------------------
+app.post('/api/gallery/folders/assign', requireFirebaseAuth, requireAdmin, async (req, res) => {
+  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  const albumId = req.body?.albumId;
+  if (!validEmail(email) || !validAlbumId(albumId)) {
+    return res.status(400).json({ error: 'Indica un email válido y una carpeta existente.' });
+  }
+  if (email === req.authenticatedEmail) {
+    return res.status(400).json({ error: 'Selecciona el correo del cliente, no el del administrador.' });
+  }
+
+  try {
+    const sourceAlbum = await getGalleryAlbum(req.authenticatedEmail, albumId);
+    if (!sourceAlbum) {
+      return res.status(404).json({ error: 'La carpeta seleccionada no pertenece a tu galería.' });
+    }
+
+    const targetKey = encodeEmail(email);
+    const targetRef = db.ref(`galeria_carpetas/${targetKey}/${albumId}`);
+    const existingSnapshot = await targetRef.once('value');
+    if (existingSnapshot.exists()) {
+      return res.status(409).json({ error: 'Esa carpeta ya está asignada a este cliente.' });
+    }
+
+    const folder = {
+      albumId,
+      title: sourceAlbum.title || 'Galería general',
+      email,
+      createdAt: sourceAlbum.createdAt || new Date().toISOString(),
+      sharedBy: req.authenticatedEmail,
+    };
+    await targetRef.set(folder);
+    return res.status(201).json(folder);
+  } catch (error) {
+    console.error('❌ Error al asignar carpeta al cliente:', error.message);
+    return res.status(500).json({ error: 'No se pudo asignar la carpeta al cliente.' });
+  }
+});
+
+// ---------------------------------------------
 // GOOGLE PHOTOS: OBTENER FOTOS DE UN USUARIO
 // ---------------------------------------------
 app.get('/api/gallery/:email', requireFirebaseAuth, async (req, res) => {

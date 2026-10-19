@@ -63,6 +63,18 @@ export class GalleryService {
     );
   }
 
+  assignFolderToUser(email: string, albumId: string): Observable<GalleryFolder> {
+    return this.authorizationHeaders().pipe(
+      switchMap(headers =>
+        this.http.post<GalleryFolder>(
+          `${this.apiUrl}/gallery/folders/assign`,
+          { email, albumId },
+          { headers }
+        )
+      )
+    );
+  }
+
   getPhotos(email: string, albumId: string): Observable<Photo[]> {
     return this.authorizationHeaders().pipe(
       switchMap(headers =>

@@ -16,9 +16,31 @@
       </div>
       @if (userEmail) {
         <p class="gallery-target-hint">
-          Las carpetas y fotos se asociarán a <strong>{{ userEmail }}</strong> y serán visibles
-          cuando esa cuenta inicie sesión.
+          Estas carpetas serán visibles para <strong>{{ userEmail }}</strong> cuando inicie sesión.
         </p>
+        @if (adminFolders.length > 0) {
+          <label for="admin-gallery-folder">Asignar una carpeta existente del administrador</label>
+          <div class="gallery-target-row">
+            <select
+              id="admin-gallery-folder"
+              [value]="sourceAlbumId"
+              (change)="setSourceFolder($event)">
+              <option value="">Selecciona una carpeta existente</option>
+              @for (folder of adminFolders; track folder.albumId) {
+                <option [value]="folder.albumId">{{ folder.title }}</option>
+              }
+            </select>
+            <button
+              type="button"
+              (click)="assignExistingFolder()"
+              [disabled]="isAssigningFolder || !sourceAlbumId">
+              {{ isAssigningFolder ? 'Asignando…' : 'Asignar al cliente' }}
+            </button>
+          </div>
+          <p class="gallery-target-hint">
+            Esto permite ver en la cuenta del cliente las fotos ya subidas a esa carpeta.
+          </p>
+        }
         <label for="new-folder-name">Crear carpeta para {{ userEmail }}</label>
         <div class="gallery-target-row">
           <input
