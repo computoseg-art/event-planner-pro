@@ -14,7 +14,6 @@
     "firebase-admin": "^14.5.0",
     "googleapis": "^183.0.0",
     "mercadopago": "^2.5.0",
-    "multer": "^2.4.0",
-    "nodemailer": "^10.0.14"
+    "multer": "^2.4.0"
   }
 }

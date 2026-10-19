@@ -34,7 +34,7 @@ Configura el servicio con:
 - **Build Command:** `npm ci`
 - **Start Command:** `npm start`
 
-En **Environment** de Render, configura `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `FIREBASE_SERVICE_ACCOUNT_JSON`, `FIREBASE_DATABASE_URL`, `CLIENT_URL`, `BACKEND_PUBLIC_URL`, `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_TO` y las credenciales de Google Photos indicadas abajo. Render proporciona `PORT`; no hace falta definirlo manualmente.
+En **Environment** de Render, configura `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `FIREBASE_SERVICE_ACCOUNT_JSON`, `FIREBASE_DATABASE_URL`, `CLIENT_URL`, `BACKEND_PUBLIC_URL`, `BREVO_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME`, `EMAIL_TO` y las credenciales de Google Photos indicadas abajo. Render proporciona `PORT`; no hace falta definirlo manualmente.
 
 - `MP_ACCESS_TOKEN`: credencial de producción de Mercado Pago. No la subas a Git ni la compartas por chat.
 - `MP_WEBHOOK_SECRET`: clave secreta de firma que muestra la configuración de Webhooks de Mercado Pago.
@@ -44,13 +44,14 @@ En **Environment** de Render, configura `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, 
 - `BACKEND_PUBLIC_URL`: URL pública actual de Render (`https://event-planner-pro-k978.onrender.com`), sin barra final.
 - `ADMIN_EMAILS`: lista separada por comas de los correos administradores autorizados para administrar carpetas, subir fotos y borrar fotos de cualquier galería. Debe coincidir con los administradores configurados en el frontend.
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` y `REFRESH_TOKEN`: credenciales OAuth de Google Photos usadas por el backend para crear álbumes y subir/leer imágenes. Configúralas como variables secretas en Render y no las subas a Git.
-- `EMAIL_USER` y `EMAIL_PASS`: cuenta Gmail que enviará los mensajes y su contraseña de aplicación de Google (no la contraseña normal de la cuenta). Activa la verificación en dos pasos en esa cuenta y genera la contraseña de aplicación en la configuración de seguridad de Google.
+- `BREVO_API_KEY`: clave API transaccional creada en Brevo. Guárdala como secreto en Render; no la publiques ni la compartas por chat.
+- `EMAIL_FROM`: dirección remitente que hayas verificado en Brevo. Verifica el remitente o dominio en Brevo antes de probar el formulario.
+- `EMAIL_FROM_NAME`: nombre que se muestra como remitente; usa `BSfotografia & Videografia`.
 - `EMAIL_TO`: destinatario del formulario de contacto; por ahora usa `esteban.garriga@gmail.com`. Para cambiar la cuenta más adelante, actualiza este valor en Render.
-- `EMAIL_HOST` y `EMAIL_PORT`: servidor SMTP; para Gmail usa `smtp.gmail.com` y `587`.
 
-El formulario público envía mensajes al destinatario configurado en `EMAIL_TO`; el visitante no puede controlar el destinatario. El correo del visitante se establece como `Reply-To`. En Render configura las variables SMTP como secretos; nunca publiques la contraseña de aplicación en Git ni en el frontend.
+El formulario público envía mensajes al destinatario configurado en `EMAIL_TO`; el visitante no puede controlar el destinatario. El correo del visitante se establece como `Reply-To`. El backend usa la API HTTPS de Brevo (`api.brevo.com`) y no necesita conexiones SMTP ni puertos 465/587.
 
-La conexión SMTP tiene tiempos máximos de espera para evitar que el formulario quede indefinidamente en “Enviando…”. Gmail puede mostrar la contraseña de aplicación en grupos con espacios; el backend los elimina automáticamente.
+La llamada HTTP a Brevo tiene un límite de espera para evitar que el formulario quede indefinidamente en “Enviando…”. Al cambiar el proveedor, elimina de Render las variables SMTP antiguas `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER` y `EMAIL_PASS`, y agrega `BREVO_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME` y `EMAIL_TO`. Luego redepliega el backend. Si Brevo rechaza un mensaje, consulta el log `Brevo rechazó el correo de contacto` en Render; los errores de credencial o remitente no verificado se registran con el estado devuelto por Brevo.
 
 Al registrar o iniciar sesión, el backend crea (si aún no existe) una carpeta personal de Google Photos para la cuenta, y también lo intenta al abrir `/galeria` para recuperar cuentas existentes. El título usa el formato `Galería - <nombre de usuario> - <Firebase UID>`; el UID hace único el nombre y el ID real del álbum queda guardado en Realtime Database para reutilizar siempre esa misma carpeta. En `/galeria`, los clientes ven su carpeta personal. El administrador abre la galería de un cliente por correo; la consulta y las subidas usan automáticamente el ID del álbum personal de esa cuenta, sin selección ni creación manual de carpetas. Si una cuenta antigua ya tenía un álbum predeterminado, se conserva y reutiliza para no perder sus fotos. Tanto clientes como administradores pueden eliminar una foto después de confirmar la acción; el backend solo permite a cada cliente eliminar fotos de sus propias carpetas y reserva a los administradores el acceso a otras galerías. Los administradores pueden subir hasta 5 imágenes de 25 MB por lote. Las imágenes permanecen en la biblioteca de Google autorizada por OAuth en el backend. Los permisos se comprueban en el backend con Firebase Auth y `ADMIN_EMAILS`; ocultar controles en la interfaz no es el control de seguridad.
 

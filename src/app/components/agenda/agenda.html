@@ -245,7 +245,7 @@
           type="text"
           [ngModel]="miDescripcion()"
           (ngModelChange)="miDescripcion.set($event)"
-          placeholder="Ej.: Boda de Juan y Sofía"
+          placeholder="Ej.: Casamiento de Juan y Sofía"
           maxlength="100"
           autofocus
           class="input-reserva" />
@@ -273,7 +273,7 @@
               [attr.aria-pressed]="categoriaServicios() === 'bodas'"
               (click)="seleccionarCategoria('bodas')">
               <span class="category-icon" aria-hidden="true">♡</span>
-              <span class="category-copy"><strong>Bodas</strong><small>Para toda la vida</small></span>
+              <span class="category-copy"><strong>Casamientos</strong><small>Para toda la vida</small></span>
               <span class="category-check" aria-hidden="true">✓</span>
             </button>
             <button
@@ -292,12 +292,12 @@
         @if (categoriaPrevia()) {
           <p class="booking-event-type" aria-live="polite">
             Evento seleccionado:
-            <strong>{{ categoriaPrevia() === '15_años' ? '15 años' : 'Boda' }}</strong>
+            <strong>{{ categoriaPrevia() === '15_años' ? '15 años' : 'Casamiento' }}</strong>
             <span> · Los servicios extra se pueden sumar a tu evento.</span>
           </p>
         } @else {
           <p class="booking-event-type" aria-live="polite">
-            Elegí 15 años o Bodas para indicar el tipo de evento. Los extras son complementarios.
+            Elegí 15 años o Casamientos para indicar el tipo de evento. Los extras son complementarios.
           </p>
         }
 

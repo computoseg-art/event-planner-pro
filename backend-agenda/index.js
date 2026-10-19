@@ -7,7 +7,6 @@ import { initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getDatabase } from 'firebase-admin/database';
 
-import nodemailer from 'nodemailer';
 import { google } from 'googleapis';
 import axios from 'axios';
 import multer from 'multer';
@@ -516,23 +515,6 @@ async function applyApprovedPayment(paymentId) {
 
   return { status: 'approved' };
 }
-
-// ---------------------------------------------
-// NODEMAILER (CONFIGURACIÓN DE CORREO)
-// ---------------------------------------------
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: Number(process.env.EMAIL_PORT) || 587,
-  secure: process.env.EMAIL_PORT == 465,
-  requireTLS: process.env.EMAIL_PORT != 465,
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 15000,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS?.replace(/\s/g, '')
-  }
-});
 
 // ---------------------------------------------
 // HELPER: OBTENER ACCESS TOKEN DE GOOGLE PHOTOS
@@ -1101,10 +1083,10 @@ app.post('/api/contact', async (req, res) => {
   attempts.push(now);
   contactRequests.set(clientIp, attempts);
 
-  const emailUser = process.env.EMAIL_USER?.trim();
-  const emailPass = process.env.EMAIL_PASS?.trim();
-  if (!emailUser || !emailPass) {
-    console.error('El correo de contacto no está configurado: faltan EMAIL_USER o EMAIL_PASS.');
+  const brevoApiKey = process.env.BREVO_API_KEY?.trim();
+  const emailFrom = process.env.EMAIL_FROM?.trim();
+  if (!brevoApiKey || !emailFrom || !validEmail(emailFrom)) {
+    console.error('El correo de contacto no está configurado: revisa BREVO_API_KEY y EMAIL_FROM.');
     return res.status(503).json({ error: 'El formulario de contacto no está disponible temporalmente.' });
   }
 
@@ -1129,42 +1111,55 @@ app.post('/api/contact', async (req, res) => {
       </div>
     `;
 
-    let timeoutId;
-    try {
-      await Promise.race([
-        transporter.sendMail({
-          from: emailUser,
-          to: process.env.EMAIL_TO?.trim() || 'esteban.garriga@gmail.com',
-          replyTo: email,
-          subject: `Contacto BSfotografia & Videografia: ${name.slice(0, 80)}`,
-          text: `Nombre: ${name}\nCorreo: ${email}\n\nMensaje:\n${message}`,
-          html: htmlContent,
-        }),
-        new Promise((_, reject) => {
-          timeoutId = setTimeout(
-            () => reject(new Error('CONTACT_EMAIL_TIMEOUT')),
-            20000
-          );
-        }),
-      ]);
-    } finally {
-      clearTimeout(timeoutId);
+    const emailResponse = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': brevoApiKey,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: {
+          name: process.env.EMAIL_FROM_NAME?.trim() || 'BSfotografia & Videografia',
+          email: emailFrom,
+        },
+        to: [{ email: process.env.EMAIL_TO?.trim() || 'esteban.garriga@gmail.com' }],
+        replyTo: { email },
+        subject: `Contacto BSfotografia & Videografia: ${name.slice(0, 80)}`,
+        textContent: `Nombre: ${name}\nCorreo: ${email}\n\nMensaje:\n${message}`,
+        htmlContent,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!emailResponse.ok) {
+      const responseBody = await emailResponse.text();
+      let providerMessage = 'Sin detalle del proveedor';
+      try {
+        providerMessage = JSON.parse(responseBody).message || providerMessage;
+      } catch {
+        providerMessage = responseBody.slice(0, 300) || providerMessage;
+      }
+      console.error('Brevo rechazó el correo de contacto:', {
+        status: emailResponse.status,
+        message: providerMessage,
+      });
+      return res.status(502).json({
+        error: 'No se pudo enviar tu mensaje. Revisa la configuración de Brevo e inténtalo nuevamente.',
+      });
     }
 
     return res.status(200).json({ message: '¡Gracias! Tu mensaje fue enviado. Te responderemos pronto.' });
   } catch (error) {
     console.error('Error al enviar correo de contacto:', {
       message: error.message,
-      code: error.code,
-      responseCode: error.responseCode,
-      command: error.command,
+      name: error.name,
     });
-    const timedOut = error.message === 'CONTACT_EMAIL_TIMEOUT'
-      || ['ETIMEDOUT', 'ESOCKET', 'ECONNECTION'].includes(error.code);
+    const timedOut = error.name === 'TimeoutError' || error.name === 'AbortError';
     return res.status(timedOut ? 504 : 502).json({
       error: timedOut
         ? 'El servicio de correo tardó demasiado en responder. Inténtalo nuevamente en unos minutos.'
-        : 'No se pudo enviar tu mensaje. Revisa la configuración de Gmail e inténtalo nuevamente.',
+        : 'No se pudo enviar tu mensaje. Inténtalo nuevamente más tarde.',
     });
   }
 });

@@ -401,12 +401,12 @@
 
   .card-event:last-child {
     grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: 0.9fr 1.1fr;
+    display: block;
   }
 
   .card-event:last-child .card-image {
-    height: 100%;
+    height: auto;
+    min-height: 280px;
   }
 
   .hero-note {
