@@ -27,6 +27,12 @@
   font-weight: 650;
 }
 
+.gallery-target-hint {
+  margin: 0;
+  color: #475569;
+  line-height: 1.5;
+}
+
 .gallery-target-row,
 .upload-action {
   display: flex;

@@ -14,46 +14,57 @@
         />
         <button type="button" (click)="openTargetGallery()">Abrir galería</button>
       </div>
-      <label for="new-folder-name">Crear carpeta para {{ userEmail }}</label>
-      <div class="gallery-target-row">
-        <input
-          id="new-folder-name"
-          type="text"
-          maxlength="100"
-          [value]="newFolderName"
-          (input)="setNewFolderName($event)"
-          placeholder="Ej.: Boda de Ana y Luis"
-        />
-        <button
-          type="button"
-          (click)="createFolder()"
-          [disabled]="isCreatingFolder || !newFolderName.trim()">
-          {{ isCreatingFolder ? 'Creando…' : 'Crear carpeta' }}
-        </button>
-      </div>
-      @if (folders.length > 0) {
-        <label for="gallery-folder">Carpeta</label>
-        <select id="gallery-folder" [value]="selectedAlbumId" (change)="selectFolder($event)">
-          @for (folder of folders; track folder.albumId) {
-            <option [value]="folder.albumId">{{ folder.title }}</option>
-          }
-        </select>
-      }
-      <label for="photo-files" class="upload-label">Subir fotos originales (hasta 5 imágenes de 25 MB)</label>
-      <input
-        id="photo-files"
-        type="file"
-        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif,image/bmp,image/tiff"
-        multiple
-        (change)="setSelectedFiles($event)"
-      />
-      @if (selectedFiles.length > 0) {
-        <div class="upload-action">
-          <span>{{ selectedFiles.length }} foto(s) seleccionada(s)</span>
-          <button type="button" (click)="uploadPhotos()" [disabled]="isUploading || !selectedAlbumId">
-            {{ isUploading ? 'Subiendo…' : 'Subir a esta galería' }}
+      @if (userEmail) {
+        <p class="gallery-target-hint">
+          Las carpetas y fotos se asociarán a <strong>{{ userEmail }}</strong> y serán visibles
+          cuando esa cuenta inicie sesión.
+        </p>
+        <label for="new-folder-name">Crear carpeta para {{ userEmail }}</label>
+        <div class="gallery-target-row">
+          <input
+            id="new-folder-name"
+            type="text"
+            maxlength="100"
+            [value]="newFolderName"
+            (input)="setNewFolderName($event)"
+            placeholder="Ej.: Boda de Ana y Luis"
+          />
+          <button
+            type="button"
+            (click)="createFolder()"
+            [disabled]="isCreatingFolder || !newFolderName.trim()">
+            {{ isCreatingFolder ? 'Creando…' : 'Crear carpeta' }}
           </button>
         </div>
+        @if (folders.length > 0) {
+          <label for="gallery-folder">Carpeta</label>
+          <select id="gallery-folder" [value]="selectedAlbumId" (change)="selectFolder($event)">
+            @for (folder of folders; track folder.albumId) {
+              <option [value]="folder.albumId">{{ folder.title }}</option>
+            }
+          </select>
+        }
+        <label for="photo-files" class="upload-label">Subir fotos originales (hasta 5 imágenes de 25 MB)</label>
+        <input
+          id="photo-files"
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif,image/bmp,image/tiff"
+          multiple
+          (change)="setSelectedFiles($event)"
+        />
+        @if (selectedFiles.length > 0) {
+          <div class="upload-action">
+            <span>{{ selectedFiles.length }} foto(s) seleccionada(s)</span>
+            <button type="button" (click)="uploadPhotos()" [disabled]="isUploading || !selectedAlbumId">
+              {{ isUploading ? 'Subiendo…' : 'Subir a esta galería' }}
+            </button>
+          </div>
+        }
+      } @else {
+        <p class="gallery-target-hint">
+          Escribe el correo exacto de la cuenta del cliente y pulsa “Abrir galería” antes de crear
+          carpetas o subir fotos.
+        </p>
       }
     </section>
   }

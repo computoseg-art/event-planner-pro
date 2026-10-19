@@ -41,11 +41,14 @@ export class GalleryComponent implements OnInit, OnDestroy {
     }
 
     const requestedEmail = this.route.snapshot.queryParamMap.get('email');
-    this.userEmail = this.auth.esAdmin() && requestedEmail
-      ? requestedEmail.trim().toLowerCase()
+    const esAdmin = this.auth.esAdmin();
+    this.userEmail = esAdmin
+      ? requestedEmail?.trim().toLowerCase() || ''
       : currentEmail;
     this.targetEmail = this.userEmail;
-    this.loadFolders(this.userEmail);
+    if (this.userEmail) {
+      this.loadFolders(this.userEmail);
+    }
     this.photoRefreshTimer = setInterval(() => this.refreshExpiringPhotoUrls(), 50 * 60 * 1000);
   }
 
