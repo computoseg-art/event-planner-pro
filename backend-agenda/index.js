@@ -699,15 +699,41 @@ app.post('/api/ensure-album', requireFirebaseAuth, requireAdmin, async (req, res
 // ---------------------------------------------
 app.post('/api/gallery/ensure-own-folder', requireFirebaseAuth, async (req, res) => {
   try {
+    const requestedEmail = typeof req.body?.email === 'string'
+      ? req.body.email.trim().toLowerCase()
+      : req.authenticatedEmail;
+    if (!validEmail(requestedEmail)) {
+      return res.status(400).json({ error: 'El email debe ser válido.' });
+    }
+    if (requestedEmail !== req.authenticatedEmail && !isAdmin(req.authenticatedEmail)) {
+      return res.status(403).json({ error: 'Solo puedes preparar tu propia carpeta personal.' });
+    }
+
+    let targetUser;
+    try {
+      targetUser = requestedEmail === req.authenticatedEmail
+        ? {
+            uid: req.authenticatedUid,
+            displayName: req.authenticatedName,
+            email: req.authenticatedEmail,
+          }
+        : await auth.getUserByEmail(requestedEmail);
+    } catch (error) {
+      if (error.code === 'auth/user-not-found') {
+        return res.status(404).json({ error: 'No existe una cuenta registrada con ese correo.' });
+      }
+      throw error;
+    }
+
     const album = await ensurePersonalGalleryAlbum(
-      req.authenticatedEmail,
-      req.authenticatedUid,
-      req.authenticatedName
+      targetUser.email.toLowerCase().trim(),
+      targetUser.uid,
+      targetUser.displayName
     );
     return res.status(200).json({
       albumId: album.albumId,
       title: album.title || 'Galería general',
-      email: album.email || req.authenticatedEmail,
+      email: album.email || targetUser.email,
       createdAt: album.createdAt,
       isDefault: true,
     });
@@ -917,7 +943,7 @@ app.post('/api/upload-photos', requireFirebaseAuth, requireAdmin, (req, res, nex
     next(error);
   });
 }, async (req, res) => {
-  const { targetEmail, albumId: requestedAlbumId } = req.body;
+  const { targetEmail } = req.body;
   const files = req.files;
 
   if (!validEmail(targetEmail) || !files || files.length === 0) {
@@ -936,33 +962,28 @@ app.post('/api/upload-photos', requireFirebaseAuth, requireAdmin, (req, res, nex
   if (!files.every(file => allowedImageTypes.has(file.mimetype))) {
     return res.status(400).json({ error: 'Formato no permitido. Usa JPG, PNG, WebP, HEIC, GIF, BMP o TIFF.' });
   }
-  if (requestedAlbumId && !validAlbumId(requestedAlbumId)) {
-    return res.status(400).json({ error: 'La carpeta solicitada no es válida.' });
-  }
-
-  const cleanEmail = encodeEmail(targetEmail);
-
   try {
-    let albumData = requestedAlbumId
-      ? await getGalleryAlbum(cleanEmail, requestedAlbumId)
-      : null;
-    if (requestedAlbumId && !albumData) {
-      return res.status(404).json({ error: 'No se encontró la carpeta de destino.' });
+    let targetUser;
+    try {
+      targetUser = targetEmail.trim().toLowerCase() === req.authenticatedEmail
+        ? {
+            uid: req.authenticatedUid,
+            displayName: req.authenticatedName,
+            email: req.authenticatedEmail,
+          }
+        : await auth.getUserByEmail(targetEmail.trim().toLowerCase());
+    } catch (error) {
+      if (error.code === 'auth/user-not-found') {
+        return res.status(404).json({ error: 'No existe una cuenta registrada con ese correo.' });
+      }
+      throw error;
     }
-    let token = await getGooglePhotosToken();
-
-    if (!requestedAlbumId && !albumData) {
-      const snapshot = await db.ref(`albumes/${cleanEmail}`).once('value');
-      albumData = snapshot.val();
-    }
-    if (!requestedAlbumId && !albumData?.albumId) {
-      const albumTitle = `Evento - ${targetEmail}`;
-      const albumId = await createAlbumInGooglePhotos(token, albumTitle);
-      if (!albumId) throw new Error('No se pudo crear el álbum automáticamente.');
-
-      albumData = { email: targetEmail.toLowerCase().trim(), albumId, createdAt: new Date().toISOString() };
-      await db.ref(`albumes/${cleanEmail}`).set(albumData);
-    }
+    const albumData = await ensurePersonalGalleryAlbum(
+      targetUser.email.toLowerCase().trim(),
+      targetUser.uid,
+      targetUser.displayName
+    );
+    const token = await getGooglePhotosToken();
 
     const uploadRequests = files.map(file =>
       axios.post(

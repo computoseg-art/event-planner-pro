@@ -2,7 +2,7 @@ import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/cor
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
-import { GalleryFolder, GalleryService, Photo } from '../../services/gallery.service';
+import { GalleryService, Photo } from '../../services/gallery.service';
 import { ImageCarousel } from '../../components/image-carousel/image-carousel';
 import { firstValueFrom, take } from 'rxjs';
 
@@ -19,20 +19,14 @@ export class GalleryComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
 
   photos: Photo[] = [];
-  folders: GalleryFolder[] = [];
-  adminFolders: GalleryFolder[] = [];
   photoUrls: string[] = [];
   userEmail = '';
   targetEmail = '';
   selectedAlbumId = '';
-  sourceAlbumId = '';
-  newFolderName = '';
   selectedFiles: File[] = [];
   errorMessage = '';
   isLoading = false;
   isUploading = false;
-  isCreatingFolder = false;
-  isAssigningFolder = false;
   isDeletingPhoto = false;
   currentImageIndex: number = 0;
   private photoRefreshTimer?: ReturnType<typeof setInterval>;
@@ -41,7 +35,6 @@ export class GalleryComponent implements OnInit, OnDestroy {
   async ngOnInit(): Promise<void> {
     this.isLoading = true;
     let currentEmail: string | undefined;
-    let provisioningError = '';
     try {
       const currentUser = await firstValueFrom(this.auth.user$.pipe(take(1)));
       currentEmail = currentUser?.email?.trim().toLowerCase();
@@ -58,39 +51,37 @@ export class GalleryComponent implements OnInit, OnDestroy {
       return;
     }
 
-    try {
-      await firstValueFrom(this.galleryService.ensureOwnFolder());
-    } catch (error) {
-      console.error('No se pudo preparar la carpeta personal de Google Photos:', error);
-      provisioningError = this.galleryService.provisioningErrorMessage(error);
-    }
-
     const requestedEmail = this.route.snapshot.queryParamMap.get('email');
     const esAdmin = this.auth.esAdmin();
     this.userEmail = esAdmin
       ? requestedEmail?.trim().toLowerCase() || ''
       : currentEmail;
     this.targetEmail = this.userEmail;
-    if (esAdmin) {
-      this.loadAdminFolders(currentEmail);
-    }
     if (this.userEmail) {
-      this.loadFolders(this.userEmail);
+      void this.loadPersonalGallery(this.userEmail);
+    } else {
+      this.isLoading = false;
     }
-    this.errorMessage = provisioningError;
     this.photoRefreshTimer = setInterval(() => this.refreshExpiringPhotoUrls(), 50 * 60 * 1000);
   }
 
-  private loadAdminFolders(email: string): void {
-    this.galleryService.getFolders(email).subscribe({
-      next: folders => {
-        this.adminFolders = folders;
-      },
-      error: err => {
-        console.error('Error al cargar tus carpetas para asignarlas:', err);
-        this.errorMessage = err.error?.error || 'No se pudieron cargar tus carpetas existentes.';
+  private async loadPersonalGallery(email: string): Promise<void> {
+    this.isLoading = true;
+    this.errorMessage = '';
+    try {
+      const folder = await firstValueFrom(this.galleryService.ensureOwnFolder(email));
+      if (this.userEmail !== email) return;
+      this.selectedAlbumId = folder.albumId;
+      this.loadGallery(email, folder.albumId);
+    } catch (error) {
+      console.error('No se pudo preparar la carpeta personal de Google Photos:', error);
+      if (this.userEmail === email) {
+        this.isLoading = false;
+        this.photos = [];
+        this.photoUrls = [];
+        this.errorMessage = this.galleryService.provisioningErrorMessage(error);
       }
-    });
+    }
   }
 
   ngOnDestroy(): void {
@@ -117,35 +108,6 @@ export class GalleryComponent implements OnInit, OnDestroy {
     ) {
       this.loadGallery(this.userEmail, this.selectedAlbumId);
     }
-  }
-
-  loadFolders(email: string, preferredAlbumId = ''): void {
-    this.isLoading = true;
-    this.errorMessage = '';
-    this.galleryService.getFolders(email).subscribe({
-      next: folders => {
-        this.folders = folders;
-        const albumId = folders.some(folder => folder.albumId === preferredAlbumId)
-          ? preferredAlbumId
-          : folders[0]?.albumId || '';
-        this.selectedAlbumId = albumId;
-        if (albumId) {
-          this.loadGallery(email, albumId);
-        } else {
-          this.photos = [];
-          this.photoUrls = [];
-          this.isLoading = false;
-        }
-      },
-      error: err => {
-        console.error('Error al cargar las carpetas de la galería:', err);
-        this.isLoading = false;
-        this.folders = [];
-        this.photos = [];
-        this.photoUrls = [];
-        this.errorMessage = err.error?.error || 'No se pudieron cargar las carpetas de la galería.';
-      }
-    });
   }
 
   loadGallery(email: string, albumId = this.selectedAlbumId): void {
@@ -192,75 +154,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
     this.selectedAlbumId = '';
     this.photos = [];
     this.photoUrls = [];
-    this.loadFolders(email);
-  }
-
-  selectFolder(event: Event): void {
-    const select = event.target;
-    if (!(select instanceof HTMLSelectElement)) return;
-    this.selectedAlbumId = select.value;
-    this.loadGallery(this.userEmail, this.selectedAlbumId);
-  }
-
-  setSourceFolder(event: Event): void {
-    const select = event.target;
-    if (select instanceof HTMLSelectElement) {
-      this.sourceAlbumId = select.value;
-    }
-  }
-
-  setNewFolderName(event: Event): void {
-    const input = event.target;
-    if (input instanceof HTMLInputElement) {
-      this.newFolderName = input.value;
-    }
-  }
-
-  createFolder(): void {
-    const title = this.newFolderName.trim();
-    if (!this.auth.esAdmin() || !this.userEmail || !title || this.isCreatingFolder) return;
-
-    this.isCreatingFolder = true;
-    this.errorMessage = '';
-    this.galleryService.createFolder(this.userEmail, title).subscribe({
-      next: folder => {
-        this.newFolderName = '';
-        this.isCreatingFolder = false;
-        this.loadFolders(this.userEmail, folder.albumId);
-      },
-      error: err => {
-        console.error('Error al crear carpeta de galería:', err);
-        this.isCreatingFolder = false;
-        this.errorMessage = err.error?.error || 'No se pudo crear la carpeta.';
-      }
-    });
-  }
-
-  assignExistingFolder(): void {
-    if (
-      !this.auth.esAdmin() ||
-      !this.userEmail ||
-      !this.sourceAlbumId ||
-      this.isAssigningFolder
-    ) {
-      return;
-    }
-
-    this.isAssigningFolder = true;
-    this.errorMessage = '';
-    const targetEmail = this.userEmail;
-    const albumId = this.sourceAlbumId;
-    this.galleryService.assignFolderToUser(targetEmail, albumId).subscribe({
-      next: folder => {
-        this.isAssigningFolder = false;
-        this.loadFolders(targetEmail, folder.albumId);
-      },
-      error: err => {
-        console.error('Error al asignar carpeta existente al cliente:', err);
-        this.isAssigningFolder = false;
-        this.errorMessage = err.error?.error || 'No se pudo compartir la carpeta con el cliente.';
-      }
-    });
+    void this.loadPersonalGallery(email);
   }
 
   setSelectedFiles(event: Event): void {
@@ -307,7 +201,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
     this.errorMessage = '';
     const targetEmail = this.userEmail;
     const albumId = this.selectedAlbumId;
-    this.galleryService.uploadPhotos(targetEmail, albumId, this.selectedFiles).subscribe({
+    this.galleryService.uploadPhotos(targetEmail, this.selectedFiles).subscribe({
       next: () => {
         this.selectedFiles = [];
         this.isUploading = false;

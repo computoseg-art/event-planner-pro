@@ -56,43 +56,12 @@ export class GalleryService {
     });
   }
 
-  ensureOwnFolder(): Observable<GalleryFolder> {
-    return this.authorizationHeaders().pipe(
-      switchMap(headers =>
-        this.http.post<GalleryFolder>(`${this.apiUrl}/gallery/ensure-own-folder`, {}, { headers })
-      )
-    );
-  }
-
-  getFolders(email: string): Observable<GalleryFolder[]> {
-    return this.authorizationHeaders().pipe(
-      switchMap(headers =>
-        this.http.get<GalleryFolder[]>(
-          `${this.apiUrl}/gallery/${encodeURIComponent(email)}/folders`,
-          { headers, params: { _refresh: Date.now() } }
-        )
-      )
-    );
-  }
-
-  createFolder(email: string, title: string): Observable<GalleryFolder> {
+  ensureOwnFolder(email?: string): Observable<GalleryFolder> {
     return this.authorizationHeaders().pipe(
       switchMap(headers =>
         this.http.post<GalleryFolder>(
-          `${this.apiUrl}/gallery/folders`,
-          { email, title },
-          { headers }
-        )
-      )
-    );
-  }
-
-  assignFolderToUser(email: string, albumId: string): Observable<GalleryFolder> {
-    return this.authorizationHeaders().pipe(
-      switchMap(headers =>
-        this.http.post<GalleryFolder>(
-          `${this.apiUrl}/gallery/folders/assign`,
-          { email, albumId },
+          `${this.apiUrl}/gallery/ensure-own-folder`,
+          email ? { email } : {},
           { headers }
         )
       )
@@ -112,12 +81,10 @@ export class GalleryService {
 
   uploadPhotos(
     targetEmail: string,
-    albumId: string,
     files: File[]
   ): Observable<{ message: string }> {
     const formData = new FormData();
     formData.append('targetEmail', targetEmail);
-    formData.append('albumId', albumId);
     files.forEach(file => formData.append('photos', file));
 
     return this.authorizationHeaders().pipe(
