@@ -1,6 +1,6 @@
 <header class="navbar">
   <!-- BRANDING -->
-  <div class="nav-brand" routerLink="/">
+  <div class="nav-brand" [routerLink]="(auth.user$ | async) ? '/eventos' : '/home'">
     <div class="logo-icon">
       <svg class="icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -13,8 +13,11 @@
   <nav class="nav-links desktop-only">
     @if (!(auth.user$ | async)) {
       <a routerLink="/home" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">Inicio</a>
+    } @else {
+      <a routerLink="/eventos" routerLinkActive="active" class="nav-item">Experiencias</a>
+      <a routerLink="/agenda" routerLinkActive="active" class="nav-item">Agenda</a>
     }
-    <a routerLink="/agenda" routerLinkActive="active" class="nav-item">Agenda</a>
+    <a routerLink="/contacto" routerLinkActive="active" class="nav-item">Contacto</a>
     @if (auth.user$ | async) {
       <a routerLink="/galeria" routerLinkActive="active" class="nav-item">
         {{ auth.esAdmin() ? 'Administrar galería' : 'Galería' }}
@@ -24,14 +27,16 @@
 
   <!-- ACCIONES DESKTOP -->
   <div class="nav-actions desktop-only">
-    <button routerLink="/agenda" class="cart-btn" title="Ver Reservas">
-      <svg class="icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-      </svg>
-      @if ((auth.user$ | async) && reservaService.reservasVisibles().length > 0) {
-        <span class="cart-badge">{{ reservaService.reservasVisibles().length }}</span>
-      }
-    </button>
+    @if (auth.user$ | async) {
+      <button routerLink="/agenda" class="cart-btn" title="Ver Reservas">
+        <svg class="icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+        </svg>
+        @if (reservaService.reservasVisibles().length > 0) {
+          <span class="cart-badge">{{ reservaService.reservasVisibles().length }}</span>
+        }
+      </button>
+    }
 
     @if (auth.user$ | async; as user) {
       <div class="user-profile">
@@ -61,8 +66,11 @@
     <nav class="mobile-nav-links">
       @if (!(auth.user$ | async)) {
         <a routerLink="/home" (click)="cerrarMenu()" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Inicio</a>
+      } @else {
+        <a routerLink="/eventos" (click)="cerrarMenu()" routerLinkActive="active">Experiencias</a>
+        <a routerLink="/agenda" (click)="cerrarMenu()" routerLinkActive="active">Agenda</a>
       }
-      <a routerLink="/agenda" (click)="cerrarMenu()" routerLinkActive="active">Agenda</a>
+      <a routerLink="/contacto" (click)="cerrarMenu()" routerLinkActive="active">Contacto</a>
     </nav>
 
     <div class="mobile-user-section">

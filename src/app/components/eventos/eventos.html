@@ -1,64 +1,107 @@
 <div class="eventos-container">
-  <!-- Hero / Header de Bienvenida -->
   <header class="hero-section">
-    <div class="hero-overlay"></div>
+    <div class="hero-image" aria-hidden="true"></div>
     <div class="hero-content">
-      <span class="subtitle">EVENT PLANNER PRO</span>
-      <h1>Fotografía y Video de Alta Gama</h1>
-      <p>Creando memorias inolvidables para tus momentos más especiales: Bodas y Cumpleaños de 15.</p>
+      <span class="eyebrow"><span></span> EVENT PLANNER PRO · FOTOGRAFÍA & VIDEO</span>
+      <h1>Hay días que merecen<br /><em>ser para siempre.</em></h1>
+      <p>
+        Contamos historias de amor, familia y celebración con imágenes que vas a querer volver
+        a mirar toda la vida.
+      </p>
       <div class="hero-actions">
         <button class="btn-primary" (click)="irAgenda()">
-          <i class="bi bi-calendar-check"></i> Ir a Mi Agenda / Reservar
+          Reservá tu fecha <span aria-hidden="true">↗</span>
         </button>
+        <a class="hero-link" href="#experiencias">Descubrí nuestras experiencias <span>↓</span></a>
       </div>
+      <div class="hero-signature">
+        <span class="signature-line"></span>
+        <span>Momentos reales. Recuerdos eternos.</span>
+      </div>
+    </div>
+    <div class="hero-note">
+      <span class="note-star">✳</span>
+      <span>Tu historia,<br />en cada detalle.</span>
     </div>
   </header>
 
-  <!-- Sección de Servicios Elegantes -->
-  <section class="services-section">
-    <div class="section-title">
-      <h2>Nuestros Servicios Exclusivos</h2>
-      <div class="divider"></div>
+  <section class="intro-section" id="experiencias">
+    <div class="intro-heading">
+      <span class="section-kicker">CELEBRAMOS LO QUE IMPORTA</span>
+      <h2>Tres maneras de hacer<br /><em>inolvidable</em> tu gran día.</h2>
+      <p>Una mirada sensible, un equipo profesional y todo lo que necesitás para celebrar.</p>
     </div>
 
     <div class="cards-grid">
-      <!-- Tarjeta Cumpleaños de 15 -->
-      <div class="card-event quince">
-        <div class="card-badge">POPULAR</div>
+      <article class="card-event quince">
+        <div class="card-image">
+          <span class="card-number">01</span>
+          <span class="card-badge">UNA NOCHE MÁGICA</span>
+        </div>
         <div class="card-body">
-          <div class="card-icon">👑</div>
+          <span class="card-icon" aria-hidden="true">✧</span>
           <h3>Cumpleaños de 15</h3>
           <p class="description">
-            Una noche mágica capturada con elegancia. Cobertura completa de la recepción, vals, shows y book previo en exteriores.
+            La emoción de una noche única, contada en imágenes llenas de luz, movimiento y
+            personalidad.
           </p>
           <ul class="features">
-            <li><i class="bi bi-check2-circle"></i> Cobertura audiovisual completa</li>
-            <li><i class="bi bi-check2-circle"></i> Sesión previa en exteriores (Book 15)</li>
-            <li><i class="bi bi-check2-circle"></i> Álbum impreso HD + Galería Digital</li>
-            <li><i class="bi bi-check2-circle"></i> Video resumen para redes sociales</li>
+            <li><span>✦</span> Cobertura de foto y video</li>
+            <li><span>✦</span> Book previo en exteriores</li>
+            <li><span>✦</span> Galería digital y video resumen</li>
           </ul>
-          <button class="btn-secondary" (click)="irAgenda()">Reservar Fecha</button>
+          <button class="btn-secondary" (click)="irAgenda()">Soñemos este día <span>↗</span></button>
         </div>
-      </div>
+      </article>
 
-      <!-- Tarjeta Bodas -->
-      <div class="card-event bodas">
-        <div class="card-badge premium">PREMIUM</div>
+      <article class="card-event bodas">
+        <div class="card-image">
+          <span class="card-number">02</span>
+          <span class="card-badge premium">PARA TODA LA VIDA</span>
+        </div>
         <div class="card-body">
-          <div class="card-icon">💍</div>
-          <h3>Bodas & Casamientos</h3>
+          <span class="card-icon" aria-hidden="true">♡</span>
+          <h3>Bodas & casamientos</h3>
           <p class="description">
-            Documentamos el día más importante de sus vidas. Cada mirada, emoción y detalle preservado para siempre.
+            Desde los preparativos hasta el último abrazo: cada gesto, cada mirada, cada historia.
           </p>
           <ul class="features">
-            <li><i class="bi bi-check2-circle"></i> Pre-Boda (Getting Ready) y Fiesta</li>
-            <li><i class="bi bi-check2-circle"></i> Dron profesional en exteriores</li>
-            <li><i class="bi bi-check2-circle"></i> Fotolibro lujoso en tapa dura</li>
-            <li><i class="bi bi-check2-circle"></i> Entrega de fotos editadas en alta resolución</li>
+            <li><span>✦</span> Preparativos, ceremonia y fiesta</li>
+            <li><span>✦</span> Foto y video con mirada documental</li>
+            <li><span>✦</span> Dron y fotolibro premium</li>
           </ul>
-          <button class="btn-secondary" (click)="irAgenda()">Reservar Fecha</button>
+          <button class="btn-secondary" (click)="irAgenda()">Celebrémoslo juntos <span>↗</span></button>
         </div>
-      </div>
+      </article>
+
+      <article class="card-event extras">
+        <div class="card-image">
+          <span class="card-number">03</span>
+          <span class="card-badge">UN PLUS INOLVIDABLE</span>
+        </div>
+        <div class="card-body">
+          <span class="card-icon" aria-hidden="true">✺</span>
+          <h3>Más para celebrar</h3>
+          <p class="description">
+            Sumá experiencias y detalles que sorprenden. Nosotros te ayudamos a darle forma a
+            cada idea.
+          </p>
+          <ul class="features">
+            <li><span>✦</span> Toro mecánico y transporte</li>
+            <li><span>✦</span> Dron para foto y video</li>
+            <li><span>✦</span> Mesa dulce y decoración</li>
+          </ul>
+          <button class="btn-secondary" (click)="irAgenda()">Armá tu experiencia <span>↗</span></button>
+        </div>
+      </article>
     </div>
+  </section>
+
+  <section class="closing-banner">
+    <div>
+      <span class="section-kicker">EL PRIMER PASO ES TUYO</span>
+      <h2>Tu próxima gran historia<br /><em>empieza acá.</em></h2>
+    </div>
+    <button class="btn-primary" (click)="irAgenda()">Consultá disponibilidad <span>↗</span></button>
   </section>
 </div>

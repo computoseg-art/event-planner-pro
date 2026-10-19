@@ -1,10 +1,25 @@
 <div class="login-container">
+  <section class="login-story">
+    <span class="story-kicker">EVENT PLANNER PRO</span>
+    <h1>Los momentos pasan.<br /><em>Los recuerdos quedan.</em></h1>
+    <p>
+      Fotografía, video y experiencias pensadas para celebrar en familia. Empezá a organizar
+      ese día que ya imaginás.
+    </p>
+    <div class="story-caption"><span>✳</span> Historias reales, recuerdos para siempre</div>
+  </section>
+
   <div class="login-card">
-    <h2>{{ esRegistro() ? 'Crear Cuenta' : 'Iniciar Sesión' }}</h2>
+    <span class="card-kicker">{{ esRegistro() ? 'TU PRÓXIMA HISTORIA' : 'QUÉ BUENO VERTE' }}</span>
+    <h2>{{ esRegistro() ? 'Creá tu cuenta' : 'Bienvenido de nuevo' }}</h2>
+    <p class="login-intro">
+      {{ esRegistro() ? 'Organizá tu celebración y guardá cada detalle.' : 'Ingresá para seguir organizando tu celebración.' }}
+    </p>
 
     <div class="form-group">
-      <label>Correo Electrónico</label>
+      <label for="login-email">Correo electrónico</label>
       <input
+        id="login-email"
         type="email"
         [ngModel]="nombreUsuario()"
         (input)="nombreUsuario.set($any($event.target).value)"
@@ -14,8 +29,9 @@
     </div>
 
     <div class="form-group">
-      <label>Contraseña</label>
+      <label for="login-password">Contraseña</label>
       <input
+        id="login-password"
         type="password"
         [ngModel]="passwordUsuario()"
         (input)="passwordUsuario.set($any($event.target).value)"
@@ -29,7 +45,7 @@
       class="btn-primary"
       [disabled]="nombreUsuario().trim().length === 0 || passwordUsuario().trim().length < 6"
     >
-      {{ esRegistro() ? 'Registrarse Ahora' : 'Entrar' }}
+      {{ esRegistro() ? 'Crear mi cuenta' : 'Iniciar sesión' }} <span aria-hidden="true">↗</span>
     </button>
 
     <!-- Botón de Inicio de Sesión con Google -->

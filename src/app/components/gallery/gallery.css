@@ -1,36 +1,42 @@
 .gallery-page-container {
-  width: min(1100px, calc(100% - 32px));
-  margin: 96px auto 48px;
-  color: #172033;
+  width: min(1120px, calc(100% - 40px));
+  margin: 38px auto 64px;
+  color: #302725;
 }
 
 .gallery-page-container h1 {
-  margin: 0 0 24px;
-  font-size: clamp(1.75rem, 4vw, 2.4rem);
-  font-weight: 750;
+  margin: 0 0 27px;
+  color: #302725;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  font-size: clamp(2.2rem, 5vw, 3.35rem);
+  font-weight: 400;
+  letter-spacing: -0.045em;
   text-align: center;
 }
 
 .gallery-admin-tools {
   display: grid;
-  gap: 12px;
-  max-width: 720px;
-  margin: 0 auto 24px;
-  padding: 20px;
-  border: 1px solid #dbe3ef;
-  border-radius: 14px;
-  background: #fff;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  max-width: 760px;
+  gap: 13px;
+  margin: 0 auto 32px;
+  padding: clamp(20px, 4vw, 32px);
+  border: 1px solid #e8e1d8;
+  border-radius: 5px;
+  background: #fffdfa;
+  box-shadow: 0 14px 40px rgb(45 35 31 / 7%);
 }
 
 .gallery-admin-tools label {
-  font-weight: 650;
+  color: #403632;
+  font-size: 0.84rem;
+  font-weight: 700;
 }
 
 .gallery-target-hint {
   margin: 0;
-  color: #475569;
-  line-height: 1.5;
+  color: #77716a;
+  font-size: 0.87rem;
+  line-height: 1.65;
 }
 
 .gallery-target-row,
@@ -42,38 +48,43 @@
 
 .gallery-target-row input,
 .gallery-admin-tools input[type='file'] {
+  width: 100%;
   min-width: 0;
-  width: 100%;
 }
 
+.gallery-target-row input,
 .gallery-admin-tools select {
-  width: 100%;
+  min-height: 45px;
   padding: 10px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: white;
-}
-
-.gallery-target-row input {
-  padding: 10px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
+  border: 1px solid #ddd4ca;
+  border-radius: 3px;
+  background: #fffdfa;
+  color: #332927;
 }
 
 .gallery-admin-tools button,
 .photo-download a {
   display: inline-flex;
-  justify-content: center;
+  min-height: 43px;
   align-items: center;
-  padding: 10px 16px;
-  border: 0;
-  border-radius: 8px;
-  background: #4f46e5;
+  justify-content: center;
+  padding: 0 16px;
+  border: 1px solid #722f4d;
+  border-radius: 3px;
+  background: #722f4d;
   color: white;
-  font-weight: 650;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
-  cursor: pointer;
+  transition: transform 180ms ease, background 180ms ease;
+}
+
+.gallery-admin-tools button:hover:not(:disabled),
+.photo-download a:hover {
+  transform: translateY(-2px);
+  background: #57223a;
 }
 
 .gallery-admin-tools button:disabled {
@@ -82,56 +93,68 @@
 }
 
 .upload-label {
-  margin-top: 6px;
+  margin-top: 5px;
 }
 
 .upload-action {
   justify-content: space-between;
   flex-wrap: wrap;
+  color: #655a54;
+  font-size: 0.84rem;
 }
 
 .gallery-message,
 .no-photos-message {
+  max-width: 760px;
   margin: 20px auto;
-  padding: 18px;
+  padding: 23px;
+  border: 1px solid #e9e1d8;
+  border-radius: 5px;
+  background: #fffdfa;
+  color: #77716a;
+  line-height: 1.7;
   text-align: center;
-  color: #475569;
 }
 
 .gallery-error {
-  max-width: 720px;
-  border: 1px solid #fecaca;
-  border-radius: 8px;
-  background: #fef2f2;
-  color: #b91c1c;
+  border-color: #e9ceca;
+  background: #fbf1ef;
+  color: #9b5148;
 }
 
 .carousel-container {
   width: 100%;
+  animation: reveal-up 450ms both;
 }
 
 .photo-download {
   display: flex;
   justify-content: center;
-  margin: 16px 0 24px;
+  margin: 17px 0 28px;
 }
 
 .thumbnail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 10px;
+  gap: 11px;
 }
 
 .thumbnail-item {
   overflow: hidden;
   aspect-ratio: 4 / 3;
-  border: 3px solid transparent;
-  border-radius: 8px;
+  border: 2px solid transparent;
+  border-radius: 3px;
+  background: #eee8e0;
   cursor: pointer;
+  transition: border-color 180ms ease, transform 180ms ease;
+}
+
+.thumbnail-item:hover {
+  transform: translateY(-2px);
 }
 
 .thumbnail-item.active {
-  border-color: #4f46e5;
+  border-color: #a78355;
 }
 
 .thumbnail-item img {
@@ -142,12 +165,12 @@
 
 @media (max-width: 600px) {
   .gallery-page-container {
-    width: min(100% - 20px, 1100px);
-    margin-top: 84px;
+    width: calc(100% - 24px);
+    margin-top: 27px;
   }
 
   .gallery-admin-tools {
-    padding: 14px;
+    padding: 17px;
   }
 
   .gallery-target-row {
@@ -160,7 +183,7 @@
   }
 
   .thumbnail-grid {
-    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(82px, 1fr));
     gap: 6px;
   }
 }

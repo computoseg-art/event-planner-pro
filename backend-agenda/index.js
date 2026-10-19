@@ -49,7 +49,9 @@ const db = getDatabase(firebaseApp);
 const preferenceClient = new Preference(new MercadoPagoConfig({ accessToken }));
 const paymentClient = new Payment(new MercadoPagoConfig({ accessToken }));
 const app = express();
+app.set('trust proxy', 1);
 const personalAlbumProvisioning = new Map();
+const contactRequests = new Map();
 const PORT = Number(process.env.PORT || 3000);
 const clientUrl = process.env.CLIENT_URL.replace(/\/+$/, '');
 const backendPublicUrl = process.env.BACKEND_PUBLIC_URL.replace(/\/+$/, '');
@@ -1070,40 +1072,72 @@ app.post('/api/delete-photo/:photoId', requireFirebaseAuth, async (req, res) => 
 });
 
 // ---------------------------------------------
-// CORREO: ENVIAR MENSAJE
+// CORREO: FORMULARIO DE CONTACTO
 // ---------------------------------------------
-app.post('/api/send-email', async (req, res) => {
-  const { from, to, subject, text } = req.body;
-  if (!from || !to || !subject || !text) {
-    return res.status(400).json({ error: 'Faltan campos requeridos.' });
+app.post('/api/contact', async (req, res) => {
+  const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+  const email = typeof req.body?.email === 'string' ? req.body.email.trim() : '';
+  const message = typeof req.body?.message === 'string' ? req.body.message.trim() : '';
+
+  if (
+    !name || name.length > 100 ||
+    !validEmail(email) ||
+    !message || message.length > 5000
+  ) {
+    return res.status(400).json({ error: 'Completa nombre, correo válido y mensaje (máximo 5000 caracteres).' });
+  }
+
+  const now = Date.now();
+  const clientIp = req.ip;
+  const attempts = (contactRequests.get(clientIp) || []).filter(timestamp => now - timestamp < 15 * 60 * 1000);
+  if (attempts.length >= 5) {
+    contactRequests.set(clientIp, attempts);
+    return res.status(429).json({ error: 'Se alcanzó el límite de mensajes. Inténtalo nuevamente más tarde.' });
+  }
+  attempts.push(now);
+  contactRequests.set(clientIp, attempts);
+
+  const emailUser = process.env.EMAIL_USER?.trim();
+  const emailPass = process.env.EMAIL_PASS?.trim();
+  if (!emailUser || !emailPass) {
+    console.error('El correo de contacto no está configurado: faltan EMAIL_USER o EMAIL_PASS.');
+    return res.status(503).json({ error: 'El formulario de contacto no está disponible temporalmente.' });
   }
 
   try {
+    const escapeHtml = value => value.replace(/[&<>"']/g, character => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    })[character]);
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; color: #333;">
         <div style="max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 8px;">
-          <h2 style="color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 10px;">Nuevo Mensaje de EventPlannerPro</h2>
-          <p><strong>De:</strong> ${from}</p>
-          <p><strong>Asunto:</strong> ${subject}</p>
+          <h2 style="color: #722f4d; border-bottom: 2px solid #c2a16d; padding-bottom: 10px;">Nuevo mensaje de EventPlanner Pro</h2>
+          <p><strong>Nombre:</strong> ${escapeHtml(name)}</p>
+          <p><strong>Correo:</strong> ${escapeHtml(email)}</p>
           <div style="border: 1px solid #ddd; padding: 15px; background: #fafafa; border-radius: 5px; margin-top: 15px;">
-            <p style="white-space: pre-wrap; margin: 0;">${text}</p>
+            <p style="white-space: pre-wrap; margin: 0;">${escapeHtml(message)}</p>
           </div>
         </div>
       </div>
     `;
 
     await transporter.sendMail({
-      from,
-      to,
-      subject,
-      text: `De: ${from}\n\nAsunto: ${subject}\n\nMensaje:\n${text}`,
-      html: htmlContent
+      from: emailUser,
+      to: process.env.EMAIL_TO?.trim() || 'esteban.garriga@gmail.com',
+      replyTo: email,
+      subject: `Contacto EventPlanner Pro: ${name.slice(0, 80)}`,
+      text: `Nombre: ${name}\nCorreo: ${email}\n\nMensaje:\n${message}`,
+      html: htmlContent,
     });
 
-    res.status(200).json({ message: 'Correo enviado con éxito.' });
+    return res.status(200).json({ message: '¡Gracias! Tu mensaje fue enviado. Te responderemos pronto.' });
   } catch (error) {
-    console.error('❌ Error al enviar correo:', error);
-    res.status(500).json({ error: 'Error interno al enviar correo.' });
+    console.error('Error al enviar correo de contacto:', error.message);
+    return res.status(500).json({ error: 'No se pudo enviar tu mensaje. Inténtalo nuevamente más tarde.' });
   }
 });
 

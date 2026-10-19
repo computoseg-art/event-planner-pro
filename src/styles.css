@@ -1,18 +1,27 @@
 :root {
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --bg-color: #0f172a; /* Fondo oscuro consistente */
-  --card-bg: #ffffff;
-  --text-main: #1e293b;
-  --text-muted: #64748b;
-  --border-radius: 12px;
-  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  color-scheme: light;
+  --primary: #722f4d;
+  --primary-hover: #57223a;
+  --primary-soft: #f3e8ed;
+  --accent: #c2a16d;
+  --accent-soft: #f2eadb;
+  --bg-color: #f7f4ef;
+  --card-bg: #fffdfa;
+  --text-main: #262321;
+  --text-muted: #77716a;
+  --border-color: #e8e1d8;
+  --border-radius: 18px;
+  --shadow: 0 14px 40px rgb(45 35 31 / 8%);
+  --shadow-lift: 0 24px 58px rgb(45 35 31 / 14%);
 }
 
-html, body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: var(--bg-color);
-  color: #f8fafc;
+html,
+body {
+  font-family: 'Avenir Next', Avenir, 'Segoe UI', sans-serif;
+  background:
+    radial-gradient(ellipse at 8% 0%, rgb(194 161 109 / 10%), transparent 34rem),
+    var(--bg-color);
+  color: var(--text-main);
   margin: 0;
   padding: 0;
   width: 100%;
@@ -21,11 +30,33 @@ html, body {
   overflow-x: hidden;
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: inherit;
 }
 
-/* El elemento raíz de Angular debe abarcar el 100% de la ventana */
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgb(194 161 109 / 65%);
+  outline-offset: 3px;
+}
+
 app-root {
   display: flex;
   flex-direction: column;
@@ -33,10 +64,42 @@ app-root {
   min-height: 100vh;
 }
 
-/* Contenedor principal que se expande a todo el ancho del iPad */
 main.main-content {
   width: 100%;
   flex: 1;
-  padding-top: 65px; /* Espacio para compensar la altura del Navbar fijo */
-  box-sizing: border-box;
+  padding-top: 76px;
+}
+
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes soft-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

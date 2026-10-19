@@ -1,5 +1,8 @@
 <main>
   <h1>Contacto</h1>
+  <p class="contact-intro">
+    Contanos qué estás imaginando. Nos encantará ayudarte a crear un día inolvidable.
+  </p>
   <form (ngSubmit)="enviarFormulario()" #miForm="ngForm">
     <div class="form-group">
       <input
@@ -7,8 +10,10 @@
         [ngModel]="nombre()"
         (input)="nombre.set($any($event.target).value)"
         name="nombre"
+        maxlength="100"
         required
         placeholder="Tu nombre"
+        aria-label="Tu nombre"
       />
     </div>
 
@@ -18,8 +23,10 @@
         [ngModel]="email()"
         (input)="email.set($any($event.target).value)"
         name="email"
+        maxlength="254"
         required
         placeholder="ejemplo@correo.com"
+        aria-label="Tu correo electrónico"
       />
     </div>
 
@@ -28,14 +35,25 @@
         [ngModel]="mensaje()"
         (input)="mensaje.set($any($event.target).value)"
         name="mensaje"
+        maxlength="5000"
         required
         placeholder="Escribe tu mensaje..."
         rows="4"
+        aria-label="Tu mensaje"
       ></textarea>
     </div>
 
-    <button type="submit" [disabled]="!miForm.valid" class="mt-2">
-      Enviar Datos
+    <button type="submit" [disabled]="!miForm.valid || enviando()">
+      {{ enviando() ? 'Enviando…' : 'Enviar mensaje' }}
     </button>
+    @if (estadoEnvio()) {
+      <p
+        class="contact-status"
+        [class.contact-error]="errorEnvio()"
+        role="status"
+        aria-live="polite">
+        {{ estadoEnvio() }}
+      </p>
+    }
   </form>
 </main>

@@ -4,10 +4,11 @@ import { ContactoComponent } from './components/contacto/contacto';
 import { AgendaComponent } from './components/agenda/agenda';
 import { Eventos } from './components/eventos/eventos'; // Nomenclatura moderna sin 'Component'
 import { authGuard } from './guards/auth.guard';
+import { guestGuard } from './guards/guest.guard';
 import { GalleryComponent } from './components/gallery/gallery'; // Importa la clase Gallery
 
 export const routes: Routes = [
-  { path: 'home', component: HomeComponent },
+  { path: 'home', component: HomeComponent, canActivate: [guestGuard] },
   { path: 'contacto', component: ContactoComponent },
   { path: 'eventos', component: Eventos, canActivate: [authGuard] }, // Nueva carátula protegida
   { path: 'agenda', component: AgendaComponent, canActivate: [authGuard] },

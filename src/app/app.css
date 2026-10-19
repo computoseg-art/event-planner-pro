@@ -1,9 +1,18 @@
 .main-content {
-  min-height: 100vh;
+  min-height: calc(100vh - 76px);
   box-sizing: border-box;
 }
 
-/* Si el navbar está presente, le damos un margen superior */
 app-navbar + .main-content {
-  padding-top: 70px;
+  padding-top: 76px;
+}
+
+@media (max-width: 860px) {
+  .main-content {
+    min-height: calc(100svh - 68px);
+  }
+
+  app-navbar + .main-content {
+    padding-top: 68px;
+  }
 }

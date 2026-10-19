@@ -430,3 +430,249 @@
   font-size: 0.9rem;
   padding: 20px 0;
 }
+
+/* Editorial celebration palette */
+.agenda-wrapper {
+  max-width: 1320px;
+  padding: 38px 24px 64px;
+  color: #302725;
+}
+
+.main-layout {
+  gap: 24px;
+}
+
+.calendario-section,
+.mis-reservas-section {
+  border: 1px solid #e8e1d8;
+  border-radius: 5px;
+  background: #fffdfa;
+  box-shadow: 0 14px 40px rgb(45 35 31 / 7%);
+}
+
+.calendario-section {
+  padding: clamp(20px, 3vw, 32px);
+}
+
+.mes-titulo {
+  color: #332927;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  font-size: 1.65rem;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+}
+
+.btn-nav {
+  width: 40px;
+  height: 40px;
+  border-color: #e8e1d8;
+  background: #f7f4ef;
+  color: #722f4d;
+}
+
+.btn-nav:hover {
+  border-color: #722f4d;
+  background: #722f4d;
+  color: white;
+}
+
+.calendario-grid {
+  gap: 7px;
+}
+
+.dia-nombre {
+  color: #8a8179;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+}
+
+.dia-celda {
+  border-color: #eee8e0;
+  border-radius: 4px;
+  background: #fffdfa;
+  color: #463d38;
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.dia-celda:hover:not(.vacio):not(.ocupado):not(.bloqueado) {
+  transform: translateY(-2px);
+  border-color: #a87586;
+  background: #f3e8ed;
+  color: #722f4d;
+}
+
+.dia-celda.ocupado {
+  border-color: #e5c7c5;
+  background: #f8edeb;
+  color: #a25755;
+}
+
+.dia-celda.bloqueado {
+  border-color: #eee9e3 !important;
+  background: #f7f4ef !important;
+  color: #b9b1a9 !important;
+}
+
+.dia-celda.es-mia {
+  border-color: #c8ad7c;
+  background: #f3ecdf;
+  color: #735b36;
+}
+
+.dia-celda.seleccionado {
+  border-color: #722f4d;
+  background: #722f4d;
+  color: #fffaf6;
+}
+
+.mis-reservas-section {
+  padding: 23px;
+}
+
+.mis-reservas-section h3 {
+  color: #332927 !important;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 400;
+}
+
+.reserva-card {
+  border-color: #ece5de;
+  border-radius: 4px;
+  background: #fffdfa;
+}
+
+.reserva-card:hover {
+  border-color: #c6aeb1;
+}
+
+.reserva-titulo {
+  color: #332927;
+}
+
+.fecha-label,
+.user-badge,
+.card-footer-mini {
+  color: #77716a;
+}
+
+.card-footer-mini {
+  border-color: #eee8e0;
+}
+
+.estado-tag[data-estado='pendiente'] {
+  background: #f6f0e2;
+  color: #93733c;
+  border-color: #e8d8b3;
+}
+
+.estado-tag[data-estado='completado'],
+.estado-tag[data-estado='confirmado'] {
+  background: #eaf3eb;
+  color: #537c58;
+  border-color: #c8dfca;
+}
+
+.pagado-mini {
+  color: #537c58;
+}
+
+.btn-pago-general,
+.btn-pagar-solo {
+  background: #722f4d;
+  box-shadow: 0 8px 20px rgb(114 47 77 / 15%);
+}
+
+.btn-pago-general:hover,
+.btn-pagar-solo:hover {
+  background: #57223a;
+}
+
+.confirmacion-box {
+  border-color: #eadfe2;
+  border-radius: 4px;
+  background: #fbf7f7;
+}
+
+.confirmacion-box h4 {
+  color: #722f4d;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  font-size: 1.25rem;
+}
+
+.input-reserva,
+.input-edit {
+  border-color: #ddd4ca;
+  border-radius: 3px;
+  background: #fffdfa;
+  color: #302725;
+}
+
+.input-reserva:focus,
+.input-edit:focus {
+  border-color: #a87586;
+}
+
+.categorias-nav button {
+  border-color: #e3d8d8;
+  border-radius: 3px;
+  background: #fffdfa;
+  color: #655a54;
+}
+
+.categorias-nav button.active {
+  border-color: #722f4d;
+  background: #722f4d;
+  color: #fffaf6;
+}
+
+.chip-servicio {
+  border-color: #e5ddd4;
+  background: #fffdfa;
+  color: #5b514b;
+}
+
+.chip-servicio.active {
+  border-color: #b58d9d;
+  background: #f3e8ed;
+  color: #722f4d;
+}
+
+.btn-confirmar,
+.btn-save {
+  border-radius: 3px;
+  background: #722f4d;
+}
+
+.btn-confirmar:hover,
+.btn-save:hover {
+  background: #57223a;
+}
+
+.btn-confirmar:disabled {
+  background: #e8e1d8;
+  color: #a69c93;
+}
+
+.no-data {
+  color: #8a8179;
+}
+
+@media (max-width: 600px) {
+  .agenda-wrapper {
+    padding: 24px 14px 44px;
+  }
+
+  .calendario-section,
+  .mis-reservas-section {
+    padding: 18px;
+  }
+
+  .calendario-grid {
+    gap: 4px;
+  }
+
+  .dia-celda {
+    font-size: 0.82rem;
+  }
+}
