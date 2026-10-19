@@ -524,9 +524,13 @@ const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp.gmail.com',
   port: Number(process.env.EMAIL_PORT) || 587,
   secure: process.env.EMAIL_PORT == 465,
+  requireTLS: process.env.EMAIL_PORT != 465,
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 15000,
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+    pass: process.env.EMAIL_PASS?.replace(/\s/g, '')
   }
 });
 
@@ -1125,19 +1129,43 @@ app.post('/api/contact', async (req, res) => {
       </div>
     `;
 
-    await transporter.sendMail({
-      from: emailUser,
-      to: process.env.EMAIL_TO?.trim() || 'esteban.garriga@gmail.com',
-      replyTo: email,
-      subject: `Contacto EventPlanner Pro: ${name.slice(0, 80)}`,
-      text: `Nombre: ${name}\nCorreo: ${email}\n\nMensaje:\n${message}`,
-      html: htmlContent,
-    });
+    let timeoutId;
+    try {
+      await Promise.race([
+        transporter.sendMail({
+          from: emailUser,
+          to: process.env.EMAIL_TO?.trim() || 'esteban.garriga@gmail.com',
+          replyTo: email,
+          subject: `Contacto EventPlanner Pro: ${name.slice(0, 80)}`,
+          text: `Nombre: ${name}\nCorreo: ${email}\n\nMensaje:\n${message}`,
+          html: htmlContent,
+        }),
+        new Promise((_, reject) => {
+          timeoutId = setTimeout(
+            () => reject(new Error('CONTACT_EMAIL_TIMEOUT')),
+            20000
+          );
+        }),
+      ]);
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     return res.status(200).json({ message: '¡Gracias! Tu mensaje fue enviado. Te responderemos pronto.' });
   } catch (error) {
-    console.error('Error al enviar correo de contacto:', error.message);
-    return res.status(500).json({ error: 'No se pudo enviar tu mensaje. Inténtalo nuevamente más tarde.' });
+    console.error('Error al enviar correo de contacto:', {
+      message: error.message,
+      code: error.code,
+      responseCode: error.responseCode,
+      command: error.command,
+    });
+    const timedOut = error.message === 'CONTACT_EMAIL_TIMEOUT'
+      || ['ETIMEDOUT', 'ESOCKET', 'ECONNECTION'].includes(error.code);
+    return res.status(timedOut ? 504 : 502).json({
+      error: timedOut
+        ? 'El servicio de correo tardó demasiado en responder. Inténtalo nuevamente en unos minutos.'
+        : 'No se pudo enviar tu mensaje. Revisa la configuración de Gmail e inténtalo nuevamente.',
+    });
   }
 });
 

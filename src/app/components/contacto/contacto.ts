@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { environment } from '../../../environments/environment';
+import { TimeoutError, timeout } from 'rxjs';
 
 @Component({
   selector: 'app-contacto',
@@ -33,7 +34,9 @@ export class ContactoComponent {
     this.estadoEnvio.set('');
     this.errorEnvio.set(false);
 
-    this.http.post<{ message: string }>(`${this.apiUrl}/contact`, datos).subscribe({
+    this.http.post<{ message: string }>(`${this.apiUrl}/contact`, datos).pipe(
+      timeout({ first: 30000 })
+    ).subscribe({
       next: response => {
         this.estadoEnvio.set(response.message);
         this.nombre.set('');
@@ -44,8 +47,16 @@ export class ContactoComponent {
       error: (error: HttpErrorResponse) => {
         console.error('No se pudo enviar el formulario de contacto:', error);
         this.errorEnvio.set(true);
+        const serverMessage = typeof error.error?.error === 'string'
+          ? error.error.error
+          : undefined;
         this.estadoEnvio.set(
-          error.error?.error || 'No se pudo enviar tu mensaje. Inténtalo nuevamente más tarde.'
+          error instanceof TimeoutError
+            ? 'El servidor tardó demasiado en responder. Tu mensaje puede no haberse enviado; espera un momento antes de volver a intentarlo.'
+            : serverMessage
+              || (error.status === 0
+                ? 'No hubo respuesta del servidor. Comprueba que Render esté disponible e inténtalo nuevamente.'
+                : `No se pudo enviar el mensaje (error ${error.status}). Revisa los registros del backend en Render.`)
         );
         this.enviando.set(false);
       }
