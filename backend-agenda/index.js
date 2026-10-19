@@ -643,6 +643,7 @@ app.post('/api/ensure-album', requireFirebaseAuth, requireAdmin, async (req, res
 // GOOGLE PHOTOS: LISTAR CARPETAS DE UN USUARIO
 // ---------------------------------------------
 app.get('/api/gallery/:email/folders', requireFirebaseAuth, async (req, res) => {
+  res.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
   const email = req.params.email;
   if (!validEmail(email)) {
     return res.status(400).json({ error: 'El email debe ser válido.' });
@@ -733,6 +734,7 @@ app.post('/api/gallery/folders', requireFirebaseAuth, requireAdmin, async (req, 
 // GOOGLE PHOTOS: OBTENER FOTOS DE UN USUARIO
 // ---------------------------------------------
 app.get('/api/gallery/:email', requireFirebaseAuth, async (req, res) => {
+  res.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
   const rawEmail = req.params.email;
   if (!validEmail(rawEmail)) {
     return res.status(400).json({ error: 'El email debe ser válido.' });

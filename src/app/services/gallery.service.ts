@@ -45,7 +45,7 @@ export class GalleryService {
       switchMap(headers =>
         this.http.get<GalleryFolder[]>(
           `${this.apiUrl}/gallery/${encodeURIComponent(email)}/folders`,
-          { headers }
+          { headers, params: { _refresh: Date.now() } }
         )
       )
     );
@@ -68,7 +68,7 @@ export class GalleryService {
       switchMap(headers =>
         this.http.get<Photo[]>(
           `${this.apiUrl}/gallery/${encodeURIComponent(email)}`,
-          { headers, params: { albumId } }
+          { headers, params: { albumId, _refresh: Date.now() } }
         )
       )
     );
