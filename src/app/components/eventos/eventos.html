@@ -1,32 +1,47 @@
 <div class="eventos-container">
   <header class="hero-section">
+    <div class="hero-image" aria-hidden="true"></div>
     <div class="hero-content">
-      <span class="subtitle">BS FOTOGRAFÍA Y VIDEOGRAFÍA</span>
-      <h1>Fotografía y video para tus momentos más especiales</h1>
+      <span class="eyebrow"><span aria-hidden="true"></span> BS FOTOGRAFÍA Y VIDEOGRAFÍA</span>
+      <h1>Hay días que merecen<br /><em>ser para siempre.</em></h1>
       <p>
-        Historias de amor, familia y celebración, contadas con imágenes para volver a mirar.
+        Contamos historias de amor, familia y celebración con imágenes que vas a querer volver
+        a mirar toda la vida.
       </p>
       <div class="hero-actions">
         <button class="btn-primary" type="button" (click)="irAgenda()">
-          Consultar disponibilidad
+          Reservá tu fecha <span aria-hidden="true">↗</span>
         </button>
-        <a class="hero-link" href="#experiencias">Conocé las experiencias <span aria-hidden="true">↓</span></a>
+        <a class="hero-link" href="#experiencias">
+          Descubrí nuestras experiencias <span aria-hidden="true">↓</span>
+        </a>
       </div>
+      <div class="hero-signature">
+        <span class="signature-line"></span>
+        <span>Momentos reales. Recuerdos eternos.</span>
+      </div>
+    </div>
+    <div class="hero-note">
+      <span class="note-star" aria-hidden="true">✳</span>
+      <span>Tu historia,<br />en cada detalle.</span>
     </div>
   </header>
 
   <section class="services-section" id="experiencias">
     <div class="section-title">
       <span class="section-kicker">CELEBRAMOS LO QUE IMPORTA</span>
-      <h2>Experiencias para cada historia</h2>
-      <p>Elegí una opción y consultanos para recibir una propuesta según tu celebración.</p>
+      <h2>Tres maneras de hacer <em>inolvidable</em> tu gran día.</h2>
+      <p>Una mirada sensible, un equipo profesional y todo lo que necesitás para celebrar.</p>
     </div>
 
     <div class="cards-grid">
       <article class="card-event quince">
-        <div class="card-badge">15 AÑOS</div>
+        <div class="card-image quince-image">
+          <span class="card-number">01</span>
+          <span class="card-badge">UNA NOCHE MÁGICA</span>
+        </div>
         <div class="card-body">
-          <div class="card-icon" aria-hidden="true">👑</div>
+          <div class="card-icon" aria-hidden="true">✧</div>
           <h3>Cumpleaños de 15</h3>
           <p class="description">
             Opciones de cobertura para acompañar y registrar una noche única.
@@ -40,9 +55,12 @@
       </article>
 
       <article class="card-event bodas">
-        <div class="card-badge premium">CASAMIENTOS</div>
+        <div class="card-image bodas-image">
+          <span class="card-number">02</span>
+          <span class="card-badge premium">PARA TODA LA VIDA</span>
+        </div>
         <div class="card-body">
-          <div class="card-icon" aria-hidden="true">💍</div>
+          <div class="card-icon" aria-hidden="true">♡</div>
           <h3>Bodas y casamientos</h3>
           <p class="description">
             Distintas alternativas para registrar la ceremonia y celebrar con quienes más querés.
@@ -56,9 +74,12 @@
       </article>
 
       <article class="card-event extras">
-        <div class="card-badge">SERVICIOS EXTRA</div>
+        <div class="card-image extras-image">
+          <span class="card-number">03</span>
+          <span class="card-badge">UN PLUS INOLVIDABLE</span>
+        </div>
         <div class="card-body">
-          <div class="card-icon" aria-hidden="true">✦</div>
+          <div class="card-icon" aria-hidden="true">✺</div>
           <h3>Complementos para tu evento</h3>
           <p class="description">
             Sumá servicios adicionales para personalizar la experiencia de tu celebración.
@@ -77,7 +98,7 @@
   <section class="packages-section" id="presupuestos">
     <div class="section-title">
       <span class="section-kicker">OPCIONES PARA TU CELEBRACIÓN</span>
-      <h2>Una propuesta hecha a tu medida</h2>
+      <h2>Una propuesta hecha <em>a tu medida.</em></h2>
       <p>
         El presupuesto depende de la fecha y los servicios que elijas. Consultanos para recibir
         detalles y confirmar qué incluye cada opción.
@@ -124,7 +145,7 @@
   <section class="closing-banner">
     <div>
       <span class="section-kicker">EL PRIMER PASO ES TUYO</span>
-      <h2>¿Empezamos a planificar?</h2>
+      <h2>Tu próxima gran historia<br /><em>empieza acá.</em></h2>
     </div>
     <a class="btn-primary" routerLink="/contacto">Escribinos</a>
   </section>

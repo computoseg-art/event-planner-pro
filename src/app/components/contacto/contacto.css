@@ -1,77 +1,122 @@
-.mt-1 {
-  margin-top: 0.25rem;
+:host {
+  display: block;
+  min-height: calc(100svh - 76px);
+  padding: clamp(42px, 8vw, 100px) 20px;
+  background:
+    radial-gradient(ellipse at 12% 10%, rgb(194 161 109 / 13%), transparent 26rem),
+    #f7f4ef;
 }
-.mt-2 {
-  margin-top: 0.5rem;
+
+main {
+  width: min(100%, 650px);
+  margin: 0 auto;
+  padding: clamp(26px, 6vw, 54px);
+  border: 1px solid #e9e1d8;
+  border-radius: 5px;
+  background: #fffdfa;
+  box-shadow: 0 24px 70px rgb(56 41 35 / 8%);
 }
-.mt-3 {
-  margin-top: 0.75rem;
+
+main::before {
+  display: block;
+  margin-bottom: 13px;
+  color: #99784b;
+  content: 'ESTAMOS PARA ACOMPAÑARTE';
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.18em;
 }
-.mt-4 {
-  margin-top: 1rem;
+
+h1 {
+  margin: 0 0 11px;
+  color: #302725;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  font-size: clamp(2.5rem, 6vw, 3.7rem);
+  font-weight: 400;
+  letter-spacing: -0.045em;
 }
-.mt-5 {
-  margin-top: 1.25rem;
+
+.contact-intro {
+  max-width: 460px;
+  margin: 12px 0 0;
+  color: #77716a;
+  font-size: 0.94rem;
+  line-height: 1.7;
+}
+
+form {
+  display: grid;
+  gap: 13px;
+  margin-top: 30px;
 }
 
 .form-group {
-  margin-bottom: 1.25rem;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  gap: 7px;
+  margin: 0;
 }
 
 label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-  color: var(--text-muted);
+  color: #4a403b;
+  font-size: 0.79rem;
+  font-weight: 650;
 }
 
 input,
 textarea {
-  padding: 0.75rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: all 0.2s ease;
-  outline: none;
+  width: 100%;
+  border: 1px solid #ddd4ca;
+  border-radius: 3px;
+  background: #fffdfa;
+  color: #332927;
+  font-size: 0.92rem;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+input {
+  min-height: 49px;
+  padding: 12px 14px;
+}
+
+textarea {
+  min-height: 145px;
+  padding: 13px 14px;
+  resize: vertical;
 }
 
 input:focus,
 textarea:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  border-color: #a87586;
+  box-shadow: 0 0 0 3px rgb(114 47 77 / 9%);
+  outline: none;
 }
 
 button {
-  width: 100%;
-  padding: 0.75rem;
-  background-color: var(--primary);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
+  display: inline-flex;
+  min-height: 50px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 3px;
+  padding: 0 17px;
+  border: 0;
+  border-radius: 3px;
+  background: #722f4d;
+  color: #fffaf6;
   cursor: pointer;
-  transition: background-color 0.2s;
+  font-weight: 700;
+  transition: background 180ms ease, transform 180ms ease;
 }
 
-button:hover {
-  background-color: var(--primary-hover);
+button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: #57223a;
+}
+
+button::after {
+  content: '↗';
 }
 
 button:disabled {
-  background-color: #cbd5e1;
+  background: #bba9ad;
   cursor: not-allowed;
-}
-
-/* Estilo para los Signals (Debug) */
-pre {
-  background: #1e293b;
-  color: #38bdf8;
-  padding: 1rem;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  margin-top: 1.5rem;
-  overflow-x: auto;
 }
