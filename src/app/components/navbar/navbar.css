@@ -30,6 +30,13 @@
   cursor: pointer;
 }
 
+.brand-logo {
+  display: block;
+  width: clamp(140px, 17vw, 220px);
+  max-height: 52px;
+  object-fit: contain;
+}
+
 .logo-icon {
   width: 36px;
   height: 36px;
@@ -144,6 +151,11 @@
 
 /* --- REGLAS RESPONSIVAS (MÓVIL Y TABLET) --- */
 @media (max-width: 768px) {
+  .brand-logo {
+    width: clamp(132px, 43vw, 190px);
+    max-height: 48px;
+  }
+
   .desktop-only {
     display: none !important;
   }

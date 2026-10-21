@@ -5,8 +5,8 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   user,
-  GoogleAuthProvider, // <-- Importar proveedor de Google
-  signInWithPopup     // <-- Importar función de popup
+  GoogleAuthProvider,
+  signInWithPopup,
 } from '@angular/fire/auth';
 import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -37,8 +37,7 @@ export class AuthService {
         await signInWithPopup(this.auth, provider);
       });
 
-      // Redirige automáticamente a la carátula de eventos
-      this.zone.run(() => this.router.navigate(['/eventos']));
+      this.afterAuthentication();
     } catch (e: any) {
       console.error('Error al iniciar sesión con Google:', e);
       if (e.code !== 'auth/popup-closed-by-user') {
@@ -53,7 +52,7 @@ export class AuthService {
         await signInWithEmailAndPassword(this.auth, email, pass);
       });
 
-      this.zone.run(() => this.router.navigate(['/eventos']));
+      this.afterAuthentication();
     } catch (e: any) {
       let mensaje = 'Error al iniciar sesión.';
       switch (e.code) {
@@ -76,7 +75,7 @@ export class AuthService {
   async registrar(email: string, pass: string) {
     try {
       await createUserWithEmailAndPassword(this.auth, email, pass);
-      this.zone.run(() => this.router.navigate(['/eventos']));
+      this.afterAuthentication();
     } catch (e: any) {
       let mensaje = 'No se pudo completar el registro.';
       switch (e.code) {
@@ -98,16 +97,13 @@ export class AuthService {
   }
 
   async logout() {
-    runInInjectionContext(this.injector, async () => {
+    await runInInjectionContext(this.injector, async () => {
       await signOut(this.auth);
       this.zone.run(() => {
-        this.router.navigate(['/home']);
+        void this.router.navigate(['/eventos']);
       });
     });
   }
-<<<<<<< Updated upstream
-}
-=======
 
   private afterAuthentication(): void {
     const returnUrl = this.router.parseUrl(this.router.url).queryParams['returnUrl'];
@@ -119,15 +115,5 @@ export class AuthService {
     this.zone.run(() => {
       void this.router.navigateByUrl(destination);
     });
-    void this.provisionGalleryFolder();
-  }
-
-  private async provisionGalleryFolder(): Promise<void> {
-    try {
-      await firstValueFrom(this.galleryService.ensureOwnFolder());
-    } catch (error) {
-      console.error('No se pudo crear o recuperar la carpeta personal de Google Photos:', error);
-    }
   }
 }
->>>>>>> Stashed changes

@@ -1,15 +1,5 @@
 <header class="navbar">
-  <!-- BRANDING -->
-<<<<<<< Updated upstream
-  <div class="nav-brand" routerLink="/">
-    <div class="logo-icon">
-      <svg class="icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-      </svg>
-    </div>
-    <span class="brand-title">EventPlanner<span class="brand-highlight">Pro</span></span>
-=======
-  <div class="nav-brand" routerLink="/eventos">
+  <a class="nav-brand" routerLink="/eventos" aria-label="BS Fotografía y Videografía, inicio">
     <img
       class="brand-logo"
       src="/brand-logo.png"
@@ -17,55 +7,47 @@
       width="1632"
       height="641"
       fetchpriority="high" />
->>>>>>> Stashed changes
-  </div>
+  </a>
 
-  <!-- NAVEGACIÓN DESKTOP -->
-  <nav class="nav-links desktop-only">
-<<<<<<< Updated upstream
-    <a routerLink="/home" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">Inicio</a>
-    <a routerLink="/agenda" routerLinkActive="active" class="nav-item">Agenda</a>
-=======
+  <nav class="nav-links desktop-only" aria-label="Navegación principal">
     <a routerLink="/eventos" routerLinkActive="active" class="nav-item">Experiencias</a>
     @if (auth.user$ | async) {
       <a routerLink="/agenda" routerLinkActive="active" class="nav-item">Agenda</a>
     }
     <a routerLink="/contacto" routerLinkActive="active" class="nav-item">Contacto</a>
-    @if (auth.user$ | async) {
-      <a routerLink="/galeria" routerLinkActive="active" class="nav-item">
-        {{ auth.esAdmin() ? 'Administrar galería' : 'Galería' }}
-      </a>
-    }
->>>>>>> Stashed changes
   </nav>
 
-  <!-- ACCIONES DESKTOP -->
   <div class="nav-actions desktop-only">
-    <button routerLink="/agenda" class="cart-btn" title="Ver Reservas">
-      <svg class="icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-      </svg>
-      <!-- SOLO MUESTRA EL BADGE SI HAY USUARIO AUTENTICADO Y TIENE RESERVAS -->
-      @if ((auth.user$ | async) && reservaService.reservasVisibles().length > 0) {
-        <span class="cart-badge">{{ reservaService.reservasVisibles().length }}</span>
-      }
-    </button>
+    @if (auth.user$ | async) {
+      <button routerLink="/agenda" class="cart-btn" title="Ver reservas" aria-label="Ver reservas">
+        <svg class="icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+        </svg>
+        @if (reservaService.reservasVisibles().length > 0) {
+          <span class="cart-badge">{{ reservaService.reservasVisibles().length }}</span>
+        }
+      </button>
+    }
 
     @if (auth.user$ | async; as user) {
       <div class="user-profile">
         <span class="welcome-text">
           Bienvenido, <strong>{{ user.displayName || user.email }}</strong>
         </span>
-        <button (click)="logout()" class="btn-logout-red">Cerrar Sesión</button>
+        <button (click)="logout()" class="btn-logout-red">Cerrar sesión</button>
       </div>
     } @else {
       <a routerLink="/login" class="btn-login">Acceder</a>
     }
   </div>
 
-  <!-- BOTÓN HAMBURGUESA (MÓVIL) -->
-  <button class="hamburger-btn mobile-only" (click)="toggleMenu()" aria-label="Abrir menú">
-    <svg class="icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <button
+    type="button"
+    class="hamburger-btn mobile-only"
+    (click)="toggleMenu()"
+    [attr.aria-expanded]="menuAbierto()"
+    aria-label="Abrir menú">
+    <svg class="icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
       @if (menuAbierto()) {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
       } @else {
@@ -74,27 +56,21 @@
     </svg>
   </button>
 
-  <!-- DESPLEGABLE MÓVIL -->
   <div class="mobile-menu" [class.open]="menuAbierto()">
-    <nav class="mobile-nav-links">
-<<<<<<< Updated upstream
-      <a routerLink="/home" (click)="cerrarMenu()" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Inicio</a>
-      <a routerLink="/agenda" (click)="cerrarMenu()" routerLinkActive="active">Agenda</a>
-=======
+    <nav class="mobile-nav-links" aria-label="Navegación móvil">
       <a routerLink="/eventos" (click)="cerrarMenu()" routerLinkActive="active">Experiencias</a>
       @if (auth.user$ | async) {
         <a routerLink="/agenda" (click)="cerrarMenu()" routerLinkActive="active">Agenda</a>
       }
       <a routerLink="/contacto" (click)="cerrarMenu()" routerLinkActive="active">Contacto</a>
->>>>>>> Stashed changes
     </nav>
 
     <div class="mobile-user-section">
       @if (auth.user$ | async; as user) {
         <div class="mobile-welcome">
-          Bienvenido,<br><strong>{{ user.displayName || user.email }}</strong>
+          Bienvenido,<br /><strong>{{ user.displayName || user.email }}</strong>
         </div>
-        <button (click)="logout(); cerrarMenu()" class="btn-logout-red full-width">Cerrar Sesión</button>
+        <button (click)="logout(); cerrarMenu()" class="btn-logout-red full-width">Cerrar sesión</button>
       } @else {
         <a routerLink="/login" (click)="cerrarMenu()" class="btn-login full-width">Acceder</a>
       }

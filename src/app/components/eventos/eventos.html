@@ -1,76 +1,86 @@
 <div class="eventos-container">
-  <!-- Hero / Header de Bienvenida -->
   <header class="hero-section">
-    <div class="hero-overlay"></div>
     <div class="hero-content">
-      <span class="subtitle">EVENT PLANNER PRO</span>
-      <h1>Fotografía y Video de Alta Gama</h1>
-      <p>Creando memorias inolvidables para tus momentos más especiales: Bodas y Cumpleaños de 15.</p>
+      <span class="subtitle">BS FOTOGRAFÍA Y VIDEOGRAFÍA</span>
+      <h1>Fotografía y video para tus momentos más especiales</h1>
+      <p>
+        Historias de amor, familia y celebración, contadas con imágenes para volver a mirar.
+      </p>
       <div class="hero-actions">
-        <button class="btn-primary" (click)="irAgenda()">
-          <i class="bi bi-calendar-check"></i> Ir a Mi Agenda / Reservar
+        <button class="btn-primary" type="button" (click)="irAgenda()">
+          Consultar disponibilidad
         </button>
+        <a class="hero-link" href="#experiencias">Conocé las experiencias <span aria-hidden="true">↓</span></a>
       </div>
     </div>
   </header>
 
-  <!-- Sección de Servicios Elegantes -->
-  <section class="services-section">
+  <section class="services-section" id="experiencias">
     <div class="section-title">
-      <h2>Nuestros Servicios Exclusivos</h2>
-      <div class="divider"></div>
+      <span class="section-kicker">CELEBRAMOS LO QUE IMPORTA</span>
+      <h2>Experiencias para cada historia</h2>
+      <p>Elegí una opción y consultanos para recibir una propuesta según tu celebración.</p>
     </div>
 
     <div class="cards-grid">
-      <!-- Tarjeta Cumpleaños de 15 -->
-      <div class="card-event quince">
-        <div class="card-badge">POPULAR</div>
+      <article class="card-event quince">
+        <div class="card-badge">15 AÑOS</div>
         <div class="card-body">
-          <div class="card-icon">👑</div>
+          <div class="card-icon" aria-hidden="true">👑</div>
           <h3>Cumpleaños de 15</h3>
           <p class="description">
-            Una noche mágica capturada con elegancia. Cobertura completa de la recepción, vals, shows y book previo en exteriores.
+            Opciones de cobertura para acompañar y registrar una noche única.
           </p>
           <ul class="features">
-            <li><i class="bi bi-check2-circle"></i> Cobertura audiovisual completa</li>
-            <li><i class="bi bi-check2-circle"></i> Sesión previa en exteriores (Book 15)</li>
-            <li><i class="bi bi-check2-circle"></i> Álbum impreso HD + Galería Digital</li>
-            <li><i class="bi bi-check2-circle"></i> Video resumen para redes sociales</li>
+            <li>Paquete Quince: Basic</li>
+            <li>Paquete Quince: Full Premium</li>
           </ul>
-          <button class="btn-secondary" (click)="irAgenda()">Reservar Fecha</button>
+          <a class="btn-secondary" routerLink="/contacto">Consultar presupuesto</a>
         </div>
-      </div>
+      </article>
 
-      <!-- Tarjeta Bodas -->
-      <div class="card-event bodas">
-        <div class="card-badge premium">PREMIUM</div>
+      <article class="card-event bodas">
+        <div class="card-badge premium">CASAMIENTOS</div>
         <div class="card-body">
-          <div class="card-icon">💍</div>
-          <h3>Bodas & Casamientos</h3>
+          <div class="card-icon" aria-hidden="true">💍</div>
+          <h3>Bodas y casamientos</h3>
           <p class="description">
-            Documentamos el día más importante de sus vidas. Cada mirada, emoción y detalle preservado para siempre.
+            Distintas alternativas para registrar la ceremonia y celebrar con quienes más querés.
           </p>
           <ul class="features">
-            <li><i class="bi bi-check2-circle"></i> Pre-Boda (Getting Ready) y Fiesta</li>
-            <li><i class="bi bi-check2-circle"></i> Dron profesional en exteriores</li>
-            <li><i class="bi bi-check2-circle"></i> Fotolibro lujoso en tapa dura</li>
-            <li><i class="bi bi-check2-circle"></i> Entrega de fotos editadas en alta resolución</li>
+            <li>Boda: Civil &amp; Brindis</li>
+            <li>Boda: Fiesta Completa</li>
           </ul>
-          <button class="btn-secondary" (click)="irAgenda()">Reservar Fecha</button>
+          <a class="btn-secondary" routerLink="/contacto">Consultar presupuesto</a>
         </div>
-      </div>
+      </article>
+
+      <article class="card-event extras">
+        <div class="card-badge">SERVICIOS EXTRA</div>
+        <div class="card-body">
+          <div class="card-icon" aria-hidden="true">✦</div>
+          <h3>Complementos para tu evento</h3>
+          <p class="description">
+            Sumá servicios adicionales para personalizar la experiencia de tu celebración.
+          </p>
+          <ul class="features">
+            <li>Alquiler Luces Pro</li>
+            <li>DJ y Sonido</li>
+            <li>Fotografía &amp; Video</li>
+          </ul>
+          <a class="btn-secondary" routerLink="/contacto">Consultar opciones</a>
+        </div>
+      </article>
     </div>
   </section>
-<<<<<<< Updated upstream
-=======
 
   <section class="packages-section" id="presupuestos">
-    <div class="intro-heading">
+    <div class="section-title">
       <span class="section-kicker">OPCIONES PARA TU CELEBRACIÓN</span>
-      <h2>Una propuesta hecha<br /><em>a tu medida.</em></h2>
+      <h2>Una propuesta hecha a tu medida</h2>
       <p>
-        Elegí por dónde empezar. El presupuesto se define según la fecha, la cobertura y los
-        servicios que necesites; te confirmaremos el detalle antes de reservar.
+        El presupuesto depende de la fecha y los servicios que elijas. Consultanos para recibir
+        detalles y confirmar qué incluye cada opción.
       </p>
     </div>
 
@@ -78,48 +88,35 @@
       <article class="package-card">
         <span class="package-kicker">15 AÑOS</span>
         <h3>Una noche mágica</h3>
-        <p>Opciones disponibles para celebrar y guardar cada momento.</p>
         <ul class="package-options">
           <li>Paquete Quince: Basic</li>
           <li>Paquete Quince: Full Premium</li>
-          <li>Cobertura de Cumpleaños</li>
         </ul>
-        <div class="package-price">Presupuesto personalizado</div>
-        <a class="btn-secondary" routerLink="/contacto">
-          Consultar presupuesto <span aria-hidden="true">↗</span>
-        </a>
+        <p class="package-price">Presupuesto personalizado</p>
+        <a class="btn-secondary" routerLink="/contacto">Consultar presupuesto</a>
       </article>
 
       <article class="package-card featured">
         <span class="package-kicker">CASAMIENTOS</span>
         <h3>Para toda la vida</h3>
-        <p>Alternativas de cobertura para acompañar los momentos importantes.</p>
         <ul class="package-options">
           <li>Boda: Civil &amp; Brindis</li>
           <li>Boda: Fiesta Completa</li>
-          <li>Sesión de Exteriores</li>
-          <li>Video Highlights</li>
         </ul>
-        <div class="package-price">Presupuesto personalizado</div>
-        <a class="btn-secondary" routerLink="/contacto">
-          Consultar presupuesto <span aria-hidden="true">↗</span>
-        </a>
+        <p class="package-price">Presupuesto personalizado</p>
+        <a class="btn-secondary" routerLink="/contacto">Consultar presupuesto</a>
       </article>
 
       <article class="package-card">
         <span class="package-kicker">SERVICIOS EXTRA</span>
         <h3>Sumá ese detalle</h3>
-        <p>Complementos para personalizar la experiencia de tu evento.</p>
         <ul class="package-options">
           <li>Alquiler Luces Pro</li>
           <li>DJ y Sonido</li>
-          <li>Decoración Básica</li>
-          <li>Limpieza Post-Fiesta</li>
+          <li>Fotografía &amp; Video</li>
         </ul>
-        <div class="package-price">Presupuesto personalizado</div>
-        <a class="btn-secondary" routerLink="/contacto">
-          Consultar presupuesto <span aria-hidden="true">↗</span>
-        </a>
+        <p class="package-price">Presupuesto personalizado</p>
+        <a class="btn-secondary" routerLink="/contacto">Consultar opciones</a>
       </article>
     </div>
   </section>
@@ -127,11 +124,8 @@
   <section class="closing-banner">
     <div>
       <span class="section-kicker">EL PRIMER PASO ES TUYO</span>
-      <h2>Tu próxima gran historia<br /><em>empieza acá.</em></h2>
+      <h2>¿Empezamos a planificar?</h2>
     </div>
-    <a class="btn-primary" routerLink="/contacto">
-      Consultá disponibilidad <span aria-hidden="true">↗</span>
-    </a>
+    <a class="btn-primary" routerLink="/contacto">Escribinos</a>
   </section>
->>>>>>> Stashed changes
 </div>
