@@ -105,4 +105,29 @@ export class AuthService {
       });
     });
   }
+<<<<<<< Updated upstream
 }
+=======
+
+  private afterAuthentication(): void {
+    const returnUrl = this.router.parseUrl(this.router.url).queryParams['returnUrl'];
+    const destination =
+      typeof returnUrl === 'string' && returnUrl.startsWith('/') && !returnUrl.startsWith('//')
+        ? returnUrl
+        : '/eventos';
+
+    this.zone.run(() => {
+      void this.router.navigateByUrl(destination);
+    });
+    void this.provisionGalleryFolder();
+  }
+
+  private async provisionGalleryFolder(): Promise<void> {
+    try {
+      await firstValueFrom(this.galleryService.ensureOwnFolder());
+    } catch (error) {
+      console.error('No se pudo crear o recuperar la carpeta personal de Google Photos:', error);
+    }
+  }
+}
+>>>>>>> Stashed changes

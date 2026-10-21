@@ -1,5 +1,6 @@
 <header class="navbar">
   <!-- BRANDING -->
+<<<<<<< Updated upstream
   <div class="nav-brand" routerLink="/">
     <div class="logo-icon">
       <svg class="icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -7,12 +8,35 @@
       </svg>
     </div>
     <span class="brand-title">EventPlanner<span class="brand-highlight">Pro</span></span>
+=======
+  <div class="nav-brand" routerLink="/eventos">
+    <img
+      class="brand-logo"
+      src="/brand-logo.png"
+      alt="BS Fotografía y Videografía"
+      width="1632"
+      height="641"
+      fetchpriority="high" />
+>>>>>>> Stashed changes
   </div>
 
   <!-- NAVEGACIÓN DESKTOP -->
   <nav class="nav-links desktop-only">
+<<<<<<< Updated upstream
     <a routerLink="/home" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">Inicio</a>
     <a routerLink="/agenda" routerLinkActive="active" class="nav-item">Agenda</a>
+=======
+    <a routerLink="/eventos" routerLinkActive="active" class="nav-item">Experiencias</a>
+    @if (auth.user$ | async) {
+      <a routerLink="/agenda" routerLinkActive="active" class="nav-item">Agenda</a>
+    }
+    <a routerLink="/contacto" routerLinkActive="active" class="nav-item">Contacto</a>
+    @if (auth.user$ | async) {
+      <a routerLink="/galeria" routerLinkActive="active" class="nav-item">
+        {{ auth.esAdmin() ? 'Administrar galería' : 'Galería' }}
+      </a>
+    }
+>>>>>>> Stashed changes
   </nav>
 
   <!-- ACCIONES DESKTOP -->
@@ -53,8 +77,16 @@
   <!-- DESPLEGABLE MÓVIL -->
   <div class="mobile-menu" [class.open]="menuAbierto()">
     <nav class="mobile-nav-links">
+<<<<<<< Updated upstream
       <a routerLink="/home" (click)="cerrarMenu()" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Inicio</a>
       <a routerLink="/agenda" (click)="cerrarMenu()" routerLinkActive="active">Agenda</a>
+=======
+      <a routerLink="/eventos" (click)="cerrarMenu()" routerLinkActive="active">Experiencias</a>
+      @if (auth.user$ | async) {
+        <a routerLink="/agenda" (click)="cerrarMenu()" routerLinkActive="active">Agenda</a>
+      }
+      <a routerLink="/contacto" (click)="cerrarMenu()" routerLinkActive="active">Contacto</a>
+>>>>>>> Stashed changes
     </nav>
 
     <div class="mobile-user-section">

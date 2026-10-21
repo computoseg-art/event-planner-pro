@@ -72,6 +72,93 @@
   box-shadow: 0 15px 30px -5px rgba(147, 51, 234, 0.6);
 }
 
+.packages-section {
+  padding: clamp(72px, 9vw, 112px) max(28px, calc((100vw - 1264px) / 2));
+  background: #eee7dd;
+}
+
+.packages-section .intro-heading {
+  margin-bottom: 42px;
+}
+
+.packages-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 22px;
+}
+
+.package-card {
+  display: flex;
+  flex-direction: column;
+  padding: clamp(23px, 3vw, 34px);
+  border: 1px solid #e2d8cc;
+  border-radius: 5px;
+  background: #fffdfa;
+  box-shadow: 0 12px 38px rgb(55 41 34 / 5%);
+}
+
+.package-card.featured {
+  border-color: #b99b6b;
+  box-shadow: 0 16px 42px rgb(55 41 34 / 9%);
+}
+
+.package-kicker {
+  color: #96794d;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.17em;
+}
+
+.package-card h3 {
+  margin: 14px 0 9px;
+  color: #302725;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  font-size: 1.8rem;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+}
+
+.package-card > p {
+  min-height: 52px;
+  margin: 0;
+  color: #766d66;
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+.package-options {
+  display: grid;
+  gap: 12px;
+  margin: 24px 0;
+  padding: 20px 0;
+  border-top: 1px solid #eee8e0;
+  border-bottom: 1px solid #eee8e0;
+  color: #4d4640;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  list-style: none;
+}
+
+.package-options li::before {
+  margin-right: 9px;
+  color: #a78355;
+  content: '✦';
+  font-size: 0.68rem;
+}
+
+.package-price {
+  margin: auto 0 18px;
+  color: #722f4d;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.package-card .btn-secondary {
+  box-sizing: border-box;
+}
+
 .btn-secondary {
   width: 100%;
   background: rgba(255, 255, 255, 0.05);
@@ -200,6 +287,47 @@
   }
 
   .cards-grid {
+<<<<<<< Updated upstream
     gap: 16px;
+=======
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .packages-section {
+    padding: 72px 19px;
+  }
+
+  .packages-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .card-event:last-child {
+    display: block;
+    grid-column: auto;
+  }
+
+  .card-event:last-child .card-image {
+    min-height: 245px;
+  }
+
+  .card-image {
+    min-height: 245px;
+  }
+
+  .card-body {
+    padding: 24px;
+  }
+
+  .description {
+    min-height: auto;
+  }
+
+  .closing-banner {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 47px 24px;
+>>>>>>> Stashed changes
   }
 }
