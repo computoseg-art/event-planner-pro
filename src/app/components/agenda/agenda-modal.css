@@ -284,14 +284,18 @@
 }
 
 .booking-modal .chips-container {
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 8px;
 }
 
 .booking-modal .chip-servicio {
-  display: inline-flex;
+  display: grid;
+  width: 100%;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 7px;
-  padding: 9px 12px;
+  gap: 10px;
+  padding: 12px;
   border-radius: 3px;
   font-size: 0.8rem;
 }

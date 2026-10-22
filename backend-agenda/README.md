@@ -14,6 +14,8 @@
 
 El servidor comprueba las variables requeridas al iniciar y no imprime el token de Mercado Pago.
 
+El formulario de contacto local requiere `BREVO_API_KEY` y `EMAIL_FROM` (remitente verificado en Brevo). El backend también necesita todas sus variables requeridas para arrancar, incluidas `MP_WEBHOOK_SECRET`, `FIREBASE_DATABASE_URL` y `BACKEND_PUBLIC_URL`; consulta `.env.example` y configura `.env` sin compartir ni subir secretos. Las variables SMTP antiguas (`EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`, `EMAIL_PASS`) ya no se usan. No apuntes el frontend local a producción para probar el formulario, porque podría enviar correos reales.
+
 Para usar la galería, completa también `ADMIN_EMAILS`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` y `REFRESH_TOKEN` en `.env`. `MP_ACCESS_TOKEN` solo sirve para Mercado Pago; no autoriza a Google Photos. La integración usa los permisos vigentes de Google Photos Library: `photoslibrary.appendonly` para crear álbumes y subir imágenes, `photoslibrary.readonly.appcreateddata` para listar el contenido creado por la aplicación y `photoslibrary.edit.appcreateddata` para quitar imágenes de los álbumes de la aplicación.
 
 `getToken.js` lee `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y `GOOGLE_REDIRECT_URI` desde `.env`; no requiere `credentials.json`. Para obtener el refresh token, registra en Google Cloud el URI local `http://127.0.0.1:3000/oauth2callback` como URI de redirección autorizada, configura ese mismo valor en `GOOGLE_REDIRECT_URI`, y ejecuta desde `backend-agenda`:

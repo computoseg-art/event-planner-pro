@@ -21,6 +21,9 @@ export class ContactoComponent {
   estadoEnvio = signal('');
   errorEnvio = signal(false);
   private readonly apiUrl = `${environment.apiUrl}/api`;
+  private readonly errorServidorNoDisponible = environment.production
+    ? 'No se pudo conectar con el servidor de contacto. Inténtalo nuevamente en unos minutos.'
+    : `No se pudo conectar con el backend local (${environment.apiUrl}). Inicia backend-agenda con las variables configuradas en backend-agenda/.env y vuelve a intentarlo.`;
 
   enviarFormulario() {
     if (this.enviando()) return;
@@ -55,8 +58,8 @@ export class ContactoComponent {
             ? 'El servidor tardó demasiado en responder. Tu mensaje puede no haberse enviado; espera un momento antes de volver a intentarlo.'
             : serverMessage
               || (error.status === 0
-                ? 'No hubo respuesta del servidor. Comprueba que Render esté disponible e inténtalo nuevamente.'
-                : `No se pudo enviar el mensaje (error ${error.status}). Revisa los registros del backend en Render.`)
+                ? this.errorServidorNoDisponible
+                : `No se pudo enviar el mensaje (error ${error.status}). Revisa los registros del backend e inténtalo nuevamente.`)
         );
         this.enviando.set(false);
       }

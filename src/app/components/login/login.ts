@@ -1,36 +1,38 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
+  selector: 'app-login',
   standalone: true,
-  imports: [FormsModule],
-  template: `
-    <div class="login-card">
-      <h2>Iniciar Sesión</h2>
-      <input
-        [ngModel]="email()"
-        (ngModelChange)="email.set($event)"
-        placeholder="Tu correo electrónico"
-      />
-      <input
-        type="password"
-        [ngModel]="password()"
-        (ngModelChange)="password.set($event)"
-        placeholder="Tu contraseña"
-      />
-
-      <button (click)="entrar()" [disabled]="!email() || !password()">Entrar</button>
-    </div>
-  `,
+  imports: [FormsModule, RouterLink],
+  templateUrl: './login.html',
+  styleUrl: './login.css',
 })
 export class Login {
+  private auth = inject(AuthService);
   email = signal('');
   password = signal('');
-  auth = inject(AuthService);
+  esRegistro = signal(false);
 
-  entrar() {
-    // Ahora pasamos los dos argumentos que pide el servicio
-    this.auth.login(this.email(), this.password());
+  accionPrincipal() {
+    const email = this.email().trim();
+    const password = this.password().trim();
+
+    if (!email || password.length < 6) {
+      alert('Por favor, ingresa un correo y una contraseña (mínimo 6 caracteres).');
+      return;
+    }
+
+    if (this.esRegistro()) {
+      this.auth.registrar(email, password);
+    } else {
+      this.auth.login(email, password);
+    }
+  }
+
+  ingresarConGoogle() {
+    this.auth.loginConGoogle();
   }
 }

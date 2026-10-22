@@ -26,6 +26,8 @@
 - **Selección por Categorías:** El usuario elige primero el tipo de evento (Bodas, 15 Años, etc.) para filtrar los servicios compatibles.
 - **Cálculo en Tiempo Real:** Cálculo automático de totales, montos de seña mínima y saldos pendientes.
 - **Servicios Extras:** Posibilidad de añadir complementos generales a cualquier tipo de reserva.
+- **Catálogo centralizado:** Los servicios, precios promocionales y condiciones del presupuesto de 15 años se mantienen en `src/app/services/catalogo-servicios.ts`. Los precios promocionales son informativos; el importe de la reserva y el pago se toma del campo `precio` del catálogo y se mantiene en `$ 1` mientras se prueba la aplicación.
+- **Acceso separado de la portada:** La página promocional es pública en `/home`; el inicio de sesión y registro están en `/login`.
 
 ### 👤 Panel Administrativo (Admin Mode)
 

@@ -314,7 +314,14 @@
                   (click)="cart.toggleServicio(s)"
                   [class.active]="cart.serviciosSeleccionados().includes(s)"
                   class="chip-servicio">
-                  <span>{{ s.icono }}</span> {{ s.nombre }}
+                  <span class="service-option-icon" aria-hidden="true">{{ s.icono }}</span>
+                  <span class="service-option-copy">
+                    <strong>{{ s.nombre }}</strong>
+                    @if (s.detalle) {
+                      <small>{{ s.detalle }}</small>
+                    }
+                  </span>
+                  <span class="service-option-price">$ {{ s.precio | number }}</span>
                   @if (cart.serviciosSeleccionados().includes(s)) {
                     <span class="service-check">✓</span>
                   }

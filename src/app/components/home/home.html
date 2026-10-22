@@ -1,76 +1,148 @@
-<div class="login-container">
-  <section class="login-story">
-    <span class="story-kicker">BSFOTOGRAFIA & VIDEOGRAFIA</span>
-    <h1>Los momentos pasan.<br /><em>Los recuerdos quedan.</em></h1>
-    <p>
-      Fotografía, video y experiencias pensadas para celebrar en familia. Empezá a organizar
-      ese día que ya imaginás.
-    </p>
-    <div class="story-caption"><span>✳</span> Historias reales, recuerdos para siempre</div>
-  </section>
+<div class="landing-page">
+    <section class="landing-hero">
+      <div class="hero-glow hero-glow-one"></div>
+      <div class="hero-glow hero-glow-two"></div>
+      <div class="landing-hero-content">
+        <span class="landing-eyebrow"><span></span> BS FOTOGRAFÍA & VIDEOGRAFÍA</span>
+        <h1>Tu gran día merece<br /><em>quedar para siempre.</em></h1>
+        <p>
+          Fotografía y video para celebrar tus 15 o tu boda. Elegí los servicios para tu evento,
+          encontrá tu fecha y empecemos a crear recuerdos inolvidables.
+        </p>
+        <div class="landing-actions">
+          <a class="landing-button landing-button-primary" routerLink="/login">Empezá a reservar <span>↗</span></a>
+          <a class="landing-button landing-button-quiet" routerLink="/contacto">Hablemos de tu fiesta <span>→</span></a>
+        </div>
+        <div class="hero-trust-row">
+          <span><i>✦</i> Foto y video</span>
+          <span><i>✦</i> 15 años y bodas</span>
+          <span><i>✦</i> Cobertura a medida</span>
+        </div>
+      </div>
+      <div class="hero-side-note" aria-hidden="true">
+        <span class="side-note-star">✳</span>
+        <span>Un gran día.<br />Mil recuerdos.</span>
+      </div>
+      <a class="scroll-cue" href="#servicios">Descubrí los servicios <span>↓</span></a>
+    </section>
 
-  <div class="login-card">
-    <span class="card-kicker">{{ esRegistro() ? 'TU PRÓXIMA HISTORIA' : 'QUÉ BUENO VERTE' }}</span>
-    <h2>{{ esRegistro() ? 'Creá tu cuenta' : 'Bienvenido de nuevo' }}</h2>
-    <p class="login-intro">
-      {{ esRegistro() ? 'Organizá tu celebración y guardá cada detalle.' : 'Ingresá para seguir organizando tu celebración.' }}
-    </p>
-
-    <div class="form-group">
-      <label for="login-email">Correo electrónico</label>
-      <input
-        id="login-email"
-        type="email"
-        [ngModel]="nombreUsuario()"
-        (input)="nombreUsuario.set($any($event.target).value)"
-        placeholder="ejemplo@correo.com"
-        class="login-input"
-      />
-    </div>
-
-    <div class="form-group">
-      <label for="login-password">Contraseña</label>
-      <input
-        id="login-password"
-        type="password"
-        [ngModel]="passwordUsuario()"
-        (input)="passwordUsuario.set($any($event.target).value)"
-        placeholder="Mínimo 6 caracteres"
-        class="login-input"
-      />
-    </div>
-
-    <button
-      (click)="accionPrincipal()"
-      class="btn-primary"
-      [disabled]="nombreUsuario().trim().length === 0 || passwordUsuario().trim().length < 6"
-    >
-      {{ esRegistro() ? 'Crear mi cuenta' : 'Iniciar sesión' }} <span aria-hidden="true">↗</span>
-    </button>
-
-    <!-- Botón de Inicio de Sesión con Google -->
-    <div class="social-login-container">
-      <div class="divider-text">
-        <span>o continúa con</span>
+    <section class="service-section" id="servicios">
+      <div class="section-heading">
+        <span class="section-kicker">PRESUPUESTO AUDIOVISUAL · 15 AÑOS</span>
+        <h2>Cada instante, <em>bien contado.</em></h2>
+        <p>Empezá por descubrir nuestros servicios para fiestas de 15 y, más abajo, encontrá opciones para bodas.</p>
       </div>
 
-      <button type="button" class="btn-google" (click)="ingresarConGoogle()">
-        <svg class="google-icon" width="18" height="18" viewBox="0 0 18 18">
-          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.617z"/>
-          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
-          <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
-          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
-        </svg>
-        Google
-      </button>
-    </div>
+      <div class="service-grid">
+        @for (servicio of serviciosQuince(); track servicio.id) {
+          <article class="service-card">
+            <div class="service-card-top">
+              <span class="service-icon" aria-hidden="true">{{ servicio.icono }}</span>
+              @if (servicio.precioPromocional !== undefined) {
+                <span class="service-price">{{ formatearPrecio(servicio.precioPromocional) }}</span>
+              }
+            </div>
+            <h3>{{ servicio.nombre }}</h3>
+            <p>{{ servicio.detalle }}</p>
+            <span class="service-type">{{ servicio.icono === '📸' ? 'FOTOGRAFÍA' : 'VIDEO Y FILMACIÓN' }}</span>
+          </article>
+        }
+      </div>
 
-    <p (click)="esRegistro.set(!esRegistro())" class="toggle-link">
-      {{
-        esRegistro()
-          ? '¿Ya tienes cuenta? Inicia sesión aquí'
-          : '¿No tienes cuenta? Regístrate gratis'
-      }}
-    </p>
-  </div>
+      <div class="included-banner">
+        <div class="included-icon" aria-hidden="true">✧</div>
+        <div>
+          <span class="section-kicker">UN REGALO PARA GUARDAR</span>
+          <h3>Tu historia, también en tus manos.</h3>
+          <p>Con la contratación integral de fotografía y video, recibís un pendrive de regalo con todo el material digital en alta definición.</p>
+        </div>
+      </div>
+
+      <section class="wedding-section" aria-labelledby="wedding-title">
+        <div class="wedding-heading">
+          <span class="section-kicker">FOTOGRAFÍA & VIDEO PARA BODAS</span>
+          <h3 id="wedding-title">Una historia de amor, <em>en cada detalle.</em></h3>
+          <p>
+            Desde el civil y los preparativos hasta la fiesta: armá una cobertura a medida para
+            revivir cada instante de su celebración.
+          </p>
+        </div>
+        <div class="wedding-grid">
+          @for (servicio of serviciosBodas(); track servicio.id) {
+            <article class="wedding-card">
+              <span class="wedding-icon" aria-hidden="true">{{ servicio.icono }}</span>
+              <div>
+                <h4>{{ servicio.nombre }}</h4>
+                <p>{{ servicio.detalle }}</p>
+              </div>
+            </article>
+          }
+        </div>
+        <div class="wedding-cta">
+          <p>¿Están organizando su boda? Consulten por una propuesta pensada para su día.</p>
+          <a class="landing-button landing-button-primary" routerLink="/contacto">Hablemos de su boda <span>↗</span></a>
+        </div>
+      </section>
+
+      <section class="budget-summary" aria-labelledby="budget-title">
+        <div class="budget-heading">
+          <span class="section-kicker">PRESUPUESTO OFICIAL</span>
+          <h3 id="budget-title">Elegí cómo querés organizarlo.</h3>
+          <p>Valores promocionales del presupuesto audiovisual para cumpleaños de 15. Para bodas, consultanos por una propuesta personalizada.</p>
+        </div>
+        <div class="budget-options">
+          <article class="budget-option">
+            <span class="budget-option-label">PRECIO DE LISTA</span>
+            <strong class="budget-total">{{ formatearPrecio(presupuestoQuince.precioLista) }}</strong>
+            <span class="budget-payment-label">Débito, transferencia o tarjeta hasta 6 cuotas</span>
+            <div class="budget-installment">
+              <span>Reserva de fecha · {{ presupuestoQuince.reservaPorcentaje }} %</span>
+              <strong>{{ formatearPrecio(reservaLista) }}</strong>
+            </div>
+            <div class="budget-installment">
+              <span>Saldo final · {{ presupuestoQuince.saldoPorcentaje }} %</span>
+              <strong>{{ formatearPrecio(saldoLista) }}</strong>
+            </div>
+          </article>
+          <article class="budget-option budget-option-cash">
+            <span class="budget-option-label">PAGO EN EFECTIVO · {{ presupuestoQuince.descuentoEfectivoPorcentaje }} % DE BONIFICACIÓN</span>
+            <span class="budget-original">{{ formatearPrecio(presupuestoQuince.precioLista) }}</span>
+            <span class="budget-discount">− {{ formatearPrecio(descuentoEfectivo) }}</span>
+            <strong class="budget-total">{{ formatearPrecio(precioEfectivo) }}</strong>
+            <div class="budget-installment">
+              <span>Reserva de fecha · {{ presupuestoQuince.reservaPorcentaje }} %</span>
+              <strong>{{ formatearPrecio(reservaEfectivo) }}</strong>
+            </div>
+            <div class="budget-installment">
+              <span>Saldo final · {{ presupuestoQuince.saldoPorcentaje }} %</span>
+              <strong>{{ formatearPrecio(saldoEfectivo) }}</strong>
+            </div>
+          </article>
+        </div>
+        <p class="budget-footnote">
+          Según el presupuesto, el saldo se abona {{ presupuestoQuince.fechaLimiteSaldo }}.
+          Para las pruebas de la web, cada servicio seleccionado en la agenda y el pago mantiene un
+          valor de <strong>$ 1</strong>; estos importes de lista son solo promocionales.
+        </p>
+      </section>
+
+      <div class="payment-notes">
+        <div><span>01</span><p>La reserva de fecha asegura la exclusividad del equipo audiovisual para tu evento.</p></div>
+        <div><span>02</span><p>Podés consultar financiación con tarjeta de crédito de hasta 6 cuotas sin recargo.</p></div>
+        <div><span>03</span><p>En Aprontes, las fotos y videos con el vestido antes del ingreso formal al salón están incluidos.</p></div>
+        <div><span>04</span><p>Al contratar fotografía y video de forma integral, recibís un pendrive con el material digital en alta definición.</p></div>
+      </div>
+    </section>
+
+    <section class="contact-banner">
+      <div>
+        <span class="section-kicker">EL PRIMER PASO A UNA NOCHE INOLVIDABLE</span>
+        <h2>¿Ya imaginás cómo<br /><em>querés recordarla?</em></h2>
+        <p>Contanos tu idea y te ayudamos a encontrar la cobertura ideal para tu fiesta.</p>
+      </div>
+      <div class="contact-banner-actions">
+        <a class="landing-button landing-button-light" routerLink="/contacto">Contactanos <span>↗</span></a>
+        <a class="landing-login-link" routerLink="/login">Ya tengo cuenta · Iniciar sesión</a>
+      </div>
+    </section>
 </div>
