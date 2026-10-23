@@ -368,6 +368,8 @@ async function createPreference(req, res) {
       id,
       reservaId: reservation.id || id,
       amount: Math.round(outstanding * 100) / 100,
+      fecha: reservation.fecha,
+      tipoEvento: reservation.tipoEvento,
       description: `${reservation.tipoEvento === '15_años' ? '15 Años' : 'Boda'} - ${reservation.fecha}`,
     });
   }
@@ -472,24 +474,77 @@ async function applyApprovedPayment(paymentId, verifiedPayment) {
     if (!reservationSnapshot.exists()) {
       const reservationsSnapshot = await db.ref(`reservas/${userKey}`).get();
       const reservations = reservationsSnapshot.val();
-      const matchingReservations = reservations && typeof reservations === 'object'
+      const entries = reservations && typeof reservations === 'object'
         ? Object.entries(reservations).filter(([, reservation]) =>
-            reservation &&
-            typeof reservation === 'object' &&
-            [allocation.id, allocation.reservaId].includes(String(reservation.id || ''))
+            reservation && typeof reservation === 'object'
           )
         : [];
+      const matchingById = entries.filter(([, reservation]) =>
+        [allocation.id, allocation.reservaId].includes(String(reservation.id || ''))
+      );
+
+      let matchingReservations = matchingById;
+      if (!matchingReservations.length) {
+        let allocationDate = allocation.fecha
+          ? String(allocation.fecha).split('T')[0]
+          : '';
+        let allocationEventType = allocation.tipoEvento;
+
+        if ((!allocationDate || !allocationEventType) && allocation.description) {
+          const separatorIndex = String(allocation.description).indexOf(' - ');
+          if (separatorIndex >= 0) {
+            const eventLabel = String(allocation.description).slice(0, separatorIndex);
+            allocationDate = String(allocation.description)
+              .slice(separatorIndex + 3)
+              .split('T')[0];
+            allocationEventType =
+              eventLabel === '15 Años' ? '15_años' : eventLabel === 'Boda' ? 'bodas' : undefined;
+          }
+        }
+
+        matchingReservations = entries.filter(([, reservation]) => {
+          const reservationDate = String(reservation.fecha || '').split('T')[0];
+          const reservationType = reservation.tipoEvento || (
+            reservation.descripcion?.toLowerCase().includes('boda') ? 'bodas' : undefined
+          );
+          const outstanding = Number(reservation.total) - Number(reservation.pagado || 0);
+
+          return (
+            allocationDate &&
+            allocationEventType &&
+            reservationDate === allocationDate &&
+            reservationType === allocationEventType &&
+            Number.isFinite(outstanding) &&
+            toMinorUnits(outstanding) === toMinorUnits(allocation.amount)
+          );
+        });
+      }
 
       if (matchingReservations.length === 1) {
         reservationRef = db.ref(`reservas/${userKey}/${matchingReservations[0][0]}`);
         reservationSnapshot = await reservationRef.get();
       } else if (matchingReservations.length > 1) {
-        throw new Error('El identificador de la reserva coincide con más de una reserva.');
+        throw new Error('No se pudo identificar una única reserva coincidente para el pago aprobado.');
       }
     }
 
     if (!reservationSnapshot.exists()) {
-      throw new Error(`No se encontró la reserva ${allocation.id} donde debe registrarse el pago.`);
+      const reservationsSnapshot = await db.ref(`reservas/${userKey}`).get();
+      const reservations = reservationsSnapshot.val();
+      const reservationKeys =
+        reservations && typeof reservations === 'object' ? Object.keys(reservations) : [];
+      console.error('No se encontró la reserva para aplicar el pago aprobado:', {
+        paymentId: String(paymentId),
+        externalReference,
+        reservationId: allocation.id,
+        reservationCount: reservationKeys.length,
+        reservationKeys: reservationKeys.slice(0, 20),
+      });
+      throw new Error(
+        reservationKeys.length
+          ? `No se encontró una reserva coincidente entre las ${reservationKeys.length} reservas de la cuenta.`
+          : 'La cuenta no tiene reservas en la base de datos configurada para el backend.'
+      );
     }
 
     let reservationMissing = false;
