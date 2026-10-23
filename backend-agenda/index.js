@@ -547,59 +547,94 @@ async function applyApprovedPayment(paymentId, verifiedPayment) {
       );
     }
 
-    let reservationMissing = false;
+    let transaction;
+    let callbackSawMissingReservation = false;
     let paymentDataInvalid = false;
-    const transaction = await reservationRef.transaction((reservation) => {
-      if (!reservation) {
-        reservationMissing = true;
-        return;
-      }
-      if (reservation.pagosMercadoPago?.[paymentId]) {
-        return reservation;
-      }
+    for (let attempt = 0; attempt < 2; attempt++) {
+      callbackSawMissingReservation = false;
+      paymentDataInvalid = false;
 
-      const total = Number(reservation.total);
-      const paid = Number(reservation.pagado || 0);
-      const allocationAmount = Number(allocation.amount);
-      if (
-        !Number.isFinite(total) ||
-        !Number.isFinite(paid) ||
-        !Number.isFinite(allocationAmount) ||
-        total <= 0 ||
-        paid < 0 ||
-        allocationAmount <= 0
-      ) {
-        paymentDataInvalid = true;
-        return;
-      }
-
-      if (!paymentAlreadyRecorded) {
-        const saldoPendiente = Math.max(0, total - paid);
-        if (allocationAmount > saldoPendiente) {
-          console.warn('Pago aprobado supera el saldo actual de la reserva; se registra el importe real:', {
-            paymentId: String(paymentId),
-            externalReference,
-            reservationId: allocation.id,
-            importePagado: allocationAmount,
-            saldoPendiente,
-          });
+      transaction = await reservationRef.transaction((reservation) => {
+        if (!reservation) {
+          callbackSawMissingReservation = true;
+          return;
         }
-        reservation.pagado = Math.round((paid + allocationAmount) * 100) / 100;
+        if (reservation.pagosMercadoPago?.[paymentId]) {
+          return reservation;
+        }
+
+        const total = Number(reservation.total);
+        const paid = Number(reservation.pagado || 0);
+        const allocationAmount = Number(allocation.amount);
+        if (
+          !Number.isFinite(total) ||
+          !Number.isFinite(paid) ||
+          !Number.isFinite(allocationAmount) ||
+          total <= 0 ||
+          paid < 0 ||
+          allocationAmount <= 0
+        ) {
+          paymentDataInvalid = true;
+          return;
+        }
+
+        if (!paymentAlreadyRecorded) {
+          const saldoPendiente = Math.max(0, total - paid);
+          if (allocationAmount > saldoPendiente) {
+            console.warn('Pago aprobado supera el saldo actual de la reserva; se registra el importe real:', {
+              paymentId: String(paymentId),
+              externalReference,
+              reservationId: allocation.id,
+              importePagado: allocationAmount,
+              saldoPendiente,
+            });
+          }
+          reservation.pagado = Math.round((paid + allocationAmount) * 100) / 100;
+        }
+        reservation.estado =
+          toMinorUnits(reservation.pagado) >= toMinorUnits(total) ? 'pagado' : 'pendiente';
+        reservation.pagosMercadoPago = reservation.pagosMercadoPago || {};
+        reservation.pagosMercadoPago[paymentId] = true;
+        return reservation;
+      });
+
+      if (
+        transaction.committed ||
+        transaction.snapshot.child(`pagosMercadoPago/${paymentId}`).exists()
+      ) {
+        break;
       }
-      reservation.estado =
-        toMinorUnits(reservation.pagado) >= toMinorUnits(total) ? 'pagado' : 'pendiente';
-      reservation.pagosMercadoPago = reservation.pagosMercadoPago || {};
-      reservation.pagosMercadoPago[paymentId] = true;
-      return reservation;
-    });
+
+      if (attempt === 0 && callbackSawMissingReservation && transaction.snapshot.exists()) {
+        console.warn('Se reintentará la transacción: la reserva existe pese a recibir null en la primera lectura.', {
+          paymentId: String(paymentId),
+          externalReference,
+          reservationId: allocation.id,
+        });
+        await reservationRef.get();
+        continue;
+      }
+
+      break;
+    }
 
     if (!transaction.committed && !transaction.snapshot.child(`pagosMercadoPago/${paymentId}`).exists()) {
+      const reservationStillExists = transaction.snapshot.exists();
+      console.error('No se pudo aplicar el pago aprobado a la reserva:', {
+        paymentId: String(paymentId),
+        externalReference,
+        reservationId: allocation.id,
+        reservationKey: reservationRef.key,
+        reservationStillExists,
+        callbackSawMissingReservation,
+        paymentDataInvalid,
+      });
       throw new Error(
-        reservationMissing
-          ? 'No se encontró la reserva donde debe registrarse el pago.'
-          : paymentDataInvalid
-            ? 'Los importes de la reserva o del pago no son válidos.'
-            : 'No se pudo actualizar la reserva.'
+        paymentDataInvalid
+          ? 'Los importes de la reserva o del pago no son válidos.'
+          : reservationStillExists
+            ? 'Firebase no aplicó la actualización aunque la reserva existe; vuelve a intentar la confirmación.'
+            : 'La reserva ya no existe en la base de datos del backend.'
       );
     }
   }
