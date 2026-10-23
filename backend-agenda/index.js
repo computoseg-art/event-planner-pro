@@ -366,6 +366,7 @@ async function createPreference(req, res) {
 
     allocations.push({
       id,
+      reservaId: reservation.id || id,
       amount: Math.round(outstanding * 100) / 100,
       description: `${reservation.tipoEvento === '15_años' ? '15 Años' : 'Boda'} - ${reservation.fecha}`,
     });
@@ -465,7 +466,32 @@ async function applyApprovedPayment(paymentId, verifiedPayment) {
   const paymentAlreadyRecorded = existingPaymentSnapshot.exists();
 
   for (const allocation of intent.allocations) {
-    const reservationRef = db.ref(`reservas/${userKey}/${allocation.id}`);
+    let reservationRef = db.ref(`reservas/${userKey}/${allocation.id}`);
+    let reservationSnapshot = await reservationRef.get();
+
+    if (!reservationSnapshot.exists()) {
+      const reservationsSnapshot = await db.ref(`reservas/${userKey}`).get();
+      const reservations = reservationsSnapshot.val();
+      const matchingReservations = reservations && typeof reservations === 'object'
+        ? Object.entries(reservations).filter(([, reservation]) =>
+            reservation &&
+            typeof reservation === 'object' &&
+            [allocation.id, allocation.reservaId].includes(String(reservation.id || ''))
+          )
+        : [];
+
+      if (matchingReservations.length === 1) {
+        reservationRef = db.ref(`reservas/${userKey}/${matchingReservations[0][0]}`);
+        reservationSnapshot = await reservationRef.get();
+      } else if (matchingReservations.length > 1) {
+        throw new Error('El identificador de la reserva coincide con más de una reserva.');
+      }
+    }
+
+    if (!reservationSnapshot.exists()) {
+      throw new Error(`No se encontró la reserva ${allocation.id} donde debe registrarse el pago.`);
+    }
+
     let reservationMissing = false;
     let paymentDataInvalid = false;
     const transaction = await reservationRef.transaction((reservation) => {
@@ -636,17 +662,17 @@ app.post('/confirm_payment', requireFirebaseUser, async (req, res) => {
     const result = await applyApprovedPayment(paymentId, payment);
     return res.status(result.status === 'approved' ? 200 : 202).json(result);
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('Error al confirmar pago de Mercado Pago:', {
       paymentId,
       externalReference,
-      message: error instanceof Error ? error.message : String(error),
+      message: errorMessage,
       name: error instanceof Error ? error.name : 'UnknownError',
     });
 
     if (payment?.status === 'approved') {
       return res.status(500).json({
-        error:
-          'Mercado Pago confirmó el pago, pero no se pudo actualizar la reserva. No vuelvas a pagar; recarga esta página para reintentar la confirmación.',
+        error: `Mercado Pago confirmó el pago, pero no se pudo actualizar la reserva (${errorMessage}). No vuelvas a pagar; recarga esta página para reintentar la confirmación.`,
       });
     }
 
