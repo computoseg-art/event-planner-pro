@@ -370,6 +370,17 @@ async function createPreference(req, res) {
       amount: Math.round(outstanding * 100) / 100,
       fecha: reservation.fecha,
       tipoEvento: reservation.tipoEvento,
+      reservaSnapshot: {
+        id: reservation.id || id,
+        usuario: email,
+        fecha: reservation.fecha,
+        descripcion: String(reservation.descripcion || ''),
+        tipoEvento: reservation.tipoEvento,
+        servicios: Array.isArray(reservation.servicios) ? reservation.servicios : [],
+        total,
+        pagado: paid,
+        estado: reservation.estado || 'pendiente',
+      },
       description: `${reservation.tipoEvento === '15_años' ? '15 Años' : 'Boda'} - ${reservation.fecha}`,
     });
   }
@@ -529,35 +540,80 @@ async function applyApprovedPayment(paymentId, verifiedPayment) {
     }
 
     if (!reservationSnapshot.exists()) {
-      const reservationsSnapshot = await db.ref(`reservas/${userKey}`).get();
-      const reservations = reservationsSnapshot.val();
-      const reservationKeys =
-        reservations && typeof reservations === 'object' ? Object.keys(reservations) : [];
-      console.error('No se encontró la reserva para aplicar el pago aprobado:', {
-        paymentId: String(paymentId),
-        externalReference,
-        reservationId: allocation.id,
-        reservationCount: reservationKeys.length,
-        reservationKeys: reservationKeys.slice(0, 20),
-      });
-      throw new Error(
-        reservationKeys.length
-          ? `No se encontró una reserva coincidente entre las ${reservationKeys.length} reservas de la cuenta.`
-          : 'La cuenta no tiene reservas en la base de datos configurada para el backend.'
-      );
+      const savedReservation = allocation.reservaSnapshot;
+      const savedTotal = Number(savedReservation?.total);
+      const savedPaid = Number(savedReservation?.pagado || 0);
+      const savedDate = String(savedReservation?.fecha || '').split('T')[0];
+      const validSavedReservation =
+        savedReservation &&
+        userDatabaseKey(savedReservation.usuario) === userKey &&
+        String(savedReservation.id || '') === String(allocation.reservaId || allocation.id) &&
+        /^\d{4}-\d{2}-\d{2}$/.test(savedDate) &&
+        Number.isFinite(savedTotal) &&
+        Number.isFinite(savedPaid) &&
+        savedTotal > 0 &&
+        savedPaid >= 0 &&
+        toMinorUnits(savedTotal - savedPaid) === toMinorUnits(allocation.amount);
+
+      if (validSavedReservation) {
+        console.warn('Se restaurará la reserva desde la copia de la intención porque el pago está aprobado y la reserva ya no existe:', {
+          paymentId: String(paymentId),
+          externalReference,
+          reservationId: allocation.id,
+        });
+      } else {
+        const reservationsSnapshot = await db.ref(`reservas/${userKey}`).get();
+        const reservations = reservationsSnapshot.val();
+        const reservationKeys =
+          reservations && typeof reservations === 'object' ? Object.keys(reservations) : [];
+        console.error('No se encontró la reserva para aplicar el pago aprobado:', {
+          paymentId: String(paymentId),
+          externalReference,
+          reservationId: allocation.id,
+          reservationCount: reservationKeys.length,
+          reservationKeys: reservationKeys.slice(0, 20),
+        });
+        throw new Error(
+          reservationKeys.length
+            ? `No se encontró una reserva coincidente entre las ${reservationKeys.length} reservas de la cuenta.`
+            : 'La cuenta no tiene reservas en la base de datos configurada para el backend.'
+        );
+      }
     }
 
     let transaction;
     let callbackSawMissingReservation = false;
+    let restoringReservationFromSnapshot = false;
     let paymentDataInvalid = false;
     for (let attempt = 0; attempt < 2; attempt++) {
       callbackSawMissingReservation = false;
+      restoringReservationFromSnapshot = false;
       paymentDataInvalid = false;
 
       transaction = await reservationRef.transaction((reservation) => {
         if (!reservation) {
           callbackSawMissingReservation = true;
-          return;
+          const savedReservation = allocation.reservaSnapshot;
+          const savedTotal = Number(savedReservation?.total);
+          const savedPaid = Number(savedReservation?.pagado || 0);
+          const savedDate = String(savedReservation?.fecha || '').split('T')[0];
+          const canRestore =
+            savedReservation &&
+            userDatabaseKey(savedReservation.usuario) === userKey &&
+            String(savedReservation.id || '') === String(allocation.reservaId || allocation.id) &&
+            /^\d{4}-\d{2}-\d{2}$/.test(savedDate) &&
+            Number.isFinite(savedTotal) &&
+            Number.isFinite(savedPaid) &&
+            savedTotal > 0 &&
+            savedPaid >= 0 &&
+            toMinorUnits(savedTotal - savedPaid) === toMinorUnits(allocation.amount);
+
+          if (!canRestore) return;
+          restoringReservationFromSnapshot = true;
+          reservation = {
+            ...savedReservation,
+            id: allocation.reservaId || allocation.id,
+          };
         }
         if (reservation.pagosMercadoPago?.[paymentId]) {
           return reservation;
@@ -578,7 +634,7 @@ async function applyApprovedPayment(paymentId, verifiedPayment) {
           return;
         }
 
-        if (!paymentAlreadyRecorded) {
+        if (!paymentAlreadyRecorded || restoringReservationFromSnapshot) {
           const saldoPendiente = Math.max(0, total - paid);
           if (allocationAmount > saldoPendiente) {
             console.warn('Pago aprobado supera el saldo actual de la reserva; se registra el importe real:', {
