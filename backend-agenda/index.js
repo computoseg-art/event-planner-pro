@@ -487,7 +487,7 @@ async function applyApprovedPayment(paymentId) {
 
       reservation.pagado = Math.round((paid + allocationAmount) * 100) / 100;
       reservation.estado =
-        toMinorUnits(reservation.pagado) >= toMinorUnits(total) ? 'completado' : 'pendiente';
+        toMinorUnits(reservation.pagado) >= toMinorUnits(total) ? 'pagado' : 'pendiente';
       reservation.pagosMercadoPago = reservation.pagosMercadoPago || {};
       reservation.pagosMercadoPago[paymentId] = true;
       return reservation;

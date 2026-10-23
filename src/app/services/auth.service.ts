@@ -133,14 +133,20 @@ export class AuthService {
     runInInjectionContext(this.injector, async () => {
       await signOut(this.auth);
       this.zone.run(() => {
-        this.router.navigate(['/home']);
+        this.router.navigate(['/login']);
       });
     });
   }
 
   private afterAuthentication(): void {
+    const returnUrl = this.router.parseUrl(this.router.url).queryParams['returnUrl'];
+    const destination =
+      typeof returnUrl === 'string' && returnUrl.startsWith('/') && !returnUrl.startsWith('//')
+        ? returnUrl
+        : '/eventos';
+
     this.zone.run(() => {
-      void this.router.navigate(['/eventos']);
+      void this.router.navigateByUrl(destination);
     });
     void this.provisionGalleryFolder();
   }

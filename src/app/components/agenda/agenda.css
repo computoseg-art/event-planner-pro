@@ -246,6 +246,7 @@
   border: 1px solid rgba(234, 179, 8, 0.3);
 }
 
+.estado-tag[data-estado="pagado"],
 .estado-tag[data-estado="completado"],
 .estado-tag[data-estado="confirmado"] {
   background: rgba(34, 197, 94, 0.15);
@@ -616,6 +617,7 @@
   border-color: #e8d8b3;
 }
 
+.estado-tag[data-estado='pagado'],
 .estado-tag[data-estado='completado'],
 .estado-tag[data-estado='confirmado'] {
   background: #eaf3eb;

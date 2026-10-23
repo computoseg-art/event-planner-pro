@@ -1,7 +1,7 @@
 // src/app/guards/auth.guard.ts
 
 //Este guardia protege las rutas que requieren autenticación en la aplicación.
-//Si el usuario no está autenticado, se le redirige a la página de inicio (home).
+//Si el usuario no está autenticado, se le redirige al login.
 //Utiliza Firebase Authentication para verificar el estado del usuario y Angular Router 
 // para la navegación.
 
@@ -21,9 +21,7 @@ export const authGuard: CanActivateFn = (route, state) => {
       if (currUser) {
         return true; // Hay usuario, permite el paso
       } else {
-        console.log('Guard: Acceso denegado, redirigiendo a home');
-        router.navigate(['/home']);
-        return false; // No hay usuario, bloquea
+        return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
       }
     }),
   );

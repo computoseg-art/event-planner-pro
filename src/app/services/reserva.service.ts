@@ -14,7 +14,7 @@ export interface Reserva {
   servicios: any[];
   total: number;
   pagado: number;
-  estado: string;
+  estado: 'pendiente' | 'pagado' | 'caducada' | 'completado';
 }
 
 export interface PagoHistorial {
@@ -195,8 +195,8 @@ deudaTotal = computed(() => {
 
       const estaCaducada = hoy > limitePago;
 
-      // Si está caducada o ya está pagada en su totalidad, no se suma a la deuda pendiente
-      if (estaCaducada || (res.estado && res.estado === 'caducada')) {
+      // No se suma deuda de reservas vencidas o ya saldadas.
+      if (estaCaducada || ['caducada', 'pagado', 'completado'].includes(res.estado)) {
         return acc;
       }
 
@@ -288,6 +288,10 @@ deudaTotal = computed(() => {
         ...res,
         total: Number(res.total),
         pagado: Number(res.pagado),
+        estado:
+          Number(res.total) > 0 && Number(res.pagado) >= Number(res.total)
+            ? 'pagado'
+            : 'pendiente',
       });
 
       if (fechaAnterior !== res.fecha) {

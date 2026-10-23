@@ -15,6 +15,6 @@ export const routes: Routes = [
   { path: 'eventos', component: Eventos, canActivate: [authGuard] }, // Nueva carátula protegida
   { path: 'agenda', component: AgendaComponent, canActivate: [authGuard] },
   { path: 'galeria', component: GalleryComponent, canActivate: [authGuard] },
-  { path: '', redirectTo: 'home', pathMatch: 'full' },
-  { path: '**', redirectTo: 'home' }
+  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  { path: '**', redirectTo: 'login' }
 ];

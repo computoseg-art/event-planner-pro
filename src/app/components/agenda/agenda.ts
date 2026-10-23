@@ -4,8 +4,7 @@
 //Proporciona funcionalidades para seleccionar fechas, agregar y actualizar reservas, 
 //procesar pagos y verificar el estado de las reservas.
 //También incluye validaciones para bloquear días ocupados o con menos de 3 días de anticipación, 
-// y para determinar si una reserva está completada o caducada. 
-// los estados pueden ser "pendiente", "completado" o "caducado".
+// y para determinar si una reserva está pagada o caducada.
 
 import { Component, signal, computed, inject, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -108,6 +107,7 @@ export class AgendaComponent implements OnInit {
 
     // Si ya está 100% saldada, no caduca
     if (pagado >= total) return false;
+    if (reserva.estado === 'caducada') return true;
 
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
@@ -123,9 +123,20 @@ export class AgendaComponent implements OnInit {
     return hoy > fechaLimite;
   }
 
+  estadoVisible(reserva: Reserva): 'pendiente' | 'pagado' | 'caducada' {
+    if (this.esReservaCaducada(reserva)) return 'caducada';
+
+    const total = Number(reserva.total || 0);
+    const pagado = Number(reserva.pagado || 0);
+    return total > 0 && pagado >= total ? 'pagado' : 'pendiente';
+  }
+
   // REGLA 3: Verificar si una reserva está completada o caducada (bloqueada para edición)
   esReservaBloqueada(res: Reserva): boolean {
-    const esCompletada = res.estado === 'completado' || (res.total > 0 && (res.pagado || 0) >= res.total);
+    const esCompletada =
+      res.estado === 'pagado' ||
+      res.estado === 'completado' ||
+      (res.total > 0 && (res.pagado || 0) >= res.total);
     const esCaducada = this.esReservaCaducada(res);
 
     // Los clientes no pueden editar si está completada o caducada. Los admin conservan permisos.
