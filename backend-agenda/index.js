@@ -425,8 +425,8 @@ async function createPreference(req, res) {
   }
 }
 
-async function applyApprovedPayment(paymentId) {
-  const payment = await paymentClient.get({ id: paymentId });
+async function applyApprovedPayment(paymentId, verifiedPayment) {
+  const payment = verifiedPayment || await paymentClient.get({ id: paymentId });
   if (payment.status !== 'approved') {
     return { status: payment.status || 'pending' };
   }
@@ -459,12 +459,18 @@ async function applyApprovedPayment(paymentId) {
   }
 
   const userKey = userDatabaseKey(intent.usuario);
+  const existingPaymentSnapshot = await db
+    .ref(`historial_pagos/${userKey}/${paymentId}`)
+    .get();
+  const paymentAlreadyRecorded = existingPaymentSnapshot.exists();
+
   for (const allocation of intent.allocations) {
     const reservationRef = db.ref(`reservas/${userKey}/${allocation.id}`);
-    let conflict = false;
+    let reservationMissing = false;
+    let paymentDataInvalid = false;
     const transaction = await reservationRef.transaction((reservation) => {
       if (!reservation) {
-        conflict = true;
+        reservationMissing = true;
         return;
       }
       if (reservation.pagosMercadoPago?.[paymentId]) {
@@ -478,14 +484,27 @@ async function applyApprovedPayment(paymentId) {
         !Number.isFinite(total) ||
         !Number.isFinite(paid) ||
         !Number.isFinite(allocationAmount) ||
-        allocationAmount <= 0 ||
-        toMinorUnits(total - paid) < toMinorUnits(allocationAmount)
+        total <= 0 ||
+        paid < 0 ||
+        allocationAmount <= 0
       ) {
-        conflict = true;
+        paymentDataInvalid = true;
         return;
       }
 
-      reservation.pagado = Math.round((paid + allocationAmount) * 100) / 100;
+      if (!paymentAlreadyRecorded) {
+        const saldoPendiente = Math.max(0, total - paid);
+        if (allocationAmount > saldoPendiente) {
+          console.warn('Pago aprobado supera el saldo actual de la reserva; se registra el importe real:', {
+            paymentId: String(paymentId),
+            externalReference,
+            reservationId: allocation.id,
+            importePagado: allocationAmount,
+            saldoPendiente,
+          });
+        }
+        reservation.pagado = Math.round((paid + allocationAmount) * 100) / 100;
+      }
       reservation.estado =
         toMinorUnits(reservation.pagado) >= toMinorUnits(total) ? 'pagado' : 'pendiente';
       reservation.pagosMercadoPago = reservation.pagosMercadoPago || {};
@@ -495,7 +514,11 @@ async function applyApprovedPayment(paymentId) {
 
     if (!transaction.committed && !transaction.snapshot.child(`pagosMercadoPago/${paymentId}`).exists()) {
       throw new Error(
-        conflict ? 'La reserva cambió después de iniciar el pago.' : 'No se pudo actualizar la reserva.'
+        reservationMissing
+          ? 'No se encontró la reserva donde debe registrarse el pago.'
+          : paymentDataInvalid
+            ? 'Los importes de la reserva o del pago no son válidos.'
+            : 'No se pudo actualizar la reserva.'
       );
     }
   }
@@ -584,15 +607,19 @@ app.post('/create_preference', requireFirebaseUser, (req, res, next) => {
   createPreference(req, res).catch(next);
 });
 
-app.post('/confirm_payment', requireFirebaseUser, async (req, res, next) => {
+app.post('/confirm_payment', requireFirebaseUser, async (req, res) => {
+  let paymentId = '';
+  let externalReference = '';
+  let payment = null;
+
   try {
-    const paymentId = String(req.body?.payment_id || '');
-    const externalReference = String(req.body?.external_reference || '');
+    paymentId = String(req.body?.payment_id || '');
+    externalReference = String(req.body?.external_reference || '');
     if (!/^\d+$/.test(paymentId) || !/^[0-9a-f-]{36}$/i.test(externalReference)) {
       return res.status(400).json({ error: 'Faltan los datos para verificar el pago.' });
     }
 
-    const payment = await paymentClient.get({ id: paymentId });
+    payment = await paymentClient.get({ id: paymentId });
     if (payment.external_reference !== externalReference) {
       return res.status(400).json({ error: 'El pago no corresponde a esta operación.' });
     }
@@ -606,10 +633,27 @@ app.post('/confirm_payment', requireFirebaseUser, async (req, res, next) => {
       return res.status(403).json({ error: 'El pago no corresponde a esta cuenta.' });
     }
 
-    const result = await applyApprovedPayment(paymentId);
+    const result = await applyApprovedPayment(paymentId, payment);
     return res.status(result.status === 'approved' ? 200 : 202).json(result);
   } catch (error) {
-    next(error);
+    console.error('Error al confirmar pago de Mercado Pago:', {
+      paymentId,
+      externalReference,
+      message: error instanceof Error ? error.message : String(error),
+      name: error instanceof Error ? error.name : 'UnknownError',
+    });
+
+    if (payment?.status === 'approved') {
+      return res.status(500).json({
+        error:
+          'Mercado Pago confirmó el pago, pero no se pudo actualizar la reserva. No vuelvas a pagar; recarga esta página para reintentar la confirmación.',
+      });
+    }
+
+    return res.status(502).json({
+      error:
+        'No se pudo consultar o verificar el pago con Mercado Pago. No inicies otro pago; espera unos segundos y vuelve a cargar esta página para reintentar.',
+    });
   }
 });
 

@@ -53,9 +53,12 @@ export class AgendaComponent implements OnInit {
   }
 
   private async confirmarRetornoPago(paymentId: string, externalReference: string) {
+    let pagoConfirmado = false;
+
     try {
       const result = await this.rs.confirmarPago(paymentId, externalReference);
       if (result.status === 'approved') {
+        pagoConfirmado = true;
         alert('¡Pago confirmado por Mercado Pago!');
       } else {
         alert('El pago todavía está pendiente de confirmación. La agenda se actualizará cuando Mercado Pago lo apruebe.');
@@ -64,7 +67,9 @@ export class AgendaComponent implements OnInit {
       console.error('No se pudo verificar el pago:', error);
       alert(error instanceof Error ? error.message : 'No se pudo verificar el pago con Mercado Pago.');
     } finally {
-      await this.router.navigate([], { queryParams: {}, replaceUrl: true });
+      if (pagoConfirmado) {
+        await this.router.navigate([], { queryParams: {}, replaceUrl: true });
+      }
     }
   }
 
