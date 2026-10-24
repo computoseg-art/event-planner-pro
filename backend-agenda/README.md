@@ -59,6 +59,8 @@ Al registrar o iniciar sesión, el backend crea (si aún no existe) una carpeta 
 
 En Mercado Pago, registra `https://<BACKEND_PUBLIC_URL>/webhook` como URL de notificaciones y habilita el evento **Pagos**. Configura allí la firma secreta correspondiente en `MP_WEBHOOK_SECRET`. El backend también consulta el pago directamente cuando el usuario vuelve a la agenda; los parámetros de retorno del navegador no se consideran prueba de pago.
 
+Cuando Mercado Pago confirma un pago, el backend conserva la intención en `pagos_pendientes/<externalReference>` con `estado: "approved"` y además archiva el registro aprobado en `pagos_aprovados/<paymentId>`. El historial visible por cuenta queda en `historial_pagos/<usuario>/<paymentId>`. La escritura de estos tres registros se hace en una única actualización de Realtime Database; los datos de `pagos_pendientes` no se eliminan para preservar la trazabilidad del checkout.
+
 Antes de habilitar cobros reales, completa un pago de prueba de punta a punta con credenciales y cuentas de prueba. El backend toma el importe y las reservas pendientes desde Firebase, comprueba la sesión de Firebase y actualiza los saldos solo después de verificar un pago aprobado con Mercado Pago.
 
 Revisa también las reglas de Realtime Database en Firebase Console: los clientes no deben poder editar `pagado`, `estado` ni los marcadores de pagos de una reserva. Ese permiso debe quedar reservado al backend con Admin SDK; las reglas actuales de la consola no están versionadas en este repositorio.

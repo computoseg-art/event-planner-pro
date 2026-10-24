@@ -439,6 +439,37 @@ async function createPreference(req, res) {
   }
 }
 
+async function persistApprovedPayment(paymentId, payment, externalReference, intent, userKey) {
+  const approvedAt =
+    payment.date_approved || intent.aprobado || new Date().toISOString();
+  const paymentRecord = {
+    ...intent,
+    externalReference,
+    estado: 'approved',
+    paymentId: String(paymentId),
+    aprobado: approvedAt,
+    monto: Number(payment.transaction_amount ?? intent.monto),
+    moneda: payment.currency_id || intent.moneda || 'UYU',
+    paymentStatus: payment.status,
+  };
+  const historyRecord = {
+    fecha: approvedAt,
+    monto: Number(payment.transaction_amount ?? intent.monto),
+    paymentId: String(paymentId),
+    externalReference,
+    descripcion: `Pago de Mercado Pago (${intent.allocations.length} reserva(s))`,
+    usuario: intent.usuario,
+  };
+
+  await db.ref().update({
+    [`pagos_pendientes/${externalReference}/estado`]: 'approved',
+    [`pagos_pendientes/${externalReference}/paymentId`]: String(paymentId),
+    [`pagos_pendientes/${externalReference}/aprobado`]: approvedAt,
+    [`pagos_aprovados/${paymentId}`]: paymentRecord,
+    [`historial_pagos/${userKey}/${paymentId}`]: historyRecord,
+  });
+}
+
 async function applyApprovedPayment(paymentId, verifiedPayment) {
   const payment = verifiedPayment || await paymentClient.get({ id: paymentId });
   if (payment.status !== 'approved') {
@@ -463,6 +494,7 @@ async function applyApprovedPayment(paymentId, verifiedPayment) {
     if (String(intent.paymentId) !== String(paymentId)) {
       throw new Error('La intención ya fue aplicada a otro pago.');
     }
+    await persistApprovedPayment(paymentId, payment, externalReference, intent, userDatabaseKey(intent.usuario));
     return { status: 'approved' };
   }
   if (
@@ -695,18 +727,7 @@ async function applyApprovedPayment(paymentId, verifiedPayment) {
     }
   }
 
-  await db.ref(`historial_pagos/${userKey}/${paymentId}`).set({
-    fecha: payment.date_approved || new Date().toISOString(),
-    monto: Number(payment.transaction_amount),
-    paymentId: String(paymentId),
-    descripcion: `Pago de Mercado Pago (${intent.allocations.length} reserva(s))`,
-    usuario: intent.usuario,
-  });
-  await intentRef.update({
-    estado: 'approved',
-    paymentId: String(paymentId),
-    aprobado: payment.date_approved || new Date().toISOString(),
-  });
+  await persistApprovedPayment(paymentId, payment, externalReference, intent, userKey);
 
   return { status: 'approved' };
 }
