@@ -1401,6 +1401,159 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
+app.post('/api/reservation-notification', requireFirebaseUser, async (req, res) => {
+  const reservationId =
+    typeof req.body?.id === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(req.body.id)
+      ? req.body.id
+      : '';
+  if (!reservationId) {
+    return res.status(400).json({ error: 'Falta un identificador de reserva válido.' });
+  }
+
+  const email = req.paymentUser.email.trim().toLowerCase();
+  const userKey = userDatabaseKey(email);
+  const reservationSnapshot = await db
+    .ref(`reservas/${userKey}/${reservationId}`)
+    .get();
+  const reservation = reservationSnapshot.val();
+  if (!reservation || typeof reservation !== 'object') {
+    return res.status(404).json({ error: 'No se encontró la reserva de esta cuenta.' });
+  }
+
+  const date = String(reservation.fecha || '');
+  const description = String(reservation.descripcion || '').trim();
+  const eventType = reservation.tipoEvento;
+  const total = Number(reservation.total);
+  const services = Array.isArray(reservation.servicios) ? reservation.servicios : [];
+  if (
+    !/^\d{4}-\d{2}-\d{2}(?:T.*)?$/.test(date) ||
+    !description ||
+    !['15_años', 'bodas'].includes(eventType) ||
+    !Number.isFinite(total) ||
+    total <= 0
+  ) {
+    return res.status(400).json({ error: 'Los datos guardados de la reserva no son válidos.' });
+  }
+
+  const notificationRef = db.ref(`notificaciones_reservas/${userKey}/${reservationId}`);
+  let alreadySent = false;
+  let alreadySending = false;
+  const claim = await notificationRef.transaction((current) => {
+    alreadySent = current?.estado === 'sent';
+    alreadySending =
+      current?.estado === 'sending' &&
+      Date.now() - Date.parse(current.iniciado || '') < 2 * 60 * 1000;
+    if (alreadySent || alreadySending) return;
+    return { estado: 'sending', iniciado: new Date().toISOString() };
+  });
+
+  if (!claim.committed) {
+    if (alreadySent) {
+      return res.status(200).json({ message: 'El aviso de esta reserva ya fue enviado.' });
+    }
+    if (alreadySending) {
+      return res.status(202).json({ message: 'El aviso de esta reserva ya se está enviando.' });
+    }
+    return res.status(503).json({ error: 'No se pudo reservar el envío del aviso. Inténtalo nuevamente.' });
+  }
+
+  const brevoApiKey = process.env.BREVO_API_KEY?.trim();
+  const emailFrom = process.env.EMAIL_FROM?.trim();
+  const emailTo = process.env.EMAIL_TO?.trim() || 'esteban.garriga@gmail.com';
+  if (!brevoApiKey || !emailFrom || !validEmail(emailFrom) || !validEmail(emailTo)) {
+    await notificationRef.update({ estado: 'failed' });
+    console.error('El aviso por email de reservas no está configurado: revisa BREVO_API_KEY, EMAIL_FROM y EMAIL_TO.');
+    return res.status(503).json({ error: 'El aviso por correo no está disponible temporalmente.' });
+  }
+
+  try {
+    const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    })[character]);
+    const eventName = eventType === '15_años' ? '15 años' : 'Boda';
+    const serviceLines = services.map((service) =>
+      `${String(service?.nombre || 'Servicio')} — $${Number(service?.precio || 0).toFixed(2)}`
+    );
+    const textContent = [
+      'Nueva reserva de evento',
+      `Cliente: ${email}`,
+      `Fecha: ${date}`,
+      `Tipo de evento: ${eventName}`,
+      `Descripción: ${description}`,
+      `Total: $${total.toFixed(2)}`,
+      'Servicios:',
+      ...(serviceLines.length ? serviceLines : ['Sin detalle de servicios']),
+      `ID de reserva: ${reservationId}`,
+    ].join('\n');
+    const htmlContent = `
+      <div style="font-family:Arial,sans-serif;color:#332927;line-height:1.6">
+        <h2 style="color:#722f4d">Nueva reserva de evento</h2>
+        <p><strong>Cliente:</strong> ${escapeHtml(email)}</p>
+        <p><strong>Fecha:</strong> ${escapeHtml(date)}</p>
+        <p><strong>Tipo de evento:</strong> ${eventName}</p>
+        <p><strong>Descripción:</strong> ${escapeHtml(description)}</p>
+        <p><strong>Total:</strong> $${total.toFixed(2)}</p>
+        <p><strong>Servicios:</strong></p>
+        <ul>${serviceLines.map((line) => `<li>${escapeHtml(line)}</li>`).join('') || '<li>Sin detalle de servicios</li>'}</ul>
+        <p><strong>ID de reserva:</strong> ${escapeHtml(reservationId)}</p>
+      </div>`;
+    const emailResponse = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'api-key': brevoApiKey,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: {
+          name: process.env.EMAIL_FROM_NAME?.trim() || 'BSfotografia & Videografia',
+          email: emailFrom,
+        },
+        to: [{ email: emailTo }],
+        replyTo: { email },
+        subject: `Nueva reserva: ${eventName} - ${date}`,
+        textContent,
+        htmlContent,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!emailResponse.ok) {
+      const providerResponse = await emailResponse.text();
+      console.error('Brevo rechazó el aviso de reserva:', {
+        status: emailResponse.status,
+        message: providerResponse.slice(0, 300),
+        reservationId,
+      });
+      await notificationRef.update({ estado: 'failed' });
+      return res.status(502).json({ error: 'Brevo no pudo enviar el aviso de la reserva.' });
+    }
+
+    await notificationRef.update({
+      estado: 'sent',
+      enviado: new Date().toISOString(),
+    });
+    return res.status(200).json({ message: 'Aviso de reserva enviado por correo.' });
+  } catch (error) {
+    await notificationRef.update({ estado: 'failed' });
+    console.error('Error al enviar el aviso de reserva:', {
+      name: error instanceof Error ? error.name : 'UnknownError',
+      message: error instanceof Error ? error.message : String(error),
+      reservationId,
+    });
+    const timedOut = error.name === 'TimeoutError' || error.name === 'AbortError';
+    return res.status(timedOut ? 504 : 502).json({
+      error: timedOut
+        ? 'El envío del aviso de reserva tardó demasiado.'
+        : 'No se pudo enviar el aviso de la reserva.',
+    });
+  }
+});
+
 app.use((error, _req, res, _next) => {
   console.error('Error en el backend:', error.api_response?.content || error.message || error);
   if (!res.headersSent) {

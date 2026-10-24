@@ -244,7 +244,9 @@ deudaTotal = computed(() => {
 
   async agregar(fecha: string, desc: string, total: number, servicios: any[], tipoEvento: string) {
     const email = this.auth.usuarioLogueado();
-    if (!email) return;
+    if (!email) {
+      throw new Error('Debes iniciar sesión para crear una reserva.');
+    }
     const userPath = email.toLowerCase().replace(/\./g, ',');
     const nuevaRef = push(ref(this.db, `reservas/${userPath}`));
 
@@ -267,6 +269,27 @@ deudaTotal = computed(() => {
       console.error('No se pudo actualizar la disponibilidad de la reserva nueva:', error);
       await remove(nuevaRef);
       throw error;
+    }
+
+    try {
+      const idToken = await this.auth.obtenerIdToken();
+      const response = await fetch(`${environment.apiUrl}/api/reservation-notification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ id: nuevaReserva.id }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'No se pudo enviar el aviso de la reserva.');
+      }
+      return true;
+    } catch (error) {
+      console.error('La reserva se guardó, pero no se pudo enviar el aviso por correo:', error);
+      return false;
     }
   }
 

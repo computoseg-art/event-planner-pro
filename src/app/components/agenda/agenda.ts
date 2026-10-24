@@ -303,7 +303,7 @@ export class AgendaComponent implements OnInit {
     }
 
     try {
-      await this.rs.agregar(
+      const avisoEnviado = await this.rs.agregar(
         this.fechaSeleccionada()!,
         this.miDescripcion(),
         this.totalParaReserva(),
@@ -314,7 +314,11 @@ export class AgendaComponent implements OnInit {
       this.miDescripcion.set('');
       this.categoriaPrevia.set(null);
       this.categoriaServicios.set(null);
-      alert('¡Reserva confirmada!');
+      alert(
+        avisoEnviado
+          ? '¡Reserva confirmada! Se envió el aviso por correo.'
+          : 'La reserva quedó guardada, pero no se pudo enviar el aviso por correo. Revisa la configuración del correo en Render.'
+      );
       this.cerrarConAnimacion();
     } catch (e) {
       console.error('Error al confirmar:', e);

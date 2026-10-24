@@ -44,6 +44,41 @@ h1 {
   line-height: 1.7;
 }
 
+.contact-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 11px;
+  margin-top: 24px;
+}
+
+.contact-options a {
+  display: grid;
+  gap: 5px;
+  padding: 15px;
+  border: 1px solid #e9e1d8;
+  border-radius: 3px;
+  background: #fff;
+  color: #332927;
+  text-decoration: none;
+  transition: border-color 180ms ease, transform 180ms ease;
+}
+
+.contact-options a:hover {
+  transform: translateY(-2px);
+  border-color: #a87586;
+}
+
+.contact-option-label {
+  color: #77716a;
+  font-size: 0.8rem;
+}
+
+.contact-options strong {
+  overflow-wrap: anywhere;
+  color: #722f4d;
+  font-size: 0.9rem;
+}
+
 form {
   display: grid;
   gap: 13px;
