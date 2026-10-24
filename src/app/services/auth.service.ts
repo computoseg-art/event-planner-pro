@@ -9,6 +9,7 @@ import {
   Auth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut,
   user,
   GoogleAuthProvider,
@@ -127,6 +128,12 @@ export class AuthService {
       alert(`Error al registrar: ${mensaje}`);
       throw e;
     }
+  }
+
+  async recuperarContrasena(email: string): Promise<void> {
+    await runInInjectionContext(this.injector, () =>
+      sendPasswordResetEmail(this.auth, email.trim())
+    );
   }
 
   async logout() {

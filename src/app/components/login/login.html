@@ -44,6 +44,22 @@
       />
     </div>
 
+    @if (!esRegistro()) {
+      <button
+        type="button"
+        class="forgot-password-link"
+        (click)="recuperarContrasena()"
+        [disabled]="enviandoRecuperacion()"
+      >
+        {{ enviandoRecuperacion() ? 'Enviando enlace…' : '¿Olvidaste tu contraseña?' }}
+      </button>
+      @if (mensajeRecuperacion()) {
+        <p class="password-reset-status" role="status" aria-live="polite">
+          {{ mensajeRecuperacion() }}
+        </p>
+      }
+    }
+
     <button
       type="submit"
       class="btn-primary"

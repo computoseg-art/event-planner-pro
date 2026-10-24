@@ -15,6 +15,8 @@ export class Login {
   email = signal('');
   password = signal('');
   esRegistro = signal(false);
+  enviandoRecuperacion = signal(false);
+  mensajeRecuperacion = signal('');
 
   accionPrincipal() {
     const email = this.email().trim();
@@ -34,5 +36,35 @@ export class Login {
 
   ingresarConGoogle() {
     this.auth.loginConGoogle();
+  }
+
+  async recuperarContrasena() {
+    const email = this.email().trim();
+    this.mensajeRecuperacion.set('');
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this.mensajeRecuperacion.set('Ingresa un correo válido para enviarte el enlace.');
+      return;
+    }
+
+    this.enviandoRecuperacion.set(true);
+    try {
+      await this.auth.recuperarContrasena(email);
+      this.mensajeRecuperacion.set(
+        'Si existe una cuenta con ese correo, recibirás un enlace para restablecer la contraseña. Revisa también spam.'
+      );
+    } catch (error) {
+      console.error('No se pudo enviar el enlace para restablecer la contraseña:', error);
+      const code = (error as { code?: string })?.code;
+      this.mensajeRecuperacion.set(
+        code === 'auth/invalid-email'
+          ? 'El formato del correo no es válido.'
+          : code === 'auth/too-many-requests'
+            ? 'Se realizaron demasiados intentos. Espera unos minutos e inténtalo otra vez.'
+            : 'No se pudo enviar el enlace. Revisa el correo e inténtalo nuevamente.'
+      );
+    } finally {
+      this.enviandoRecuperacion.set(false);
+    }
   }
 }

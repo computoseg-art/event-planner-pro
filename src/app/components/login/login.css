@@ -145,6 +145,37 @@
   outline: none;
 }
 
+.forgot-password-link {
+  display: block;
+  margin: -5px 0 14px auto;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: #722f4d;
+  cursor: pointer;
+  font-size: 0.79rem;
+  text-align: right;
+  text-decoration: underline;
+  text-decoration-color: rgb(114 47 77 / 35%);
+  text-underline-offset: 4px;
+}
+
+.forgot-password-link:hover:not(:disabled) {
+  color: #57223a;
+}
+
+.forgot-password-link:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.password-reset-status {
+  margin: -6px 0 14px;
+  color: #537c58;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
 .btn-primary {
   display: flex;
   width: 100%;
