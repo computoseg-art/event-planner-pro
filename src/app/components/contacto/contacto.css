@@ -79,6 +79,23 @@ h1 {
   font-size: 0.9rem;
 }
 
+.contact-options .whatsapp-contact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.whatsapp-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  color: #25d366;
+}
+
+.whatsapp-contact strong {
+  color: #168a43;
+}
+
 form {
   display: grid;
   gap: 13px;
