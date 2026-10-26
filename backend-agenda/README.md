@@ -65,6 +65,8 @@ Cuando Mercado Pago confirma un pago, el backend conserva la intención en `pago
 
 La seña es el 30 % del total y solo puede pagarse si faltan al menos 5 días para el evento. El saldo debe quedar pagado como máximo 3 días antes; al vencer ese plazo, la reserva se cancela y cualquier seña abonada se conserva sin devolución. El backend cancela las reservas vencidas al iniciar y luego las revisa cada hora.
 
+Después de aplicar un pago aprobado a la reserva, el backend envía por Brevo un comprobante al cliente y un aviso al correo `EMAIL_TO`. El asunto y el contenido distinguen seña del 30 % y pago total, e incluyen evento, fecha, importe recibido, total y saldo restante. Cada destinatario se registra en `notificaciones_pagos/<paymentId>/<cliente|admin>` para evitar duplicados cuando Mercado Pago notifica y la agenda confirma el mismo pago. Si el proveedor de email falla, el pago permanece aprobado y aplicado; el error se registra en Render y el estado de notificación queda como `failed`.
+
 Antes de habilitar cobros reales, completa un pago de prueba de punta a punta con credenciales y cuentas de prueba. El backend toma el importe y las reservas pendientes desde Firebase, comprueba la sesión de Firebase y actualiza los saldos solo después de verificar un pago aprobado con Mercado Pago.
 
 Revisa también las reglas de Realtime Database en Firebase Console: los clientes no deben poder editar `pagado`, `estado` ni los marcadores de pagos de una reserva. Ese permiso debe quedar reservado al backend con Admin SDK; las reglas actuales de la consola no están versionadas en este repositorio.

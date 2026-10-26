@@ -504,6 +504,203 @@ async function persistApprovedPayment(paymentId, payment, externalReference, int
   });
 }
 
+function formatoMonto(monto, moneda = 'UYU') {
+  return new Intl.NumberFormat('es-UY', {
+    style: 'currency',
+    currency: moneda,
+    minimumFractionDigits: 2,
+  }).format(Number(monto));
+}
+
+function escaparHtml(valor) {
+  return String(valor ?? '').replace(/[&<>"']/g, (caracter) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[caracter]);
+}
+
+async function enviarNotificacionPago({ paymentId, intent, payment, email, destinatario, tipo }) {
+  const brevoApiKey = process.env.BREVO_API_KEY?.trim();
+  const emailFrom = process.env.EMAIL_FROM?.trim();
+  if (
+    !brevoApiKey ||
+    !emailFrom ||
+    !validEmail(emailFrom) ||
+    !validEmail(destinatario)
+  ) {
+    throw new Error('La configuración de email para notificaciones de pago no es válida.');
+  }
+
+  const notificationRef = db.ref(`notificaciones_pagos/${paymentId}/${tipo}`);
+  let alreadySent = false;
+  let alreadySending = false;
+  const claim = await notificationRef.transaction((current) => {
+    alreadySent = current?.estado === 'sent';
+    alreadySending =
+      current?.estado === 'sending' &&
+      Date.now() - Date.parse(current.iniciado || '') < 2 * 60 * 1000;
+    if (alreadySent || alreadySending) return;
+    return { estado: 'sending', iniciado: new Date().toISOString(), destinatario };
+  });
+
+  if (!claim.committed) {
+    if (alreadySent || alreadySending) return;
+    throw new Error('No se pudo reservar el envío del email de pago.');
+  }
+
+  const moneda = payment.currency_id || intent.moneda || 'UYU';
+  const tipoPago = intent.tipoPago === 'senia' ? 'senia' : 'total';
+  const asuntoPago = tipoPago === 'senia' ? 'Seña del 30 % recibida' : 'Pago total recibido';
+  const filas = intent.allocations.map((allocation) => {
+    const reserva = allocation.reservaSnapshot || {};
+    const pagadoAntes = Number(reserva.pagado || 0);
+    const total = Number(reserva.total || 0);
+    const monto = Number(allocation.amount || 0);
+    const pagadoAcumulado = Math.min(total, pagadoAntes + monto);
+    const saldo = Math.max(0, total - pagadoAcumulado);
+    const servicios = Array.isArray(reserva.servicios)
+      ? reserva.servicios.map((servicio) => String(servicio?.nombre || 'Servicio')).join(', ')
+      : '';
+    const descripcion = String(reserva.descripcion || allocation.description || 'Evento');
+    const fecha = String(reserva.fecha || allocation.fecha || '').split('T')[0];
+    return {
+      descripcion,
+      fecha,
+      servicios,
+      total,
+      monto,
+      pagadoAcumulado,
+      saldo,
+    };
+  });
+  const montoTotalPago = Number(payment.transaction_amount ?? intent.monto);
+  const cliente = String(intent.usuario || email).trim().toLowerCase();
+  const lineas = filas.map((fila) => [
+    `${fila.descripcion} — ${fila.fecha}`,
+    `Importe de este pago: ${formatoMonto(fila.monto, moneda)}`,
+    `Total del evento: ${formatoMonto(fila.total, moneda)}`,
+    `Abonado acumulado: ${formatoMonto(fila.pagadoAcumulado, moneda)}`,
+    `Saldo pendiente: ${formatoMonto(fila.saldo, moneda)}`,
+    fila.servicios ? `Servicios: ${fila.servicios}` : '',
+  ].filter(Boolean).join('\n'));
+  const esCliente = tipo === 'cliente';
+  const titulo = esCliente
+    ? `Confirmamos tu ${tipoPago === 'senia' ? 'seña' : 'pago total'}`
+    : `Nuevo ${tipoPago === 'senia' ? 'pago de seña' : 'pago total'} confirmado`;
+  const texto = [
+    esCliente ? `Hola ${cliente},` : 'Se confirmó un pago de Mercado Pago.',
+    '',
+    esCliente
+      ? `Recibimos correctamente tu ${tipoPago === 'senia' ? 'seña del 30 %' : 'pago total'}.`
+      : `Tipo de pago: ${asuntoPago}`,
+    `Cliente: ${cliente}`,
+    `Importe recibido: ${formatoMonto(montoTotalPago, moneda)}`,
+    '',
+    ...lineas,
+    '',
+    `Identificador de pago: ${paymentId}`,
+    esCliente ? 'Gracias por confiar en BSfotografia & Videografia.' : '',
+  ].filter(Boolean).join('\n');
+  const bloquesHtml = filas.map((fila) => `
+    <div style="margin:16px 0;padding:16px;border:1px solid #eee8e0;border-radius:8px">
+      <h3 style="margin:0 0 8px;color:#722f4d">${escaparHtml(fila.descripcion)}</h3>
+      <p style="margin:4px 0"><strong>Fecha del evento:</strong> ${escaparHtml(fila.fecha)}</p>
+      ${fila.servicios ? `<p style="margin:4px 0"><strong>Servicios:</strong> ${escaparHtml(fila.servicios)}</p>` : ''}
+      <p style="margin:4px 0"><strong>Importe de este pago:</strong> ${escaparHtml(formatoMonto(fila.monto, moneda))}</p>
+      <p style="margin:4px 0"><strong>Total del evento:</strong> ${escaparHtml(formatoMonto(fila.total, moneda))}</p>
+      <p style="margin:4px 0"><strong>Abonado acumulado:</strong> ${escaparHtml(formatoMonto(fila.pagadoAcumulado, moneda))}</p>
+      <p style="margin:4px 0"><strong>Saldo pendiente:</strong> ${escaparHtml(formatoMonto(fila.saldo, moneda))}</p>
+    </div>
+  `).join('');
+  const htmlContent = `
+    <div style="font-family:Arial,sans-serif;max-width:620px;margin:auto;padding:24px;color:#332927;line-height:1.6">
+      <h2 style="color:#722f4d">${escaparHtml(titulo)}</h2>
+      <p>${esCliente ? 'Hola ' + escaparHtml(cliente) + ', recibimos correctamente tu pago.' : 'Se confirmó un pago de Mercado Pago para la siguiente reserva.'}</p>
+      <p><strong>Tipo:</strong> ${escaparHtml(asuntoPago)}<br>
+      <strong>Cliente:</strong> ${escaparHtml(cliente)}<br>
+      <strong>Importe recibido:</strong> ${escaparHtml(formatoMonto(montoTotalPago, moneda))}</p>
+      ${bloquesHtml}
+      <p style="color:#777;font-size:12px">Pago ${escaparHtml(paymentId)} · BSfotografia &amp; Videografia</p>
+    </div>
+  `;
+
+  try {
+    const emailResponse = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'api-key': brevoApiKey,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: {
+          name: process.env.EMAIL_FROM_NAME?.trim() || 'BSfotografia & Videografia',
+          email: emailFrom,
+        },
+        to: [{ email: destinatario }],
+        subject: `${asuntoPago} - ${filas.length} evento(s)`,
+        textContent: texto,
+        htmlContent,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!emailResponse.ok) {
+      const providerResponse = await emailResponse.text();
+      let providerMessage = 'Sin detalle del proveedor';
+      try {
+        providerMessage = JSON.parse(providerResponse).message || providerMessage;
+      } catch {
+        providerMessage = providerResponse.slice(0, 300) || providerMessage;
+      }
+      throw new Error(`Brevo respondió ${emailResponse.status}: ${providerMessage}`);
+    }
+
+    await notificationRef.update({
+      estado: 'sent',
+      enviado: new Date().toISOString(),
+    });
+  } catch (error) {
+    await notificationRef.update({
+      estado: 'failed',
+      error: error instanceof Error ? error.message.slice(0, 300) : String(error).slice(0, 300),
+      actualizado: new Date().toISOString(),
+    });
+    throw error;
+  }
+}
+
+async function notificarPagoAprobado(paymentId, intent, payment) {
+  const emailCliente = String(intent.usuario || '').trim().toLowerCase();
+  const emailAdmin = process.env.EMAIL_TO?.trim().toLowerCase();
+  const destinatarios = [
+    { email: emailCliente, tipo: 'cliente' },
+    ...(emailAdmin && emailAdmin !== emailCliente ? [{ email: emailAdmin, tipo: 'admin' }] : []),
+  ];
+
+  for (const destinatario of destinatarios) {
+    try {
+      await enviarNotificacionPago({
+        paymentId,
+        intent,
+        payment,
+        email: emailCliente,
+        destinatario: destinatario.email,
+        tipo: destinatario.tipo,
+      });
+    } catch (error) {
+      console.error('No se pudo enviar la notificación de pago por email:', {
+        paymentId: String(paymentId),
+        tipo: destinatario.tipo,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+}
+
 function allocationMatchesReservation(reservation, allocation, tipoPago) {
   const total = Number(reservation?.total);
   const paid = Number(reservation?.pagado || 0);
@@ -552,6 +749,7 @@ async function applyApprovedPayment(paymentId, verifiedPayment) {
       throw new Error('La intención ya fue aplicada a otro pago.');
     }
     await persistApprovedPayment(paymentId, payment, externalReference, intent, userDatabaseKey(intent.usuario));
+    await notificarPagoAprobado(paymentId, intent, payment);
     return { status: 'approved' };
   }
   if (
@@ -773,6 +971,7 @@ async function applyApprovedPayment(paymentId, verifiedPayment) {
   }
 
   await persistApprovedPayment(paymentId, payment, externalReference, intent, userKey);
+  await notificarPagoAprobado(paymentId, intent, payment);
 
   return { status: 'approved' };
 }
