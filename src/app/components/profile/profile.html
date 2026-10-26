@@ -1,0 +1,148 @@
+<section class="profile-page">
+  <header class="profile-heading">
+    <span class="profile-kicker">MI CUENTA</span>
+    <h1>Mi perfil</h1>
+    <p>{{ usuario()?.displayName || email() }}</p>
+  </header>
+
+  <div class="profile-summary">
+    <article class="summary-card">
+      <span>Reservas</span>
+      <strong>{{ misReservas().length }}</strong>
+    </article>
+    <article class="summary-card">
+      <span>Pagos registrados</span>
+      <strong>{{ misPagos().length }}</strong>
+    </article>
+    <article class="summary-card">
+      <span>Total abonado</span>
+      <strong>{{ formatoMonto(totalPagado()) }}</strong>
+    </article>
+  </div>
+
+  <section class="profile-section">
+    <div class="section-heading">
+      <div>
+        <span class="profile-kicker">ACTIVIDAD</span>
+        <h2>Historial de pagos</h2>
+      </div>
+      <p>Descargá un comprobante interno de cada pago confirmado.</p>
+    </div>
+
+    @for (pago of misPagos(); track pago.paymentId || pago.id) {
+      <article class="history-card">
+        <div class="history-main">
+          <div class="history-title-row">
+            <h3>{{ esSenia(pago) ? 'Seña recibida' : 'Pago recibido' }}</h3>
+            <span class="payment-status">Confirmado</span>
+          </div>
+          <p>{{ pago.descripcion }}</p>
+          <div class="history-meta">
+            <span>{{ pago.fecha | date: 'dd/MM/yyyy HH:mm' }}</span>
+            <span>Pago #{{ pago.paymentId }}</span>
+          </div>
+          @if (pago.reservas?.length) {
+            <div class="history-events">
+              @for (detalle of pago.reservas; track detalle.id || $index) {
+                <span>{{ detalle.descripcion }} · {{ detalle.fecha | date: 'dd/MM/yyyy' : 'UTC' }}</span>
+              }
+            </div>
+          }
+        </div>
+        <div class="history-actions">
+          <strong>{{ formatoMonto(pago.monto, pago.moneda) }}</strong>
+          <button type="button" (click)="descargarComprobante(pago)">
+            Descargar comprobante PDF
+          </button>
+        </div>
+      </article>
+    } @empty {
+      <p class="empty-state">Todavía no hay pagos confirmados en tu cuenta.</p>
+    }
+    <p class="receipt-note">
+      El comprobante es constancia de pago; no reemplaza una factura fiscal.
+      Al descargarlo, elegí “Guardar como PDF” en la ventana de impresión.
+    </p>
+  </section>
+
+  <section class="profile-section">
+    <div class="section-heading">
+      <div>
+        <span class="profile-kicker">TUS EVENTOS</span>
+        <h2>Mis reservas</h2>
+      </div>
+    </div>
+
+    @for (reserva of misReservas(); track reserva.id) {
+      <article class="reservation-card">
+        <div>
+          <div class="history-title-row">
+            <h3>{{ reserva.descripcion }}</h3>
+            <span class="reservation-status" [attr.data-status]="reserva.estado">
+              {{ etiquetaEstado(reserva) }}
+            </span>
+          </div>
+          <p>{{ reserva.fecha | date: 'EEEE d MMMM yyyy' : 'UTC' : 'es' | titlecase }}</p>
+          <span class="reservation-type">
+            {{ reserva.tipoEvento === '15_años' ? '15 años' : 'Casamiento' }}
+          </span>
+        </div>
+        <div class="reservation-amounts">
+          <span>Total <strong>{{ formatoMonto(reserva.total) }}</strong></span>
+          <span>Abonado <strong>{{ formatoMonto(reserva.pagado || 0) }}</strong></span>
+          <span>Saldo <strong>{{ formatoMonto(saldoPendiente(reserva)) }}</strong></span>
+        </div>
+      </article>
+    } @empty {
+      <p class="empty-state">Todavía no hay reservas en tu cuenta.</p>
+    }
+  </section>
+</section>
+
+@if (comprobanteSeleccionado(); as comprobante) {
+  <article class="receipt-print">
+    <header class="receipt-header">
+      <div>
+        <span class="profile-kicker">BSFOTOGRAFIA &amp; VIDEOGRAFIA</span>
+        <h1>Comprobante de pago</h1>
+      </div>
+      <span class="receipt-paid">PAGO CONFIRMADO</span>
+    </header>
+    <div class="receipt-details">
+      <p><strong>Cliente:</strong> {{ comprobante.usuario }}</p>
+      <p><strong>Fecha de pago:</strong> {{ comprobante.fecha | date: 'dd/MM/yyyy HH:mm' }}</p>
+      <p><strong>Número de operación:</strong> {{ comprobante.paymentId }}</p>
+      <p><strong>Medio de pago:</strong> Mercado Pago</p>
+      <p><strong>Concepto:</strong> {{ esSenia(comprobante) ? 'Seña del 30%' : 'Pago total o saldo' }}</p>
+    </div>
+
+    @if (comprobante.reservas?.length) {
+      <h2>Detalle del evento</h2>
+      @for (detalle of comprobante.reservas; track detalle.id || $index) {
+        <section class="receipt-event">
+          <h3>{{ detalle.descripcion }}</h3>
+          <p><strong>Fecha del evento:</strong> {{ detalle.fecha | date: 'dd/MM/yyyy' : 'UTC' }}</p>
+          <p><strong>Servicios:</strong> {{ descripcionServicios(detalle) }}</p>
+          @if (detalle.descuento && detalle.descuento > 0) {
+            <p><strong>Subtotal:</strong> {{ formatoMonto(detalle.total + detalle.descuento, comprobante.moneda) }}</p>
+            <p><strong>Descuento:</strong> −{{ formatoMonto(detalle.descuento, comprobante.moneda) }}</p>
+          }
+          <p><strong>Total de la reserva:</strong> {{ formatoMonto(detalle.total, comprobante.moneda) }}</p>
+          <p><strong>Abonado antes de este pago:</strong> {{ formatoMonto(detalle.pagadoAntes, comprobante.moneda) }}</p>
+          <p><strong>Importe de este pago:</strong> {{ formatoMonto(detalle.monto, comprobante.moneda) }}</p>
+        </section>
+      }
+    } @else {
+      <p>{{ comprobante.descripcion }}</p>
+      <p>El detalle de la reserva no estaba disponible en el registro original de este pago.</p>
+    }
+
+    <div class="receipt-total">
+      <span>Total recibido</span>
+      <strong>{{ formatoMonto(comprobante.monto, comprobante.moneda) }}</strong>
+    </div>
+    <footer>
+      Este documento es un comprobante interno de pago y no reemplaza una factura fiscal.
+    </footer>
+  </article>
+}

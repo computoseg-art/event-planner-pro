@@ -289,6 +289,29 @@
   gap: 8px;
 }
 
+.booking-select-all {
+  width: 100%;
+  margin: 0 0 10px;
+  padding: 11px 14px;
+  border: 1px solid #d8c5cb;
+  border-radius: 3px;
+  background: #faf6f2;
+  color: #722f4d;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.booking-select-all:hover,
+.booking-select-all.selected {
+  border-color: #722f4d;
+  background: #722f4d;
+  color: #fffdfa;
+}
+
 .booking-modal .chip-servicio {
   display: grid;
   width: 100%;
@@ -334,6 +357,12 @@
 .booking-price-summary strong {
   margin-left: 4px;
   color: #463d38;
+}
+
+.booking-price-summary .booking-discount,
+.booking-price-summary .booking-discount strong {
+  color: #39734c;
+  font-weight: 700;
 }
 
 .booking-modal .btn-confirmar {

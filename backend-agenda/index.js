@@ -407,6 +407,7 @@ async function createPreference(req, res) {
         tipoEvento: reservation.tipoEvento,
         servicios: Array.isArray(reservation.servicios) ? reservation.servicios : [],
         total,
+        descuento: Math.max(0, Number(reservation.descuento || 0)),
         pagado: paid,
         estado: reservation.estado || 'pendiente',
       },
@@ -491,8 +492,26 @@ async function persistApprovedPayment(paymentId, payment, externalReference, int
     monto: Number(payment.transaction_amount ?? intent.monto),
     paymentId: String(paymentId),
     externalReference,
-    descripcion: `Pago de Mercado Pago (${intent.allocations.length} reserva(s))`,
+    descripcion: `${intent.tipoPago === 'senia' ? 'Seña del 30 %' : 'Pago total/saldo'} de Mercado Pago`,
     usuario: intent.usuario,
+    tipoPago: intent.tipoPago === 'senia' ? 'senia' : 'total',
+    moneda: payment.currency_id || intent.moneda || 'UYU',
+    reservas: intent.allocations.map((allocation) => {
+      const reserva = allocation.reservaSnapshot || {};
+      return {
+        id: String(allocation.reservaId || allocation.id || ''),
+        descripcion: String(reserva.descripcion || allocation.description || 'Evento'),
+        fecha: String(reserva.fecha || allocation.fecha || ''),
+        tipoEvento: reserva.tipoEvento || allocation.tipoEvento || '',
+        monto: Number(allocation.amount || 0),
+        total: Number(reserva.total || 0),
+        pagadoAntes: Number(reserva.pagado || 0),
+        descuento: Math.max(0, Number(reserva.descuento || 0)),
+        servicios: Array.isArray(reserva.servicios)
+          ? reserva.servicios.map((servicio) => String(servicio?.nombre || 'Servicio'))
+          : [],
+      };
+    }),
   };
 
   await db.ref().update({
@@ -566,11 +585,14 @@ async function enviarNotificacionPago({ paymentId, intent, payment, email, desti
       : '';
     const descripcion = String(reserva.descripcion || allocation.description || 'Evento');
     const fecha = String(reserva.fecha || allocation.fecha || '').split('T')[0];
+    const descuento = Math.max(0, Number(reserva.descuento || 0));
     return {
       descripcion,
       fecha,
       servicios,
       total,
+      descuento,
+      subtotal: total + descuento,
       monto,
       pagadoAcumulado,
       saldo,
@@ -581,6 +603,8 @@ async function enviarNotificacionPago({ paymentId, intent, payment, email, desti
   const lineas = filas.map((fila) => [
     `${fila.descripcion} — ${fila.fecha}`,
     `Importe de este pago: ${formatoMonto(fila.monto, moneda)}`,
+    fila.descuento > 0 ? `Subtotal antes del descuento: ${formatoMonto(fila.subtotal, moneda)}` : '',
+    fila.descuento > 0 ? `Descuento por categoría completa: ${formatoMonto(fila.descuento, moneda)}` : '',
     `Total del evento: ${formatoMonto(fila.total, moneda)}`,
     `Abonado acumulado: ${formatoMonto(fila.pagadoAcumulado, moneda)}`,
     `Saldo pendiente: ${formatoMonto(fila.saldo, moneda)}`,
@@ -610,6 +634,8 @@ async function enviarNotificacionPago({ paymentId, intent, payment, email, desti
       <p style="margin:4px 0"><strong>Fecha del evento:</strong> ${escaparHtml(fila.fecha)}</p>
       ${fila.servicios ? `<p style="margin:4px 0"><strong>Servicios:</strong> ${escaparHtml(fila.servicios)}</p>` : ''}
       <p style="margin:4px 0"><strong>Importe de este pago:</strong> ${escaparHtml(formatoMonto(fila.monto, moneda))}</p>
+      ${fila.descuento > 0 ? `<p style="margin:4px 0"><strong>Subtotal antes del descuento:</strong> ${escaparHtml(formatoMonto(fila.subtotal, moneda))}</p>` : ''}
+      ${fila.descuento > 0 ? `<p style="margin:4px 0"><strong>Descuento por categoría completa:</strong> ${escaparHtml(formatoMonto(fila.descuento, moneda))}</p>` : ''}
       <p style="margin:4px 0"><strong>Total del evento:</strong> ${escaparHtml(formatoMonto(fila.total, moneda))}</p>
       <p style="margin:4px 0"><strong>Abonado acumulado:</strong> ${escaparHtml(formatoMonto(fila.pagadoAcumulado, moneda))}</p>
       <p style="margin:4px 0"><strong>Saldo pendiente:</strong> ${escaparHtml(formatoMonto(fila.saldo, moneda))}</p>
@@ -1668,6 +1694,8 @@ app.post('/api/reservation-notification', requireFirebaseUser, async (req, res) 
   const description = String(reservation.descripcion || '').trim();
   const eventType = reservation.tipoEvento;
   const total = Number(reservation.total);
+  const descuento = Math.max(0, Number(reservation.descuento || 0));
+  const subtotal = total + descuento;
   const services = Array.isArray(reservation.servicios) ? reservation.servicios : [];
   if (
     !/^\d{4}-\d{2}-\d{2}(?:T.*)?$/.test(date) ||
@@ -1728,6 +1756,7 @@ app.post('/api/reservation-notification', requireFirebaseUser, async (req, res) 
       `Fecha: ${date}`,
       `Tipo de evento: ${eventName}`,
       `Descripción: ${description}`,
+      ...(descuento > 0 ? [`Subtotal: $${subtotal.toFixed(2)}`, `Descuento por categoría completa (10%): -$${descuento.toFixed(2)}`] : []),
       `Total: $${total.toFixed(2)}`,
       'Servicios:',
       ...(serviceLines.length ? serviceLines : ['Sin detalle de servicios']),
@@ -1740,6 +1769,7 @@ app.post('/api/reservation-notification', requireFirebaseUser, async (req, res) 
         <p><strong>Fecha:</strong> ${escapeHtml(date)}</p>
         <p><strong>Tipo de evento:</strong> ${eventName}</p>
         <p><strong>Descripción:</strong> ${escapeHtml(description)}</p>
+        ${descuento > 0 ? `<p><strong>Subtotal:</strong> $${subtotal.toFixed(2)}<br><strong>Descuento por categoría completa (10%):</strong> −$${descuento.toFixed(2)}</p>` : ''}
         <p><strong>Total:</strong> $${total.toFixed(2)}</p>
         <p><strong>Servicios:</strong></p>
         <ul>${serviceLines.map((line) => `<li>${escapeHtml(line)}</li>`).join('') || '<li>Sin detalle de servicios</li>'}</ul>

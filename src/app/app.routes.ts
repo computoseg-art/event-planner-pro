@@ -7,6 +7,7 @@ import { Eventos } from './components/eventos/eventos'; // Nomenclatura moderna 
 import { authGuard } from './guards/auth.guard';
 import { guestGuard } from './guards/guest.guard';
 import { GalleryComponent } from './components/gallery/gallery'; // Importa la clase Gallery
+import { ProfileComponent } from './components/profile/profile';
 
 export const routes: Routes = [
   { path: 'home', component: HomeComponent, canActivate: [guestGuard] },
@@ -14,6 +15,7 @@ export const routes: Routes = [
   { path: 'contacto', component: ContactoComponent },
   { path: 'eventos', component: Eventos, canActivate: [authGuard] }, // Nueva carátula protegida
   { path: 'agenda', component: AgendaComponent, canActivate: [authGuard] },
+  { path: 'perfil', component: ProfileComponent, canActivate: [authGuard] },
   { path: 'galeria', component: GalleryComponent, canActivate: [authGuard] },
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: '**', redirectTo: 'login' }

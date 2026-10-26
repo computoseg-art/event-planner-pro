@@ -17,6 +17,7 @@
     } @else {
       <a routerLink="/eventos" routerLinkActive="active" class="nav-item">Experiencias</a>
       <a routerLink="/agenda" routerLinkActive="active" class="nav-item">Agenda</a>
+      <a routerLink="/perfil" routerLinkActive="active" class="nav-item">Mi perfil</a>
     }
     <a routerLink="/contacto" routerLinkActive="active" class="nav-item">Contacto</a>
     @if (auth.user$ | async) {
@@ -41,6 +42,7 @@
 
     @if (auth.user$ | async; as user) {
       <div class="user-profile">
+        <a routerLink="/perfil" routerLinkActive="active" class="nav-item profile-link">Mi perfil</a>
         <span class="welcome-text">
           Bienvenido, <strong>{{ user.displayName || user.email }}</strong>
         </span>
@@ -70,6 +72,7 @@
       } @else {
         <a routerLink="/eventos" (click)="cerrarMenu()" routerLinkActive="active">Experiencias</a>
         <a routerLink="/agenda" (click)="cerrarMenu()" routerLinkActive="active">Agenda</a>
+        <a routerLink="/perfil" (click)="cerrarMenu()" routerLinkActive="active">Mi perfil</a>
       }
       <a routerLink="/contacto" (click)="cerrarMenu()" routerLinkActive="active">Contacto</a>
     </nav>
@@ -79,6 +82,9 @@
         <div class="mobile-welcome">
           Bienvenido,<br><strong>{{ user.displayName || user.email }}</strong>
         </div>
+        <a routerLink="/perfil" (click)="cerrarMenu()" routerLinkActive="active" class="nav-item">
+          Mi perfil e historial
+        </a>
         <a routerLink="/galeria" (click)="cerrarMenu()" routerLinkActive="active" class="nav-item">
           {{ auth.esAdmin() ? 'Administrar galería' : 'Galería de fotos' }}
         </a>

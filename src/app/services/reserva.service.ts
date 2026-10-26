@@ -13,6 +13,7 @@ export interface Reserva {
   tipoEvento: '15_años' | 'bodas';
   servicios: any[];
   total: number;
+  descuento?: number;
   pagado: number;
   estado: 'pendiente' | 'pagado' | 'caducada' | 'completado';
 }
@@ -24,6 +25,22 @@ export interface PagoHistorial {
   paymentId: string;
   descripcion: string;
   usuario: string;
+  externalReference?: string;
+  tipoPago?: 'senia' | 'total';
+  moneda?: string;
+  reservas?: DetallePagoReserva[];
+}
+
+export interface DetallePagoReserva {
+  id?: string;
+  descripcion: string;
+  fecha: string;
+  tipoEvento?: '15_años' | 'bodas';
+  monto: number;
+  total: number;
+  pagadoAntes: number;
+  descuento?: number;
+  servicios?: string[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -298,7 +315,14 @@ deudaTotal = computed(() => {
     }
   }
 
-  async agregar(fecha: string, desc: string, total: number, servicios: any[], tipoEvento: string) {
+  async agregar(
+    fecha: string,
+    desc: string,
+    total: number,
+    servicios: any[],
+    tipoEvento: string,
+    descuento = 0,
+  ) {
     const email = this.auth.usuarioLogueado();
     if (!email) {
       throw new Error('Debes iniciar sesión para crear una reserva.');
@@ -314,6 +338,7 @@ deudaTotal = computed(() => {
       tipoEvento: tipoEvento as '15_años' | 'bodas',
       servicios: servicios,
       total: Number(total),
+      descuento: Number(descuento),
       pagado: 0,
       estado: 'pendiente',
     };
@@ -366,6 +391,7 @@ deudaTotal = computed(() => {
       await set(itemRef, {
         ...res,
         total: Number(res.total),
+        descuento: Number(res.descuento || 0),
         pagado: Number(res.pagado),
         estado:
           Number(res.total) > 0 && Number(res.pagado) >= Number(res.total)

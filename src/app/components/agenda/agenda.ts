@@ -302,7 +302,9 @@ export class AgendaComponent implements OnInit {
       res.servicios.push(servicio);
     }
 
-    res.total = res.servicios.reduce((acc: number, s: any) => acc + (s.precio || 0), 0);
+    const subtotal = res.servicios.reduce((acc: number, s: any) => acc + (s.precio || 0), 0);
+    res.descuento = this.cart.calcularDescuento(res.servicios);
+    res.total = Math.round((subtotal - res.descuento) * 100) / 100;
   }
 
   async confirmar() {
@@ -327,7 +329,8 @@ export class AgendaComponent implements OnInit {
         this.miDescripcion(),
         this.totalParaReserva(),
         [...this.cart.serviciosSeleccionados()],
-        this.categoriaPrevia()!
+        this.categoriaPrevia()!,
+        this.cart.descuentoCarrito(),
       );
       this.cart.reset();
       this.miDescripcion.set('');

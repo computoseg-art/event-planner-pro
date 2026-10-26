@@ -136,6 +136,10 @@
   white-space: nowrap;
 }
 
+.profile-link {
+  font-size: 0.78rem;
+}
+
 .welcome-text strong {
   color: #38312d;
   font-weight: 650;

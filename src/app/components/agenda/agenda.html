@@ -148,6 +148,16 @@
                 </details>
 
                 <div class="pago-detalle">
+                  @if (res.descuento && res.descuento > 0) {
+                    <p>
+                      Subtotal antes del descuento:
+                      <strong>${{ res.total + res.descuento | number }}</strong>
+                    </p>
+                    <p class="booking-discount">
+                      Descuento por categoría completa (10%):
+                      <strong>−${{ res.descuento | number }}</strong>
+                    </p>
+                  }
                   <p>
                     Total Actual: <strong>${{ res.total | number }}</strong>
                   </p>
@@ -324,6 +334,18 @@
               <span class="booking-label">Sumá servicios a tu evento</span>
               <span class="booking-step">02 / 02</span>
             </div>
+            <button
+              type="button"
+              class="booking-select-all"
+              [class.selected]="cart.categoriaSeleccionadaCompleta()"
+              [attr.aria-pressed]="cart.categoriaSeleccionadaCompleta()"
+              (click)="cart.toggleTodosServiciosCategoria()">
+              @if (cart.categoriaSeleccionadaCompleta()) {
+                Quitar todos los servicios de esta categoría
+              } @else {
+                Seleccionar todos los servicios de esta categoría y ahorrar 10%
+              }
+            </button>
             <div class="chips-container">
               @for (s of cart.serviciosFiltrados(); track s.id) {
                 <button
@@ -352,6 +374,13 @@
       <footer class="booking-modal-footer">
         <div class="booking-price-summary">
           @if (totalParaReserva() > 0) {
+            @if (cart.descuentoCarrito() > 0) {
+              <span>Subtotal <strong>${{ cart.subtotalCarrito() | number }}</strong></span>
+              <span class="booking-discount">
+                Descuento por categoría completa (10%)
+                <strong>−${{ cart.descuentoCarrito() | number }}</strong>
+              </span>
+            }
             <span>Total estimado <strong>${{ totalParaReserva() | number }}</strong></span>
             @if (puedeReservarConSenia()) {
               <span>Seña del 30% <strong>${{ pagoSenia() | number }}</strong></span>

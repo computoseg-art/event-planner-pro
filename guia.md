@@ -139,6 +139,8 @@ El correo usa `BREVO_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME` y `EMAIL_TO`. Las
 5. Al recibir una notificación, Render valida la firma y consulta el pago a Mercado Pago. También vuelve a verificarlo al retorno del usuario. Solo una aprobación confirmada por Mercado Pago permite actualizar el estado y el historial en Firebase.
 6. Antes de cobrar de verdad, prueba el flujo completo con credenciales y cuentas de prueba. Confirma importes, reservas afectadas, notificaciones y reglas de la base de datos.
 
+Los usuarios autenticados pueden abrir **Mi perfil** desde el navbar para ver sus reservas, el historial de pagos confirmados y el total abonado. Desde cada pago se puede abrir el diálogo de impresión y elegir **Guardar como PDF** para descargar un comprobante interno con el detalle del evento, importe abonado, total y descuento registrado. Este comprobante no reemplaza una factura fiscal. Los pagos anteriores a esta función pueden no tener detalle de reserva, pero conservan su importe, fecha e identificador de operación.
+
 **Precios durante las pruebas:** el catálogo del frontend mantiene el precio de checkout en `$1` mientras se prueba la aplicación. Los importes promocionales que se muestran al público son informativos y no deben confundirse con el valor cobrado. Antes de habilitar cobros reales, revisa el catálogo y el cálculo del backend para reemplazar los importes de prueba; usa primero credenciales de prueba de Mercado Pago. No cambies solo el texto promocional.
 
 ## 6. Integración de Brevo (formulario de contacto)

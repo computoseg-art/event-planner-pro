@@ -1,0 +1,349 @@
+.profile-page {
+  width: min(100% - 40px, 1040px);
+  margin: 0 auto;
+  padding: 42px 0 64px;
+  color: #332927;
+}
+
+.profile-heading {
+  margin-bottom: 24px;
+  padding: 32px;
+  border: 1px solid #eee8e0;
+  background: #fffdfa;
+}
+
+.profile-kicker {
+  color: #9a7861;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+}
+
+.profile-heading h1,
+.section-heading h2 {
+  margin: 7px 0;
+  color: #332927;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.035em;
+}
+
+.profile-heading h1 {
+  font-size: clamp(2rem, 5vw, 2.8rem);
+}
+
+.profile-heading p,
+.section-heading > p {
+  margin: 0;
+  color: #82766e;
+}
+
+.profile-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.summary-card,
+.profile-section {
+  border: 1px solid #eee8e0;
+  background: #fffdfa;
+}
+
+.summary-card {
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+}
+
+.summary-card span,
+.reservation-amounts span {
+  color: #82766e;
+  font-size: 0.82rem;
+}
+
+.summary-card strong {
+  color: #722f4d;
+  font-size: 1.25rem;
+}
+
+.profile-section {
+  margin-top: 20px;
+  padding: 24px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.section-heading h2 {
+  font-size: 1.8rem;
+}
+
+.section-heading > p {
+  max-width: 360px;
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+.history-card,
+.reservation-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 0;
+  border-top: 1px solid #eee8e0;
+}
+
+.history-main,
+.reservation-card > div:first-child {
+  min-width: 0;
+}
+
+.history-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.history-title-row h3 {
+  margin: 0;
+  color: #332927;
+  font-size: 1rem;
+}
+
+.history-main > p,
+.reservation-card p {
+  margin: 7px 0;
+  color: #716762;
+  font-size: 0.86rem;
+}
+
+.payment-status,
+.reservation-status {
+  padding: 4px 8px;
+  border-radius: 3px;
+  background: #e8f3eb;
+  color: #39734c;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.reservation-status[data-status='pendiente'] {
+  background: #fff2d9;
+  color: #94631b;
+}
+
+.reservation-status[data-status='caducada'] {
+  background: #fbe6e6;
+  color: #9b3434;
+}
+
+.history-meta,
+.history-events {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: #82766e;
+  font-size: 0.75rem;
+}
+
+.history-events {
+  margin-top: 9px;
+  color: #722f4d;
+}
+
+.history-actions {
+  display: flex;
+  min-width: 190px;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 10px;
+}
+
+.history-actions > strong {
+  font-size: 1rem;
+}
+
+.history-actions button {
+  padding: 9px 12px;
+  border: 1px solid #722f4d;
+  border-radius: 3px;
+  background: #722f4d;
+  color: #fffdfa;
+  font-size: 0.76rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.history-actions button:hover {
+  background: #57223a;
+}
+
+.receipt-note,
+.empty-state {
+  margin: 16px 0 0;
+  color: #82766e;
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.reservation-card {
+  align-items: center;
+}
+
+.reservation-type {
+  color: #9a7861;
+  font-size: 0.75rem;
+}
+
+.reservation-amounts {
+  display: grid;
+  min-width: 170px;
+  gap: 5px;
+  text-align: right;
+}
+
+.reservation-amounts strong {
+  color: #463d38;
+}
+
+.receipt-print {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .profile-page {
+    width: min(100% - 24px, 1040px);
+    padding-top: 26px;
+  }
+
+  .profile-heading,
+  .profile-section {
+    padding: 20px;
+  }
+
+  .profile-summary {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .summary-card {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: 14px 16px;
+  }
+
+  .section-heading,
+  .history-card,
+  .reservation-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .section-heading > p {
+    text-align: left;
+  }
+
+  .history-actions {
+    width: 100%;
+    min-width: 0;
+    align-items: flex-start;
+  }
+
+  .reservation-amounts {
+    width: 100%;
+    text-align: left;
+  }
+}
+
+@media print {
+  @page {
+    margin: 18mm;
+    size: A4;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .receipt-print,
+  .receipt-print * {
+    visibility: visible !important;
+  }
+
+  .receipt-print {
+    position: absolute;
+    inset: 0;
+    display: block;
+    color: #222;
+    font-family: Arial, sans-serif;
+    font-size: 11pt;
+  }
+
+  .receipt-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding-bottom: 18px;
+    border-bottom: 2px solid #722f4d;
+  }
+
+  .receipt-header h1 {
+    margin: 8px 0;
+    font-size: 23pt;
+  }
+
+  .receipt-paid {
+    color: #39734c;
+    font-size: 9pt;
+    font-weight: 700;
+  }
+
+  .receipt-details {
+    margin: 24px 0;
+    padding: 14px 18px;
+    background: #f7f4ef;
+  }
+
+  .receipt-details p,
+  .receipt-event p {
+    margin: 7px 0;
+  }
+
+  .receipt-event {
+    margin: 12px 0;
+    padding: 14px 18px;
+    border: 1px solid #ddd;
+    break-inside: avoid;
+  }
+
+  .receipt-event h3 {
+    margin-top: 0;
+    color: #722f4d;
+  }
+
+  .receipt-total {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 24px;
+    padding: 16px 0;
+    border-top: 2px solid #722f4d;
+    font-size: 15pt;
+    font-weight: 700;
+  }
+
+  .receipt-print footer {
+    margin-top: 36px;
+    color: #666;
+    font-size: 9pt;
+  }
+}
