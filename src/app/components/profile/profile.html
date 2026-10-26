@@ -61,7 +61,8 @@
     }
     <p class="receipt-note">
       El comprobante es constancia de pago; no reemplaza una factura fiscal.
-      Al descargarlo, elegí “Guardar como PDF” en la ventana de impresión.
+      Al descargarlo, elegí “Guardar como PDF” y desactivá “Encabezados y pies de página”
+      en la ventana de impresión para que no se agreguen datos del navegador.
     </p>
   </section>
 
@@ -105,32 +106,94 @@
       <div>
         <span class="profile-kicker">BSFOTOGRAFIA &amp; VIDEOGRAFIA</span>
         <h1>Comprobante de pago</h1>
+        <p class="receipt-subtitle">Constancia de pago de servicios para eventos</p>
       </div>
       <span class="receipt-paid">PAGO CONFIRMADO</span>
     </header>
     <div class="receipt-details">
-      <p><strong>Cliente:</strong> {{ comprobante.usuario }}</p>
-      <p><strong>Fecha de pago:</strong> {{ comprobante.fecha | date: 'dd/MM/yyyy HH:mm' }}</p>
-      <p><strong>Número de operación:</strong> {{ comprobante.paymentId }}</p>
-      <p><strong>Medio de pago:</strong> Mercado Pago</p>
-      <p><strong>Concepto:</strong> {{ esSenia(comprobante) ? 'Seña del 30%' : 'Pago total o saldo' }}</p>
+      <div class="receipt-field">
+        <span>Cliente</span>
+        <strong>{{ comprobante.usuario }}</strong>
+      </div>
+      <div class="receipt-field">
+        <span>Fecha de pago</span>
+        <strong>{{ comprobante.fecha | date: 'dd/MM/yyyy HH:mm' }}</strong>
+      </div>
+      <div class="receipt-field">
+        <span>Número de operación</span>
+        <strong>{{ comprobante.paymentId }}</strong>
+      </div>
+      <div class="receipt-field">
+        <span>Medio de pago</span>
+        <strong>Mercado Pago</strong>
+      </div>
+      <div class="receipt-field">
+        <span>Concepto</span>
+        <strong>{{ esSenia(comprobante) ? 'Seña del 30%' : 'Pago total o saldo' }}</strong>
+      </div>
     </div>
 
     @if (comprobante.reservas?.length) {
-      <h2>Detalle del evento</h2>
+      <h2 class="receipt-section-title">Detalle del evento</h2>
       @for (detalle of comprobante.reservas; track detalle.id || $index) {
         <section class="receipt-event">
-          <h3>{{ detalle.descripcion }}</h3>
-          <p><strong>Fecha del evento:</strong> {{ detalle.fecha | date: 'dd/MM/yyyy' : 'UTC' }}</p>
-          <p><strong>Servicios:</strong> {{ descripcionServicios(detalle) }}</p>
-          @if (detalle.descuento && detalle.descuento > 0) {
-            <p><strong>Subtotal:</strong> {{ formatoMonto(detalle.total + detalle.descuento, comprobante.moneda) }}</p>
-            <p><strong>Descuento:</strong> −{{ formatoMonto(detalle.descuento, comprobante.moneda) }}</p>
-          }
-          <p><strong>Total de la reserva:</strong> {{ formatoMonto(detalle.total, comprobante.moneda) }}</p>
-          <p><strong>Abonado antes de este pago:</strong> {{ formatoMonto(detalle.pagadoAntes, comprobante.moneda) }}</p>
-          <p><strong>Importe de este pago:</strong> {{ formatoMonto(detalle.monto, comprobante.moneda) }}</p>
-          <p><strong>Saldo después de este pago:</strong> {{ formatoMonto(detalle.saldoDespues ?? (detalle.total - detalle.pagadoAntes - detalle.monto), comprobante.moneda) }}</p>
+          <header class="receipt-event-header">
+            <div>
+              <span class="receipt-event-label">
+                {{ detalle.tipoEvento === '15_años' ? 'Celebración de 15 años' : 'Casamiento' }}
+              </span>
+              <h3>{{ detalle.descripcion }}</h3>
+            </div>
+            <div class="receipt-event-date">
+              <span>Fecha del evento</span>
+              <strong>{{ detalle.fecha | date: 'dd/MM/yyyy' : 'UTC' }}</strong>
+            </div>
+          </header>
+          <div class="receipt-services">
+            <h4>Servicios incluidos</h4>
+            @if (detalle.servicios?.length) {
+              @for (servicio of detalle.servicios; track $index) {
+                <div class="receipt-service-row">
+                  @if (esServicioDetallado(servicio)) {
+                    <span>{{ servicio.nombre }}</span>
+                    <strong>{{ formatoMonto(servicio.precio, comprobante.moneda) }}</strong>
+                  } @else {
+                    <span>{{ servicio }}</span>
+                  }
+                </div>
+              }
+            } @else {
+              <p>{{ descripcionServicios(detalle) }}</p>
+            }
+          </div>
+          <div class="receipt-breakdown">
+            @if (detalle.descuento && detalle.descuento > 0) {
+              <div class="receipt-breakdown-row">
+                <span>Subtotal</span>
+                <strong>{{ formatoMonto(detalle.total + detalle.descuento, comprobante.moneda) }}</strong>
+              </div>
+              <div class="receipt-breakdown-row receipt-discount">
+                <span>Descuento por categoría</span>
+                <strong>−{{ formatoMonto(detalle.descuento, comprobante.moneda) }}</strong>
+              </div>
+            }
+            <div class="receipt-breakdown-row">
+              <span>Total de la reserva</span>
+              <strong>{{ formatoMonto(detalle.total, comprobante.moneda) }}</strong>
+            </div>
+            <div class="receipt-breakdown-row">
+              <span>Abonado antes de este pago</span>
+              <strong>{{ formatoMonto(detalle.pagadoAntes, comprobante.moneda) }}</strong>
+            </div>
+            <div class="receipt-breakdown-row receipt-current-payment">
+              <span>Importe de este pago</span>
+              <strong>{{ formatoMonto(detalle.monto, comprobante.moneda) }}</strong>
+            </div>
+            <div class="receipt-breakdown-row">
+              <span>Saldo después de este pago</span>
+              <strong>{{ formatoMonto(detalle.saldoDespues ?? (detalle.total - detalle.pagadoAntes - detalle.monto), comprobante.moneda) }}</strong>
+            </div>
+          </div>
         </section>
       }
     } @else {
@@ -139,10 +202,13 @@
     }
 
     <div class="receipt-total">
-      <span>Total recibido</span>
+      <div>
+        <span>Total recibido en esta operación</span>
+        <small>Pago confirmado por Mercado Pago</small>
+      </div>
       <strong>{{ formatoMonto(comprobante.monto, comprobante.moneda) }}</strong>
     </div>
-    <footer>
+    <footer class="receipt-footer">
       Este documento es un comprobante interno de pago y no reemplaza una factura fiscal.
     </footer>
   </article>

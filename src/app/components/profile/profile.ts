@@ -79,8 +79,20 @@ export class ProfileComponent {
       .join(', ');
   }
 
+  esServicioDetallado(
+    servicio: string | { nombre: string; precio: number },
+  ): servicio is { nombre: string; precio: number } {
+    return typeof servicio !== 'string';
+  }
+
   descargarComprobante(pago: PagoHistorial): void {
     this.comprobanteSeleccionado.set(pago);
-    window.setTimeout(() => window.print(), 100);
+    document.body.classList.add('printing-receipt');
+    window.setTimeout(() => window.print(), 150);
+    window.addEventListener(
+      'afterprint',
+      () => document.body.classList.remove('printing-receipt'),
+      { once: true },
+    );
   }
 }

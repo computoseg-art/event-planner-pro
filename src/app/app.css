@@ -16,3 +16,37 @@ app-navbar + .main-content {
     padding-top: 68px;
   }
 }
+
+@media print {
+  body.printing-receipt,
+  body.printing-receipt app-root {
+    min-height: 0 !important;
+    background: #fff !important;
+  }
+
+  body.printing-receipt app-root * {
+    visibility: hidden !important;
+  }
+
+  body.printing-receipt app-root .receipt-print,
+  body.printing-receipt app-root .receipt-print * {
+    visibility: visible !important;
+  }
+
+  body.printing-receipt app-root .main-content {
+    min-height: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.printing-receipt app-root .receipt-print {
+    position: fixed !important;
+    inset: 0 !important;
+    display: block !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+}
