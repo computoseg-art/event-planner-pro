@@ -19,7 +19,7 @@ export class CartService {
     this.serviciosSeleccionados().reduce((acc, s) => acc + s.precio, 0),
   );
 
-  montoSenia = computed(() => this.totalCarrito() * 0.2);
+  montoSenia = computed(() => this.totalCarrito() * 0.3);
 
   todosLosServicios = computed(() => this.serviciosDisponibles());
 

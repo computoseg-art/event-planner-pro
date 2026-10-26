@@ -72,6 +72,7 @@ export class ReservaService {
             });
 
             if (esAdmin) this.migrarDisponibilidadInicial(listaPlana);
+            this.cancelarReservasVencidas(listaPlana);
             return listaPlana;
           }),
           catchError((err) => {
@@ -166,6 +167,15 @@ export class ReservaService {
     return todas.filter((r) => r.usuario?.trim().toLowerCase() === email);
   });
 
+  reservasPendientesPago = computed(() =>
+    this.reservasVisibles().filter(
+      (reserva) =>
+        reserva.estado !== 'caducada' &&
+        reserva.estado !== 'completado' &&
+        Number(reserva.total) > Number(reserva.pagado || 0),
+    ),
+  );
+
   historialVisibles = computed(() => {
     const email = this.auth.usuarioLogueado();
     const todos = this.historial();
@@ -175,20 +185,18 @@ export class ReservaService {
   });
 
 deudaTotal = computed(() => {
-    const hoyStr = new Date().toLocaleDateString('sv'); // 'YYYY-MM-DD' actual
-
-    return this.reservasVisibles().reduce((acc, res) => {
+  return this.reservasVisibles().reduce((acc, res) => {
       // Verificamos si la reserva está caducada por fecha o por estado
       // (Asumiendo que las comparas con la fecha del evento o un indicador de caducidad)
       const fechaEvento = res.fecha ? res.fecha.split('T')[0].trim() : '';
 
-      // Calculamos si ya pasó el plazo límite de pago (2 días antes del evento, igual que en tu backend)
+      // El saldo debe pagarse como máximo tres días antes del evento.
       const [year, month, day] = fechaEvento.split('-').map(Number);
       const dEvento = new Date(year, month - 1, day);
       dEvento.setHours(0, 0, 0, 0);
 
       const limitePago = new Date(dEvento);
-      limitePago.setDate(dEvento.getDate() - 2);
+      limitePago.setDate(dEvento.getDate() - 3);
 
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
@@ -210,7 +218,7 @@ deudaTotal = computed(() => {
 
     if (this.auth.esAdmin()) {
       this.reservas()
-        .filter((r) => r && r.fecha)
+        .filter((r) => r && r.fecha && r.estado !== 'caducada' && !this.fechaFueraDePlazo(r.fecha))
         .map((r) => r.fecha.split('T')[0].trim())
         .forEach((fecha) => fechas.add(fecha));
     }
@@ -227,10 +235,16 @@ deudaTotal = computed(() => {
     try {
       const cambios: Record<string, string> = {};
       for (const reserva of reservas) {
-        if (!reserva.id || !reserva.fecha) continue;
+        if (
+          !reserva.id ||
+          !reserva.fecha ||
+          reserva.estado === 'caducada' ||
+          this.fechaFueraDePlazo(reserva.fecha)
+        ) {
+          continue;
+        }
         cambios[`fechas_ocupadas/${reserva.id}`] = reserva.fecha;
       }
-
       if (Object.keys(cambios).length > 0) {
         await update(ref(this.db), cambios);
       }
@@ -239,6 +253,48 @@ deudaTotal = computed(() => {
       console.error('Error al inicializar el índice de fechas ocupadas:', error);
     } finally {
       this.migrandoDisponibilidad = false;
+    }
+  }
+
+  private fechaFueraDePlazo(fecha: string): boolean {
+    const [year, month, day] = fecha.split('T')[0].split('-').map(Number);
+    const fechaEvento = new Date(year, month - 1, day);
+    if (
+      Number.isNaN(fechaEvento.getTime()) ||
+      fechaEvento.getFullYear() !== year ||
+      fechaEvento.getMonth() !== month - 1 ||
+      fechaEvento.getDate() !== day
+    ) {
+      return false;
+    }
+
+    const fechaLimite = new Date(fechaEvento);
+    fechaLimite.setDate(fechaEvento.getDate() - 3);
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    return hoy > fechaLimite;
+  }
+
+  private cancelarReservasVencidas(reservas: Reserva[]) {
+    const cambios: Record<string, string | null> = {};
+
+    for (const reserva of reservas) {
+      if (!reserva.id || !reserva.usuario || !reserva.fecha) continue;
+      const total = Number(reserva.total || 0);
+      const pagado = Number(reserva.pagado || 0);
+      if (total <= 0 || pagado >= total || !this.fechaFueraDePlazo(reserva.fecha)) continue;
+
+      const userPath = reserva.usuario.toLowerCase().replace(/\./g, ',');
+      if (reserva.estado !== 'caducada') {
+        cambios[`reservas/${userPath}/${reserva.id}/estado`] = 'caducada';
+      }
+      cambios[`fechas_ocupadas/${reserva.id}`] = null;
+    }
+
+    if (Object.keys(cambios).length > 0) {
+      void update(ref(this.db), cambios).catch((error) => {
+        console.error('No se pudieron cancelar las reservas vencidas:', error);
+      });
     }
   }
 
@@ -384,7 +440,7 @@ deudaTotal = computed(() => {
     return data;
   }
 
-  async procesarPagoReservaIndividual(reserva: Reserva) {
+  async procesarPagoReservaIndividual(reserva: Reserva, tipoPago: 'senia' | 'total' = 'total') {
     const pendiente = Number(reserva.total) - Number(reserva.pagado || 0);
 
     if (pendiente <= 0) {
@@ -392,11 +448,19 @@ deudaTotal = computed(() => {
       return;
     }
 
+    if (tipoPago === 'senia' && Number(reserva.pagado || 0) > 0) {
+      alert('La seña solo está disponible antes de realizar el primer pago.');
+      return;
+    }
+
     this.cargandoPago.set(true);
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     try {
-      const data = await this.postPago('create_preference', { id: reserva.id });
+      const data = await this.postPago('create_preference', {
+        id: reserva.id,
+        tipo_pago: tipoPago,
+      });
       if (data.init_point) {
         window.location.href = data.init_point;
       } else {
@@ -416,13 +480,14 @@ deudaTotal = computed(() => {
     });
   }
 
-  async procesarPago(reserva?: Pick<Reserva, 'id'>) {
+  async procesarPago(reserva?: Pick<Reserva, 'id'>, tipoPago: 'senia' | 'total' = 'total') {
     this.cargandoPago.set(true);
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     try {
       const data = await this.postPago('create_preference', {
         id: reserva?.id || 'pago-general',
+        tipo_pago: tipoPago,
       });
       if (data.init_point) {
         window.location.href = data.init_point;

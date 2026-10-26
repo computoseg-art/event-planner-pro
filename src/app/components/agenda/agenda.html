@@ -177,6 +177,13 @@
                     >
                       Pagar Saldo
                     </button>
+                    @if (puedePagarSenia(res)) {
+                      <button
+                        (click)="pagarReservaIndividual(res, 'senia')"
+                        class="btn-pagar-card">
+                        Pagar seña (30%): ${{ res.total * 0.3 | number }}
+                      </button>
+                    }
                   }
                   <button (click)="eliminar(res)" class="btn-delete">Eliminar</button>
                 </div>
@@ -197,10 +204,20 @@
                     class="btn-pagar-solo"
                     (click)="pagarReservaIndividual(res); $event.stopPropagation()"
                   >
-                    💳 Pagar esta reserva (${{ res.total - (res.pagado || 0) | number }})
+                    💳 Pagar saldo (${{ res.total - (res.pagado || 0) | number }})
                   </button>
+                  @if (puedePagarSenia(res)) {
+                    <button
+                      class="btn-pagar-solo"
+                      (click)="pagarReservaIndividual(res, 'senia'); $event.stopPropagation()">
+                      💳 Pagar seña del 30% (${{ res.total * 0.3 | number }})
+                    </button>
+                  }
                 } @else if (esReservaCaducada(res)) {
-                  <p class="aviso-caducado">Plazo de pago vencido (2 días previos).</p>
+                  <p class="aviso-caducado">
+                    {{ res.pagado > 0 ? 'Seña vencida y no reembolsable.' : 'Reserva cancelada por vencimiento.' }}
+                    Plazo de pago: hasta 3 días antes del evento.
+                  </p>
                 } @else if (estadoVisible(res) === 'pagado') {
                   <p class="aviso-completado" style="margin-top: 4px; font-size: 0.78rem; color: #4ade80; font-weight: 600;">
                     ✓ Reserva pagada
@@ -336,7 +353,13 @@
         <div class="booking-price-summary">
           @if (totalParaReserva() > 0) {
             <span>Total estimado <strong>${{ totalParaReserva() | number }}</strong></span>
-            <span>Seña mínima <strong>${{ pagoSenia() | number }}</strong></span>
+            @if (puedeReservarConSenia()) {
+              <span>Seña del 30% <strong>${{ pagoSenia() | number }}</strong></span>
+            } @else {
+              <span>Para pagar seña, reservá con al menos 5 días de anticipación.</span>
+            }
+            <span>El saldo debe abonarse hasta 3 días antes del evento.</span>
+            <span>Si vence el plazo, la seña no se devuelve y la reserva se cancela.</span>
           } @else {
             <span>Seleccioná al menos un servicio para continuar</span>
           }

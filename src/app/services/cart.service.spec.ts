@@ -33,7 +33,7 @@ describe('CartService', () => {
     cart.toggleServicio(weddingVideo);
 
     expect(cart.totalCarrito()).toBe(2);
-    expect(cart.montoSenia()).toBeCloseTo(0.4);
+    expect(cart.montoSenia()).toBeCloseTo(0.6);
   });
 
   it('keeps the quinceañera promotional payment terms in the same catalog configuration', () => {
@@ -41,5 +41,6 @@ describe('CartService', () => {
     expect(PRESUPUESTO_QUINCE.descuentoEfectivoPorcentaje).toBe(10);
     expect(PRESUPUESTO_QUINCE.reservaPorcentaje).toBe(30);
     expect(PRESUPUESTO_QUINCE.saldoPorcentaje).toBe(70);
+    expect(PRESUPUESTO_QUINCE.fechaLimiteSaldo).toBe('hasta 3 días antes del evento');
   });
 });

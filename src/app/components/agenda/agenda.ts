@@ -41,6 +41,24 @@ export class AgendaComponent implements OnInit {
   totalParaReserva = computed(() => this.cart.totalCarrito());
   pagoSenia = computed(() => this.cart.montoSenia());
 
+  puedePagarSenia(reserva: Reserva): boolean {
+    if (Number(reserva.pagado || 0) > 0 || this.esReservaCaducada(reserva)) return false;
+    return this.diasHastaEvento(reserva.fecha) >= 5;
+  }
+
+  puedeReservarConSenia(): boolean {
+    const fecha = this.fechaSeleccionada();
+    return !!fecha && this.diasHastaEvento(fecha) >= 5;
+  }
+
+  private diasHastaEvento(fecha: string): number {
+    const [year, month, day] = fecha.split('T')[0].split('-').map(Number);
+    const evento = Date.UTC(year, month - 1, day);
+    const hoy = new Date();
+    const hoyUtc = Date.UTC(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    return Math.floor((evento - hoyUtc) / 86400000);
+  }
+
   ngOnInit() {
     this.route.queryParams.pipe(take(1)).subscribe((params) => {
       const paymentId = params['payment_id'] || params['collection_id'];
@@ -105,7 +123,7 @@ export class AgendaComponent implements OnInit {
     return diffDias < 3;
   }
 
-  // REGLA 2: Verificar si una reserva caducó por no saldarse/pagarse 2 días antes del evento
+  // El saldo pendiente vence tres días antes del evento.
   esReservaCaducada(reserva: Reserva): boolean {
     const total = Number(reserva.total || 0);
     const pagado = Number(reserva.pagado || 0);
@@ -121,9 +139,9 @@ export class AgendaComponent implements OnInit {
     const fechaEvento = new Date(year, month - 1, day);
     fechaEvento.setHours(0, 0, 0, 0);
 
-    // Fecha límite de pago = 2 días antes del evento
+    // Fecha límite de pago = 3 días antes del evento
     const fechaLimite = new Date(fechaEvento);
-    fechaLimite.setDate(fechaEvento.getDate() - 2);
+    fechaLimite.setDate(fechaEvento.getDate() - 3);
 
     return hoy > fechaLimite;
   }
@@ -142,10 +160,11 @@ export class AgendaComponent implements OnInit {
       res.estado === 'pagado' ||
       res.estado === 'completado' ||
       (res.total > 0 && (res.pagado || 0) >= res.total);
+    const tienePagos = Number(res.pagado || 0) > 0;
     const esCaducada = this.esReservaCaducada(res);
 
-    // Los clientes no pueden editar si está completada o caducada. Los admin conservan permisos.
-    return (esCompletada || esCaducada) && !this.auth.esAdmin();
+    // Una seña fija el precio y los servicios; los admin conservan permisos de edición.
+    return (esCompletada || tienePagos || esCaducada) && !this.auth.esAdmin();
   }
 
   // --- NAVEGACIÓN Y CALENDARIO ---
@@ -348,9 +367,14 @@ export class AgendaComponent implements OnInit {
     }
   }
 
-  async pagarReservaIndividual(res: Reserva) {
+  async pagarReservaIndividual(res: Reserva, tipoPago: 'senia' | 'total' = 'total') {
     if (this.esReservaCaducada(res)) {
-      alert('Esta reserva ha caducado por superar la fecha límite de pago (2 días antes del evento).');
+      alert('Esta reserva caducó por superar la fecha límite de pago (3 días antes del evento).');
+      return;
+    }
+
+    if (tipoPago === 'senia' && !this.puedePagarSenia(res)) {
+      alert('Para pagar una seña, deben faltar al menos 5 días para el evento y no debe haber pagos previos.');
       return;
     }
 
@@ -361,7 +385,7 @@ export class AgendaComponent implements OnInit {
     }
 
     try {
-      await this.rs.procesarPago(res);
+      await this.rs.procesarPago(res, tipoPago);
     } catch (e) {
       console.error('Error al procesar el pago:', e);
     }

@@ -17,7 +17,7 @@ export const PRESUPUESTO_QUINCE = {
   descuentoEfectivoPorcentaje: 10,
   reservaPorcentaje: 30,
   saldoPorcentaje: 70,
-  fechaLimiteSaldo: 'hasta 5 días antes o el mismo día del evento',
+  fechaLimiteSaldo: 'hasta 3 días antes del evento',
 } as const;
 
 export const CATALOGO_SERVICIOS: ServicioExtra[] = [

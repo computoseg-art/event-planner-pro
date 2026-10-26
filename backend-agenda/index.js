@@ -283,7 +283,7 @@ function verifyWebhookSignature(dataId, requestId, signatureHeader) {
   return received.length === expected.length && timingSafeEqual(received, expected);
 }
 
-function validateEventDate(fecha) {
+function validateEventDate(fecha, diasMinimos = 3) {
   if (!fecha) {
     return;
   }
@@ -311,25 +311,36 @@ function validateEventDate(fecha) {
   fechaEvento.setHours(0, 0, 0, 0);
 
   const fechaMinimaReserva = new Date(hoy);
-  fechaMinimaReserva.setDate(fechaMinimaReserva.getDate() + 3);
+  fechaMinimaReserva.setDate(fechaMinimaReserva.getDate() + diasMinimos);
   if (fechaEvento < fechaMinimaReserva) {
-    throw new Error('No se pueden realizar ni pagar reservas con menos de 3 días de anticipación.');
+    throw new Error(
+      diasMinimos === 5
+        ? 'Para pagar una seña deben faltar al menos 5 días para el evento.'
+        : 'No se pueden realizar ni pagar reservas con menos de 3 días de anticipación.'
+    );
   }
 
   const fechaLimitePago = new Date(fechaEvento);
-  fechaLimitePago.setDate(fechaLimitePago.getDate() - 2);
+  fechaLimitePago.setDate(fechaLimitePago.getDate() - 3);
   if (hoy > fechaLimitePago) {
-    throw new Error('La reserva ha caducado. El plazo límite de pago era hasta 2 días antes del evento.');
+    throw new Error('La reserva ha caducado. El plazo límite de pago era hasta 3 días antes del evento.');
   }
 }
 
 async function createPreference(req, res) {
   const email = req.paymentUser.email;
   const requestedId = String(req.body?.id || '');
+  const tipoPago = String(req.body?.tipo_pago || 'total');
   const userKey = userDatabaseKey(email);
 
+  if (!['senia', 'total'].includes(tipoPago)) {
+    return res.status(400).json({ error: 'El tipo de pago solicitado no es válido.' });
+  }
   if (requestedId !== 'pago-general' && !/^[A-Za-z0-9_-]{1,128}$/.test(requestedId)) {
     return res.status(400).json({ error: 'Falta identificar la reserva a pagar.' });
+  }
+  if (tipoPago === 'senia' && requestedId === 'pago-general') {
+    return res.status(400).json({ error: 'La seña debe pagarse para una reserva individual.' });
   }
 
   const reservationsSnapshot = await db.ref(`reservas/${userKey}`).get();
@@ -350,6 +361,12 @@ async function createPreference(req, res) {
       }
       continue;
     }
+    if (reservation.estado === 'caducada') {
+      if (requestedId !== 'pago-general') {
+        return res.status(400).json({ error: 'La reserva está cancelada y no admite nuevos pagos.' });
+      }
+      continue;
+    }
 
     const total = Number(reservation.total);
     const paid = Number(reservation.pagado || 0);
@@ -359,15 +376,27 @@ async function createPreference(req, res) {
     }
 
     try {
-      validateEventDate(reservation.fecha);
+      validateEventDate(reservation.fecha, tipoPago === 'senia' ? 5 : 3);
     } catch (error) {
       return res.status(400).json({ error: error.message });
+    }
+
+    if (tipoPago === 'senia' && paid > 0) {
+      return res.status(400).json({ error: 'La seña solo está disponible antes de realizar el primer pago.' });
+    }
+
+    const amount = tipoPago === 'senia'
+      ? Math.round(total * 0.3 * 100) / 100
+      : Math.round(outstanding * 100) / 100;
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({ error: 'El importe del pago no es válido.' });
     }
 
     allocations.push({
       id,
       reservaId: reservation.id || id,
-      amount: Math.round(outstanding * 100) / 100,
+      amount,
+      tipoPago,
       fecha: reservation.fecha,
       tipoEvento: reservation.tipoEvento,
       reservaSnapshot: {
@@ -394,6 +423,7 @@ async function createPreference(req, res) {
   const intentRef = db.ref(`pagos_pendientes/${externalReference}`);
   await intentRef.set({
     usuario: email,
+    tipoPago,
     allocations,
     monto: amount,
     moneda: 'UYU',
@@ -405,7 +435,11 @@ async function createPreference(req, res) {
     const preference = await preferenceClient.create({
       body: {
         items: [{
-          title: requestedId === 'pago-general' ? 'Pago de deuda - Agenda' : allocations[0].description,
+          title: requestedId === 'pago-general'
+            ? 'Pago de deuda - Agenda'
+            : tipoPago === 'senia'
+              ? `Seña del 30% - ${allocations[0].description}`
+              : allocations[0].description,
           quantity: 1,
           unit_price: amount,
           currency_id: 'UYU',
@@ -1560,6 +1594,69 @@ app.use((error, _req, res, _next) => {
     res.status(500).json({ error: 'No se pudo completar la operación.' });
   }
 });
+
+async function cancelarReservasVencidas() {
+  const [reservasSnapshot, fechasSnapshot] = await Promise.all([
+    db.ref('reservas').get(),
+    db.ref('fechas_ocupadas').get(),
+  ]);
+  const reservasPorUsuario = reservasSnapshot.val();
+  const fechasOcupadas = fechasSnapshot.val() || {};
+  if (!reservasPorUsuario || typeof reservasPorUsuario !== 'object') return;
+
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const cambios = {};
+
+  for (const [userKey, reservas] of Object.entries(reservasPorUsuario)) {
+    if (!reservas || typeof reservas !== 'object') continue;
+    for (const [reservationKey, reserva] of Object.entries(reservas)) {
+      if (!reserva || typeof reserva !== 'object' || !reserva.fecha) continue;
+
+      const total = Number(reserva.total || 0);
+      const pagado = Number(reserva.pagado || 0);
+      if (total <= 0 || pagado >= total) continue;
+
+      const [year, month, day] = String(reserva.fecha).split('T')[0].split('-').map(Number);
+      const fechaEvento = new Date(year, month - 1, day);
+      if (
+        Number.isNaN(fechaEvento.getTime()) ||
+        fechaEvento.getFullYear() !== year ||
+        fechaEvento.getMonth() !== month - 1 ||
+        fechaEvento.getDate() !== day
+      ) {
+        continue;
+      }
+
+      const fechaLimite = new Date(fechaEvento);
+      fechaLimite.setDate(fechaEvento.getDate() - 3);
+      if (hoy <= fechaLimite) continue;
+
+      const reservationId = String(reserva.id || reservationKey);
+      if (reserva.estado !== 'caducada') {
+        cambios[`reservas/${userKey}/${reservationKey}/estado`] = 'caducada';
+      }
+      if (Object.prototype.hasOwnProperty.call(fechasOcupadas, reservationId)) {
+        cambios[`fechas_ocupadas/${reservationId}`] = null;
+      }
+    }
+  }
+
+  if (Object.keys(cambios).length > 0) {
+    await db.ref().update(cambios);
+    console.info('Se cancelaron reservas que superaron el plazo de pago.');
+  }
+}
+
+const ejecutarCancelacionReservasVencidas = () => {
+  cancelarReservasVencidas().catch((error) => {
+    console.error('No se pudieron cancelar las reservas vencidas:', error);
+  });
+};
+
+ejecutarCancelacionReservasVencidas();
+const cancelacionReservasTimer = setInterval(ejecutarCancelacionReservasVencidas, 60 * 60 * 1000);
+cancelacionReservasTimer.unref();
 
 app.listen(PORT, () => {
   console.log(`Backend de BSfotografia & Videografia ejecutándose en el puerto ${PORT}`);
