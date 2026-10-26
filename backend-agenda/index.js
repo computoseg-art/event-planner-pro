@@ -504,6 +504,29 @@ async function persistApprovedPayment(paymentId, payment, externalReference, int
   });
 }
 
+function allocationMatchesReservation(reservation, allocation, tipoPago) {
+  const total = Number(reservation?.total);
+  const paid = Number(reservation?.pagado || 0);
+  const amount = Number(allocation?.amount);
+  const paymentType = allocation?.tipoPago || tipoPago || 'total';
+  if (
+    !Number.isFinite(total) ||
+    !Number.isFinite(paid) ||
+    !Number.isFinite(amount) ||
+    total <= 0 ||
+    paid < 0 ||
+    paid >= total ||
+    amount <= 0
+  ) {
+    return false;
+  }
+
+  const expectedAmount = paymentType === 'senia'
+    ? Math.round(total * 0.3 * 100) / 100
+    : Math.round((total - paid) * 100) / 100;
+  return toMinorUnits(expectedAmount) === toMinorUnits(amount);
+}
+
 async function applyApprovedPayment(paymentId, verifiedPayment) {
   const payment = verifiedPayment || await paymentClient.get({ id: paymentId });
   if (payment.status !== 'approved') {
@@ -584,15 +607,12 @@ async function applyApprovedPayment(paymentId, verifiedPayment) {
           const reservationType = reservation.tipoEvento || (
             reservation.descripcion?.toLowerCase().includes('boda') ? 'bodas' : undefined
           );
-          const outstanding = Number(reservation.total) - Number(reservation.pagado || 0);
-
           return (
             allocationDate &&
             allocationEventType &&
             reservationDate === allocationDate &&
             reservationType === allocationEventType &&
-            Number.isFinite(outstanding) &&
-            toMinorUnits(outstanding) === toMinorUnits(allocation.amount)
+            allocationMatchesReservation(reservation, allocation, intent.tipoPago)
           );
         });
       }
@@ -607,19 +627,13 @@ async function applyApprovedPayment(paymentId, verifiedPayment) {
 
     if (!reservationSnapshot.exists()) {
       const savedReservation = allocation.reservaSnapshot;
-      const savedTotal = Number(savedReservation?.total);
-      const savedPaid = Number(savedReservation?.pagado || 0);
       const savedDate = String(savedReservation?.fecha || '').split('T')[0];
       const validSavedReservation =
         savedReservation &&
         userDatabaseKey(savedReservation.usuario) === userKey &&
         String(savedReservation.id || '') === String(allocation.reservaId || allocation.id) &&
         /^\d{4}-\d{2}-\d{2}$/.test(savedDate) &&
-        Number.isFinite(savedTotal) &&
-        Number.isFinite(savedPaid) &&
-        savedTotal > 0 &&
-        savedPaid >= 0 &&
-        toMinorUnits(savedTotal - savedPaid) === toMinorUnits(allocation.amount);
+        allocationMatchesReservation(savedReservation, allocation, intent.tipoPago);
 
       if (validSavedReservation) {
         console.warn('Se restaurará la reserva desde la copia de la intención porque el pago está aprobado y la reserva ya no existe:', {
@@ -636,6 +650,9 @@ async function applyApprovedPayment(paymentId, verifiedPayment) {
           paymentId: String(paymentId),
           externalReference,
           reservationId: allocation.id,
+          tipoPago: allocation.tipoPago || intent.tipoPago || 'total',
+          allocationAmount: allocation.amount,
+          savedReservationValid: Boolean(validSavedReservation),
           reservationCount: reservationKeys.length,
           reservationKeys: reservationKeys.slice(0, 20),
         });
@@ -660,19 +677,13 @@ async function applyApprovedPayment(paymentId, verifiedPayment) {
         if (!reservation) {
           callbackSawMissingReservation = true;
           const savedReservation = allocation.reservaSnapshot;
-          const savedTotal = Number(savedReservation?.total);
-          const savedPaid = Number(savedReservation?.pagado || 0);
           const savedDate = String(savedReservation?.fecha || '').split('T')[0];
           const canRestore =
             savedReservation &&
             userDatabaseKey(savedReservation.usuario) === userKey &&
             String(savedReservation.id || '') === String(allocation.reservaId || allocation.id) &&
             /^\d{4}-\d{2}-\d{2}$/.test(savedDate) &&
-            Number.isFinite(savedTotal) &&
-            Number.isFinite(savedPaid) &&
-            savedTotal > 0 &&
-            savedPaid >= 0 &&
-            toMinorUnits(savedTotal - savedPaid) === toMinorUnits(allocation.amount);
+            allocationMatchesReservation(savedReservation, allocation, intent.tipoPago);
 
           if (!canRestore) return;
           restoringReservationFromSnapshot = true;
