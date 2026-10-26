@@ -39,8 +39,16 @@ export interface DetallePagoReserva {
   monto: number;
   total: number;
   pagadoAntes: number;
+  saldoDespues?: number;
   descuento?: number;
-  servicios?: string[];
+  servicios?: Array<string | DetalleServicioPago>;
+}
+
+export interface DetalleServicioPago {
+  id?: string;
+  nombre: string;
+  categoria?: string;
+  precio: number;
 }
 
 @Injectable({ providedIn: 'root' })

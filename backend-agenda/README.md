@@ -69,6 +69,8 @@ Al seleccionar todos los servicios de una categoría (15 años, bodas o extras),
 
 Después de aplicar un pago aprobado a la reserva, el backend envía por Brevo un comprobante al cliente y un aviso al correo `EMAIL_TO`. El asunto y el contenido distinguen seña del 30 % y pago total, e incluyen evento, fecha, importe recibido, total y saldo restante. Cada destinatario se registra en `notificaciones_pagos/<paymentId>/<cliente|admin>` para evitar duplicados cuando Mercado Pago notifica y la agenda confirma el mismo pago. Si el proveedor de email falla, el pago permanece aprobado y aplicado; el error se registra en Render y el estado de notificación queda como `failed`.
 
+Antes de iniciar un checkout, el backend conserva una copia de la reserva y valida que tenga fecha, descripción y servicios detallados. Al aprobarse el cobro, guarda ese detalle junto al historial del pago en una actualización de Firebase; el comprobante no depende de que la reserva cambie después. Si una reserva antigua no contiene los datos necesarios, el backend no permite iniciar un nuevo cobro incompleto.
+
 Antes de habilitar cobros reales, completa un pago de prueba de punta a punta con credenciales y cuentas de prueba. El backend toma el importe y las reservas pendientes desde Firebase, comprueba la sesión de Firebase y actualiza los saldos solo después de verificar un pago aprobado con Mercado Pago.
 
 Revisa también las reglas de Realtime Database en Firebase Console: los clientes no deben poder editar `pagado`, `estado` ni los marcadores de pagos de una reserva. Ese permiso debe quedar reservado al backend con Admin SDK; las reglas actuales de la consola no están versionadas en este repositorio.

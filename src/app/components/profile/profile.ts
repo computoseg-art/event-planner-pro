@@ -1,7 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
-import { DetallePagoReserva, PagoHistorial, Reserva, ReservaService } from '../../services/reserva.service';
+import {
+  DetallePagoReserva,
+  PagoHistorial,
+  Reserva,
+  ReservaService,
+} from '../../services/reserva.service';
 
 @Component({
   selector: 'app-profile',
@@ -65,7 +70,13 @@ export class ProfileComponent {
   }
 
   descripcionServicios(detalle: DetallePagoReserva): string {
-    return detalle.servicios?.length ? detalle.servicios.join(', ') : 'Servicios de la reserva';
+    if (!detalle.servicios?.length) return 'Servicios de la reserva';
+    return detalle.servicios
+      .map((servicio) => {
+        if (typeof servicio === 'string') return servicio;
+        return `${servicio.nombre} — ${this.formatoMonto(servicio.precio)}`;
+      })
+      .join(', ');
   }
 
   descargarComprobante(pago: PagoHistorial): void {

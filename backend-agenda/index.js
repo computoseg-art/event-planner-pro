@@ -255,6 +255,49 @@ function toMinorUnits(amount) {
   return Math.round(Number(amount) * 100);
 }
 
+function crearSnapshotComprobante(id, reservation, email, total, paid) {
+  const servicios = Array.isArray(reservation.servicios)
+    ? reservation.servicios.map((servicio) => ({
+        id: String(servicio?.id || ''),
+        nombre: String(servicio?.nombre || '').trim(),
+        categoria: String(servicio?.categoria || ''),
+        precio: Number(servicio?.precio),
+      }))
+    : [];
+  const descripcion = String(reservation.descripcion || '').trim();
+  const fecha = String(reservation.fecha || '');
+  const tipoEvento = reservation.tipoEvento;
+  const serviciosValidos =
+    servicios.length > 0 &&
+    servicios.every(
+      (servicio) => servicio.nombre && Number.isFinite(servicio.precio) && servicio.precio >= 0,
+    );
+
+  if (
+    !id ||
+    !email ||
+    !descripcion ||
+    !fecha ||
+    !['15_años', 'bodas'].includes(tipoEvento) ||
+    !serviciosValidos
+  ) {
+    return null;
+  }
+
+  return {
+    id: reservation.id || id,
+    usuario: email,
+    fecha,
+    descripcion,
+    tipoEvento,
+    servicios,
+    total,
+    descuento: Math.max(0, Number(reservation.descuento || 0)),
+    pagado: paid,
+    estado: reservation.estado || 'pendiente',
+  };
+}
+
 function verifyWebhookSignature(dataId, requestId, signatureHeader) {
   const parts = Object.fromEntries(
     signatureHeader.split(',').map((part) => {
@@ -392,6 +435,13 @@ async function createPreference(req, res) {
       return res.status(400).json({ error: 'El importe del pago no es válido.' });
     }
 
+    const reservaSnapshot = crearSnapshotComprobante(id, reservation, email, total, paid);
+    if (!reservaSnapshot) {
+      return res.status(409).json({
+        error: 'La reserva no tiene todos los datos de servicios necesarios para emitir el comprobante. Actualiza la reserva o contacta al negocio antes de pagar.',
+      });
+    }
+
     allocations.push({
       id,
       reservaId: reservation.id || id,
@@ -399,18 +449,7 @@ async function createPreference(req, res) {
       tipoPago,
       fecha: reservation.fecha,
       tipoEvento: reservation.tipoEvento,
-      reservaSnapshot: {
-        id: reservation.id || id,
-        usuario: email,
-        fecha: reservation.fecha,
-        descripcion: String(reservation.descripcion || ''),
-        tipoEvento: reservation.tipoEvento,
-        servicios: Array.isArray(reservation.servicios) ? reservation.servicios : [],
-        total,
-        descuento: Math.max(0, Number(reservation.descuento || 0)),
-        pagado: paid,
-        estado: reservation.estado || 'pendiente',
-      },
+      reservaSnapshot,
       description: `${reservation.tipoEvento === '15_años' ? '15 Años' : 'Boda'} - ${reservation.fecha}`,
     });
   }
@@ -506,9 +545,20 @@ async function persistApprovedPayment(paymentId, payment, externalReference, int
         monto: Number(allocation.amount || 0),
         total: Number(reserva.total || 0),
         pagadoAntes: Number(reserva.pagado || 0),
+        saldoDespues: Math.max(
+          0,
+          Number(reserva.total || 0) -
+            Number(reserva.pagado || 0) -
+            Number(allocation.amount || 0),
+        ),
         descuento: Math.max(0, Number(reserva.descuento || 0)),
         servicios: Array.isArray(reserva.servicios)
-          ? reserva.servicios.map((servicio) => String(servicio?.nombre || 'Servicio'))
+          ? reserva.servicios.map((servicio) => ({
+              id: String(servicio?.id || ''),
+              nombre: String(servicio?.nombre || 'Servicio'),
+              categoria: String(servicio?.categoria || ''),
+              precio: Number(servicio?.precio || 0),
+            }))
           : [],
       };
     }),

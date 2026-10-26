@@ -130,6 +130,7 @@
           <p><strong>Total de la reserva:</strong> {{ formatoMonto(detalle.total, comprobante.moneda) }}</p>
           <p><strong>Abonado antes de este pago:</strong> {{ formatoMonto(detalle.pagadoAntes, comprobante.moneda) }}</p>
           <p><strong>Importe de este pago:</strong> {{ formatoMonto(detalle.monto, comprobante.moneda) }}</p>
+          <p><strong>Saldo después de este pago:</strong> {{ formatoMonto(detalle.saldoDespues ?? (detalle.total - detalle.pagadoAntes - detalle.monto), comprobante.moneda) }}</p>
         </section>
       }
     } @else {
