@@ -54,7 +54,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
     const requestedEmail = this.route.snapshot.queryParamMap.get('email');
     const esAdmin = this.auth.esAdmin();
     this.userEmail = esAdmin
-      ? requestedEmail?.trim().toLowerCase() || ''
+      ? requestedEmail?.trim().toLowerCase() || currentEmail
       : currentEmail;
     this.targetEmail = this.userEmail;
     if (this.userEmail) {
