@@ -1,0 +1,2189 @@
+{
+  "albumes": {
+    "admin@gmail,com": {
+      "albumId": "ALqG_I0r6MzceuOVrOKhdY-jImuTy-OMqbn_WBzOt_77XjKcHncCuVUj6Q4nNjBcFW_GxybpeVcc",
+      "createdAt": "2026-10-19T14:03:59.678Z",
+      "email": "admin@gmail.com",
+      "title": "Galería - admin - 1wrPENBKxXQ7pTrMmlUIuupEH443"
+    },
+    "brian,uru@gmail,com": {
+      "albumId": "ALqG_I28j6aDwmmm1uqBpp4jhpT31zGwMPD2IqMipvJVx9CMlLP82qGvw_G9d0spoL74xOM5BOEA",
+      "createdAt": "2026-10-19T17:38:11.751Z",
+      "email": "brian.uru@gmail.com",
+      "title": "Galería - brian.uru - ivEZ9c0XCPhqFd5xLSArTjabJgw1"
+    },
+    "computos,eg@gmail,com": {
+      "albumId": "ALqG_I3sjDYxyIAVa5vFBeRSewMzcFpMHT2A9Y1C8n76d9zlqwvM5CE7BHEVJfwBTVGf4Qr38_al",
+      "createdAt": "2026-10-21T20:04:42.159Z",
+      "email": "computos.eg@gmail.com",
+      "title": "Galería - computos es - q872fNx15JV5bbQzTWL6G9oUZXS2"
+    },
+    "esteban,garriga@gmail,com": {
+      "albumId": "ALqG_I36q2FbAvS7DZxEM-ELlewYOqom76mTyZ_IDEeqxnxJkFFkIEgLw7e4vnyE_Gl3vRAb2WJU",
+      "createdAt": "2026-10-19T14:03:04.416Z",
+      "email": "esteban.garriga@gmail.com",
+      "title": "Galería - esteban garriga - kUNH8OjDPqTaFqGHR1VfF2UcmyL2"
+    },
+    "estebandavidgarriga@gmail,com": {
+      "albumId": "ALqG_I3J9rmG63Yc0LSZrSnbsk46X-a0sFOSStYOD3-R5I0Niyuwm87c9bCzpWaBfgI7bfHJzgCh",
+      "createdAt": "2026-10-19T17:46:17.349Z",
+      "email": "estebandavidgarriga@gmail.com",
+      "title": "Galería - Esteban Garriga - 3QloKJass8TEI80GBxsnD60GpNk2"
+    }
+  },
+  "fechas_ocupadas": {
+    "-P4hZZke8ebDjn5PxM4t": "2026-10-31",
+    "-P4iBCYvnYgFYcLtlIbk": "2026-10-30",
+    "-P4pwqUVussor5_7lmrU": "2026-10-29",
+    "-P4stWLvahhcDMTD1Qj-": "2026-11-30",
+    "-P4tV0kfPuPbnLPfKV2W": "2026-11-01",
+    "-P4thLF-fXaq93ALkmAd": "2026-11-05",
+    "-P5-T9DvKrGUfoCVulVt": "2026-11-29",
+    "-P52xfb--Rdp1M_dHKJ9": "2026-11-23"
+  },
+  "galeria_carpetas": {
+    "admin@gmail,com": {
+      "ALqG_I219yrh9HKjj04JbXKCu3fxFQARKz-datQj1g0bYDFisARBu7eyX4yiW-f1sJQqu1fkSEHA": {
+        "albumId": "ALqG_I219yrh9HKjj04JbXKCu3fxFQARKz-datQj1g0bYDFisARBu7eyX4yiW-f1sJQqu1fkSEHA",
+        "createdAt": "2026-10-19T01:56:34.863Z",
+        "email": "admin@gmail.com",
+        "title": "pruebaa"
+      }
+    },
+    "esteban,garriga@gmail,com": {
+      "ALqG_I0gAOpn5Bf2lt5ni80U0hhqlKfmD4_CcMjaDEvnkfKvZRVe-L7VIzrLRRSQJb_UJJqpWbg6": {
+        "albumId": "ALqG_I0gAOpn5Bf2lt5ni80U0hhqlKfmD4_CcMjaDEvnkfKvZRVe-L7VIzrLRRSQJb_UJJqpWbg6",
+        "createdAt": "2026-10-19T13:37:48.857Z",
+        "email": "esteban.garriga@gmail.com",
+        "title": "egarriga"
+      },
+      "ALqG_I219yrh9HKjj04JbXKCu3fxFQARKz-datQj1g0bYDFisARBu7eyX4yiW-f1sJQqu1fkSEHA": {
+        "albumId": "ALqG_I219yrh9HKjj04JbXKCu3fxFQARKz-datQj1g0bYDFisARBu7eyX4yiW-f1sJQqu1fkSEHA",
+        "createdAt": "2026-10-19T01:56:34.863Z",
+        "email": "esteban.garriga@gmail.com",
+        "sharedBy": "admin@gmail.com",
+        "title": "pruebaa"
+      },
+      "ALqG_I3h2JhBwHWtbrug29y-9tcnLHk9X_-5SSzEH8ersZ_jwKHqY1dgpWKHKCiIlUOYKLgJJ90o": {
+        "albumId": "ALqG_I3h2JhBwHWtbrug29y-9tcnLHk9X_-5SSzEH8ersZ_jwKHqY1dgpWKHKCiIlUOYKLgJJ90o",
+        "createdAt": "2026-10-19T13:29:33.748Z",
+        "email": "esteban.garriga@gmail.com",
+        "title": "estebangarriga"
+      }
+    }
+  },
+  "historial_pagos": {
+    "brian,uru@gmail,com": {
+      "186119573360": {
+        "descripcion": "Pago de Mercado Pago (1 reserva(s))",
+        "externalReference": "157afddd-5e59-46bc-9405-022ac47bd6de",
+        "fecha": "2026-10-25T22:11:05.000-04:00",
+        "monto": 4,
+        "paymentId": "186119573360",
+        "usuario": "brian.uru@gmail.com"
+      }
+    },
+    "esteban,garriga@gmail,com": {
+      "184816485015": {
+        "descripcion": "Pago de Mercado Pago (1 reserva(s))",
+        "fecha": "2026-10-24T07:03:06.000-04:00",
+        "monto": 2,
+        "paymentId": "184816485015",
+        "usuario": "esteban.garriga@gmail.com"
+      },
+      "184836358097": {
+        "descripcion": "Pago de Mercado Pago (1 reserva(s))",
+        "externalReference": "a9614214-0c83-4501-b0b2-cd6f3f918d16",
+        "fecha": "2026-10-24T10:05:33.000-04:00",
+        "monto": 1,
+        "paymentId": "184836358097",
+        "usuario": "esteban.garriga@gmail.com"
+      },
+      "185178879577": {
+        "descripcion": "Seña del 30 % de Mercado Pago",
+        "externalReference": "f2bdf319-2267-4da2-af85-fa21049d081f",
+        "fecha": "2026-10-26T15:36:04.000-04:00",
+        "moneda": "UYU",
+        "monto": 1.89,
+        "paymentId": "185178879577",
+        "reservas": [
+          {
+            "descripcion": "Casamiento de Prueba",
+            "descuento": 0.7,
+            "fecha": "2026-11-05",
+            "id": "-P4thLF-fXaq93ALkmAd",
+            "monto": 1.89,
+            "pagadoAntes": 0,
+            "saldoDespues": 4.41,
+            "servicios": [
+              {
+                "categoria": "bodas",
+                "id": "b-1",
+                "nombre": "Boda: Civil & Brindis",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-2",
+                "nombre": "Boda: Fiesta Completa",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-3",
+                "nombre": "Cobertura Civil",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-4",
+                "nombre": "Sesión de Exteriores",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-5",
+                "nombre": "Cobertura de Fiesta",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-6",
+                "nombre": "Fotos de Preparativos (Getting Ready)",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-7",
+                "nombre": "Video Highlights",
+                "precio": 1
+              }
+            ],
+            "tipoEvento": "bodas",
+            "total": 6.3
+          }
+        ],
+        "tipoPago": "senia",
+        "usuario": "esteban.garriga@gmail.com"
+      },
+      "186188435494": {
+        "descripcion": "Pago de Mercado Pago (1 reserva(s))",
+        "externalReference": "3c1914d7-df59-42a4-b12a-d3d623795e3f",
+        "fecha": "2026-10-26T11:56:23.000-04:00",
+        "monto": 1.2,
+        "paymentId": "186188435494",
+        "usuario": "esteban.garriga@gmail.com"
+      },
+      "186188927296": {
+        "descripcion": "Pago de Mercado Pago (1 reserva(s))",
+        "externalReference": "8d9b3c63-e2c5-413f-a3fb-cce091bdb1e8",
+        "fecha": "2026-10-26T11:59:18.000-04:00",
+        "monto": 2.8,
+        "paymentId": "186188927296",
+        "usuario": "esteban.garriga@gmail.com"
+      },
+      "186223759754": {
+        "descripcion": "Pago total/saldo de Mercado Pago",
+        "externalReference": "32fea4d7-b247-4595-b9e5-7e7d1e5a9767",
+        "fecha": "2026-10-26T15:38:03.000-04:00",
+        "moneda": "UYU",
+        "monto": 4.41,
+        "paymentId": "186223759754",
+        "reservas": [
+          {
+            "descripcion": "Casamiento de Prueba",
+            "descuento": 0.7,
+            "fecha": "2026-11-05",
+            "id": "-P4thLF-fXaq93ALkmAd",
+            "monto": 4.41,
+            "pagadoAntes": 1.89,
+            "saldoDespues": 0,
+            "servicios": [
+              {
+                "categoria": "bodas",
+                "id": "b-1",
+                "nombre": "Boda: Civil & Brindis",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-2",
+                "nombre": "Boda: Fiesta Completa",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-3",
+                "nombre": "Cobertura Civil",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-4",
+                "nombre": "Sesión de Exteriores",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-5",
+                "nombre": "Cobertura de Fiesta",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-6",
+                "nombre": "Fotos de Preparativos (Getting Ready)",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-7",
+                "nombre": "Video Highlights",
+                "precio": 1
+              }
+            ],
+            "tipoEvento": "bodas",
+            "total": 6.3
+          }
+        ],
+        "tipoPago": "total",
+        "usuario": "esteban.garriga@gmail.com"
+      },
+      "186556008702": {
+        "descripcion": "Seña del 30 % de Mercado Pago",
+        "externalReference": "5135113c-15da-4c90-bd6c-c5afdb6e45f6",
+        "fecha": "2026-10-28T15:24:48.000-04:00",
+        "moneda": "UYU",
+        "monto": 1.62,
+        "paymentId": "186556008702",
+        "reservas": [
+          {
+            "descripcion": "Prueba cumple",
+            "descuento": 0.6,
+            "fecha": "2026-11-23",
+            "id": "-P52xfb--Rdp1M_dHKJ9",
+            "monto": 1.62,
+            "pagadoAntes": 0,
+            "saldoDespues": 3.7800000000000002,
+            "servicios": [
+              {
+                "categoria": "15_años",
+                "id": "15-foto-exteriores",
+                "nombre": "Fotografía - Exteriores",
+                "precio": 1
+              },
+              {
+                "categoria": "15_años",
+                "id": "15-foto-aprontes",
+                "nombre": "Fotografía - Aprontes",
+                "precio": 1
+              },
+              {
+                "categoria": "15_años",
+                "id": "15-foto-fiesta",
+                "nombre": "Fotografía - Fiesta",
+                "precio": 1
+              },
+              {
+                "categoria": "15_años",
+                "id": "15-video-exteriores",
+                "nombre": "Video - Exteriores",
+                "precio": 1
+              },
+              {
+                "categoria": "15_años",
+                "id": "15-video-aprontes",
+                "nombre": "Video - Aprontes",
+                "precio": 1
+              },
+              {
+                "categoria": "15_años",
+                "id": "15-video-fiesta",
+                "nombre": "Video - Fiesta",
+                "precio": 1
+              }
+            ],
+            "tipoEvento": "15_años",
+            "total": 5.4
+          }
+        ],
+        "tipoPago": "senia",
+        "usuario": "esteban.garriga@gmail.com"
+      }
+    }
+  },
+  "notificaciones_pagos": {
+    "185178879577": {
+      "cliente": {
+        "destinatario": "esteban.garriga@gmail.com",
+        "enviado": "2026-10-26T19:36:06.290Z",
+        "estado": "sent",
+        "iniciado": "2026-10-26T19:36:05.790Z"
+      }
+    },
+    "186223759754": {
+      "cliente": {
+        "destinatario": "esteban.garriga@gmail.com",
+        "enviado": "2026-10-26T19:38:05.465Z",
+        "estado": "sent",
+        "iniciado": "2026-10-26T19:38:04.988Z"
+      }
+    },
+    "186556008702": {
+      "cliente": {
+        "destinatario": "esteban.garriga@gmail.com",
+        "enviado": "2026-10-28T19:24:49.606Z",
+        "estado": "sent",
+        "iniciado": "2026-10-28T19:24:49.183Z"
+      }
+    }
+  },
+  "notificaciones_reservas": {
+    "admin@gmail,com": {
+      "-P5-T9DvKrGUfoCVulVt": {
+        "enviado": "2026-10-28T03:05:54.447Z",
+        "estado": "sent",
+        "iniciado": "2026-10-28T03:05:53.999Z"
+      }
+    },
+    "brian,uru@gmail,com": {
+      "-P4pwqUVussor5_7lmrU": {
+        "enviado": "2026-10-26T02:04:10.000Z",
+        "estado": "sent",
+        "iniciado": "2026-10-26T02:04:09.486Z"
+      }
+    },
+    "esteban,garriga@gmail,com": {
+      "-P4sT6WygfYXWlwqBxnA": {
+        "enviado": "2026-10-26T13:48:45.288Z",
+        "estado": "sent",
+        "iniciado": "2026-10-26T13:48:44.813Z"
+      },
+      "-P4stWLvahhcDMTD1Qj-": {
+        "enviado": "2026-10-26T15:48:28.892Z",
+        "estado": "sent",
+        "iniciado": "2026-10-26T15:48:28.463Z"
+      },
+      "-P4tV0kfPuPbnLPfKV2W": {
+        "enviado": "2026-10-26T18:36:43.142Z",
+        "estado": "sent",
+        "iniciado": "2026-10-26T18:36:42.616Z"
+      },
+      "-P4thLF-fXaq93ALkmAd": {
+        "enviado": "2026-10-26T19:34:55.091Z",
+        "estado": "sent",
+        "iniciado": "2026-10-26T19:34:54.658Z"
+      },
+      "-P52xfb--Rdp1M_dHKJ9": {
+        "enviado": "2026-10-28T19:22:28.793Z",
+        "estado": "sent",
+        "iniciado": "2026-10-28T19:22:28.393Z"
+      }
+    }
+  },
+  "pagos_aprovados": {
+    "184836358097": {
+      "allocations": [
+        {
+          "amount": 1,
+          "description": "15 Años - 2026-10-30",
+          "fecha": "2026-10-30",
+          "id": "-P4iBCYvnYgFYcLtlIbk",
+          "reservaId": "-P4iBCYvnYgFYcLtlIbk",
+          "reservaSnapshot": {
+            "descripcion": "Prueba cumple",
+            "estado": "pendiente",
+            "fecha": "2026-10-30",
+            "id": "-P4iBCYvnYgFYcLtlIbk",
+            "pagado": 0,
+            "servicios": [
+              {
+                "categoria": "15_años",
+                "detalle": "Filmación en exteriores previa al evento para video cronológico o de presentación.",
+                "icono": "🎬",
+                "id": "15-video-exteriores",
+                "nombre": "Video - Exteriores",
+                "precio": 1,
+                "precioPromocional": 8500
+              }
+            ],
+            "tipoEvento": "15_años",
+            "total": 1,
+            "usuario": "esteban.garriga@gmail.com"
+          },
+          "tipoEvento": "15_años"
+        }
+      ],
+      "aprobado": "2026-10-24T10:05:33.000-04:00",
+      "creado": "2026-10-24T14:04:33.049Z",
+      "estado": "approved",
+      "externalReference": "a9614214-0c83-4501-b0b2-cd6f3f918d16",
+      "moneda": "UYU",
+      "monto": 1,
+      "paymentId": "184836358097",
+      "paymentStatus": "approved",
+      "preferenceId": "391606738-d9cd3193-9f9f-48c0-aeca-231ad651f7d4",
+      "usuario": "esteban.garriga@gmail.com"
+    },
+    "185178879577": {
+      "allocations": [
+        {
+          "amount": 1.89,
+          "description": "Boda - 2026-11-05",
+          "fecha": "2026-11-05",
+          "id": "-P4thLF-fXaq93ALkmAd",
+          "reservaId": "-P4thLF-fXaq93ALkmAd",
+          "reservaSnapshot": {
+            "descripcion": "Casamiento de Prueba",
+            "descuento": 0.7,
+            "estado": "pendiente",
+            "fecha": "2026-11-05",
+            "id": "-P4thLF-fXaq93ALkmAd",
+            "pagado": 0,
+            "servicios": [
+              {
+                "categoria": "bodas",
+                "id": "b-1",
+                "nombre": "Boda: Civil & Brindis",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-2",
+                "nombre": "Boda: Fiesta Completa",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-3",
+                "nombre": "Cobertura Civil",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-4",
+                "nombre": "Sesión de Exteriores",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-5",
+                "nombre": "Cobertura de Fiesta",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-6",
+                "nombre": "Fotos de Preparativos (Getting Ready)",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-7",
+                "nombre": "Video Highlights",
+                "precio": 1
+              }
+            ],
+            "tipoEvento": "bodas",
+            "total": 6.3,
+            "usuario": "esteban.garriga@gmail.com"
+          },
+          "tipoEvento": "bodas",
+          "tipoPago": "senia"
+        }
+      ],
+      "aprobado": "2026-10-26T15:36:04.000-04:00",
+      "creado": "2026-10-26T19:35:02.285Z",
+      "estado": "approved",
+      "externalReference": "f2bdf319-2267-4da2-af85-fa21049d081f",
+      "moneda": "UYU",
+      "monto": 1.89,
+      "paymentId": "185178879577",
+      "paymentStatus": "approved",
+      "preferenceId": "391606738-13a69e1b-8d88-4a9a-bac4-336f9fc4b28e",
+      "tipoPago": "senia",
+      "usuario": "esteban.garriga@gmail.com"
+    },
+    "186119573360": {
+      "allocations": [
+        {
+          "amount": 4,
+          "description": "15 Años - 2026-10-29",
+          "fecha": "2026-10-29",
+          "id": "-P4pwqUVussor5_7lmrU",
+          "reservaId": "-P4pwqUVussor5_7lmrU",
+          "reservaSnapshot": {
+            "descripcion": "Cumpleaños de xv de micaela",
+            "estado": "pendiente",
+            "fecha": "2026-10-29",
+            "id": "-P4pwqUVussor5_7lmrU",
+            "pagado": 0,
+            "servicios": [
+              {
+                "categoria": "15_años",
+                "detalle": "Cobertura fílmica completa y edición final de la fiesta de 15 años.",
+                "icono": "🎬",
+                "id": "15-video-fiesta",
+                "nombre": "Video - Fiesta",
+                "precio": 1,
+                "precioPromocional": 16500
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Filmación en exteriores previa al evento para video cronológico o de presentación.",
+                "icono": "🎬",
+                "id": "15-video-exteriores",
+                "nombre": "Video - Exteriores",
+                "precio": 1,
+                "precioPromocional": 8500
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Cobertura fotográfica completa de toda la fiesta de 15 años.",
+                "icono": "📸",
+                "id": "15-foto-fiesta",
+                "nombre": "Fotografía - Fiesta",
+                "precio": 1,
+                "precioPromocional": 13000
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Sesión fotográfica en exteriores previa al evento.",
+                "icono": "📸",
+                "id": "15-foto-exteriores",
+                "nombre": "Fotografía - Exteriores",
+                "precio": 1,
+                "precioPromocional": 4000
+              }
+            ],
+            "tipoEvento": "15_años",
+            "total": 4,
+            "usuario": "brian.uru@gmail.com"
+          },
+          "tipoEvento": "15_años"
+        }
+      ],
+      "aprobado": "2026-10-25T22:11:05.000-04:00",
+      "creado": "2026-10-26T02:10:42.876Z",
+      "estado": "approved",
+      "externalReference": "157afddd-5e59-46bc-9405-022ac47bd6de",
+      "moneda": "UYU",
+      "monto": 4,
+      "paymentId": "186119573360",
+      "paymentStatus": "approved",
+      "preferenceId": "391606738-465b8302-4c50-4219-aaa1-68fa20f938e2",
+      "usuario": "brian.uru@gmail.com"
+    },
+    "186188435494": {
+      "allocations": [
+        {
+          "amount": 1.2,
+          "description": "15 Años - 2026-11-30",
+          "fecha": "2026-11-30",
+          "id": "-P4stWLvahhcDMTD1Qj-",
+          "reservaId": "-P4stWLvahhcDMTD1Qj-",
+          "reservaSnapshot": {
+            "descripcion": "Prueba cumple",
+            "estado": "pendiente",
+            "fecha": "2026-11-30",
+            "id": "-P4stWLvahhcDMTD1Qj-",
+            "pagado": 0,
+            "servicios": [
+              {
+                "categoria": "15_años",
+                "detalle": "Sesión fotográfica en exteriores previa al evento.",
+                "icono": "📸",
+                "id": "15-foto-exteriores",
+                "nombre": "Fotografía - Exteriores",
+                "precio": 1,
+                "precioPromocional": 4000
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Captura de preparativos y sesión exclusiva con el vestido antes del ingreso al salón.",
+                "icono": "📸",
+                "id": "15-foto-aprontes",
+                "nombre": "Fotografía - Aprontes",
+                "precio": 1,
+                "precioPromocional": 4000
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Cobertura fotográfica completa de toda la fiesta de 15 años.",
+                "icono": "📸",
+                "id": "15-foto-fiesta",
+                "nombre": "Fotografía - Fiesta",
+                "precio": 1,
+                "precioPromocional": 13000
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Filmación en exteriores previa al evento para video cronológico o de presentación.",
+                "icono": "🎬",
+                "id": "15-video-exteriores",
+                "nombre": "Video - Exteriores",
+                "precio": 1,
+                "precioPromocional": 8500
+              }
+            ],
+            "tipoEvento": "15_años",
+            "total": 4,
+            "usuario": "esteban.garriga@gmail.com"
+          },
+          "tipoEvento": "15_años",
+          "tipoPago": "senia"
+        }
+      ],
+      "aprobado": "2026-10-26T11:56:23.000-04:00",
+      "creado": "2026-10-26T15:48:32.437Z",
+      "estado": "approved",
+      "externalReference": "3c1914d7-df59-42a4-b12a-d3d623795e3f",
+      "moneda": "UYU",
+      "monto": 1.2,
+      "paymentId": "186188435494",
+      "paymentStatus": "approved",
+      "preferenceId": "391606738-c3c196f7-f413-461d-bf77-2291dfe1feda",
+      "tipoPago": "senia",
+      "usuario": "esteban.garriga@gmail.com"
+    },
+    "186188927296": {
+      "allocations": [
+        {
+          "amount": 2.8,
+          "description": "15 Años - 2026-11-30",
+          "fecha": "2026-11-30",
+          "id": "-P4stWLvahhcDMTD1Qj-",
+          "reservaId": "-P4stWLvahhcDMTD1Qj-",
+          "reservaSnapshot": {
+            "descripcion": "Prueba cumple",
+            "estado": "pendiente",
+            "fecha": "2026-11-30",
+            "id": "-P4stWLvahhcDMTD1Qj-",
+            "pagado": 1.2,
+            "servicios": [
+              {
+                "categoria": "15_años",
+                "detalle": "Sesión fotográfica en exteriores previa al evento.",
+                "icono": "📸",
+                "id": "15-foto-exteriores",
+                "nombre": "Fotografía - Exteriores",
+                "precio": 1,
+                "precioPromocional": 4000
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Captura de preparativos y sesión exclusiva con el vestido antes del ingreso al salón.",
+                "icono": "📸",
+                "id": "15-foto-aprontes",
+                "nombre": "Fotografía - Aprontes",
+                "precio": 1,
+                "precioPromocional": 4000
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Cobertura fotográfica completa de toda la fiesta de 15 años.",
+                "icono": "📸",
+                "id": "15-foto-fiesta",
+                "nombre": "Fotografía - Fiesta",
+                "precio": 1,
+                "precioPromocional": 13000
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Filmación en exteriores previa al evento para video cronológico o de presentación.",
+                "icono": "🎬",
+                "id": "15-video-exteriores",
+                "nombre": "Video - Exteriores",
+                "precio": 1,
+                "precioPromocional": 8500
+              }
+            ],
+            "tipoEvento": "15_años",
+            "total": 4,
+            "usuario": "esteban.garriga@gmail.com"
+          },
+          "tipoEvento": "15_años",
+          "tipoPago": "total"
+        }
+      ],
+      "aprobado": "2026-10-26T11:59:18.000-04:00",
+      "creado": "2026-10-26T15:58:22.529Z",
+      "estado": "approved",
+      "externalReference": "8d9b3c63-e2c5-413f-a3fb-cce091bdb1e8",
+      "moneda": "UYU",
+      "monto": 2.8,
+      "paymentId": "186188927296",
+      "paymentStatus": "approved",
+      "preferenceId": "391606738-0aed8e1a-c99f-4831-968e-79e5b47c6342",
+      "tipoPago": "total",
+      "usuario": "esteban.garriga@gmail.com"
+    },
+    "186223759754": {
+      "allocations": [
+        {
+          "amount": 4.41,
+          "description": "Boda - 2026-11-05",
+          "fecha": "2026-11-05",
+          "id": "-P4thLF-fXaq93ALkmAd",
+          "reservaId": "-P4thLF-fXaq93ALkmAd",
+          "reservaSnapshot": {
+            "descripcion": "Casamiento de Prueba",
+            "descuento": 0.7,
+            "estado": "pendiente",
+            "fecha": "2026-11-05",
+            "id": "-P4thLF-fXaq93ALkmAd",
+            "pagado": 1.89,
+            "servicios": [
+              {
+                "categoria": "bodas",
+                "id": "b-1",
+                "nombre": "Boda: Civil & Brindis",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-2",
+                "nombre": "Boda: Fiesta Completa",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-3",
+                "nombre": "Cobertura Civil",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-4",
+                "nombre": "Sesión de Exteriores",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-5",
+                "nombre": "Cobertura de Fiesta",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-6",
+                "nombre": "Fotos de Preparativos (Getting Ready)",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-7",
+                "nombre": "Video Highlights",
+                "precio": 1
+              }
+            ],
+            "tipoEvento": "bodas",
+            "total": 6.3,
+            "usuario": "esteban.garriga@gmail.com"
+          },
+          "tipoEvento": "bodas",
+          "tipoPago": "total"
+        }
+      ],
+      "aprobado": "2026-10-26T15:38:03.000-04:00",
+      "creado": "2026-10-26T19:36:31.656Z",
+      "estado": "approved",
+      "externalReference": "32fea4d7-b247-4595-b9e5-7e7d1e5a9767",
+      "moneda": "UYU",
+      "monto": 4.41,
+      "paymentId": "186223759754",
+      "paymentStatus": "approved",
+      "preferenceId": "391606738-cef7bbd6-d7da-4b42-af39-d5c01f347e5b",
+      "tipoPago": "total",
+      "usuario": "esteban.garriga@gmail.com"
+    },
+    "186556008702": {
+      "allocations": [
+        {
+          "amount": 1.62,
+          "description": "15 Años - 2026-11-23",
+          "fecha": "2026-11-23",
+          "id": "-P52xfb--Rdp1M_dHKJ9",
+          "reservaId": "-P52xfb--Rdp1M_dHKJ9",
+          "reservaSnapshot": {
+            "descripcion": "Prueba cumple",
+            "descuento": 0.6,
+            "estado": "pendiente",
+            "fecha": "2026-11-23",
+            "id": "-P52xfb--Rdp1M_dHKJ9",
+            "pagado": 0,
+            "servicios": [
+              {
+                "categoria": "15_años",
+                "id": "15-foto-exteriores",
+                "nombre": "Fotografía - Exteriores",
+                "precio": 1
+              },
+              {
+                "categoria": "15_años",
+                "id": "15-foto-aprontes",
+                "nombre": "Fotografía - Aprontes",
+                "precio": 1
+              },
+              {
+                "categoria": "15_años",
+                "id": "15-foto-fiesta",
+                "nombre": "Fotografía - Fiesta",
+                "precio": 1
+              },
+              {
+                "categoria": "15_años",
+                "id": "15-video-exteriores",
+                "nombre": "Video - Exteriores",
+                "precio": 1
+              },
+              {
+                "categoria": "15_años",
+                "id": "15-video-aprontes",
+                "nombre": "Video - Aprontes",
+                "precio": 1
+              },
+              {
+                "categoria": "15_años",
+                "id": "15-video-fiesta",
+                "nombre": "Video - Fiesta",
+                "precio": 1
+              }
+            ],
+            "tipoEvento": "15_años",
+            "total": 5.4,
+            "usuario": "esteban.garriga@gmail.com"
+          },
+          "tipoEvento": "15_años",
+          "tipoPago": "senia"
+        }
+      ],
+      "aprobado": "2026-10-28T15:24:48.000-04:00",
+      "creado": "2026-10-28T19:22:47.097Z",
+      "estado": "approved",
+      "externalReference": "5135113c-15da-4c90-bd6c-c5afdb6e45f6",
+      "moneda": "UYU",
+      "monto": 1.62,
+      "paymentId": "186556008702",
+      "paymentStatus": "approved",
+      "preferenceId": "391606738-6cea553c-976e-4ff5-8ff3-7b26012ffc89",
+      "tipoPago": "senia",
+      "usuario": "esteban.garriga@gmail.com"
+    }
+  },
+  "pagos_pendientes": {
+    "084a82fe-7123-4293-b278-47024a8de471": {
+      "allocations": [
+        {
+          "amount": 1,
+          "description": "15 Años - 2026-10-30",
+          "fecha": "2026-10-30",
+          "id": "-P4iBCYvnYgFYcLtlIbk",
+          "reservaId": "-P4iBCYvnYgFYcLtlIbk",
+          "reservaSnapshot": {
+            "descripcion": "Prueba cumple",
+            "estado": "pendiente",
+            "fecha": "2026-10-30",
+            "id": "-P4iBCYvnYgFYcLtlIbk",
+            "pagado": 0,
+            "servicios": [
+              {
+                "categoria": "15_años",
+                "detalle": "Filmación en exteriores previa al evento para video cronológico o de presentación.",
+                "icono": "🎬",
+                "id": "15-video-exteriores",
+                "nombre": "Video - Exteriores",
+                "precio": 1,
+                "precioPromocional": 8500
+              }
+            ],
+            "tipoEvento": "15_años",
+            "total": 1,
+            "usuario": "esteban.garriga@gmail.com"
+          },
+          "tipoEvento": "15_años"
+        }
+      ],
+      "creado": "2026-10-24T13:56:21.627Z",
+      "estado": "pending",
+      "moneda": "UYU",
+      "monto": 1,
+      "preferenceId": "391606738-3f18c40b-a7b3-4f49-b0c3-b97f1c53e2a1",
+      "usuario": "esteban.garriga@gmail.com"
+    },
+    "157afddd-5e59-46bc-9405-022ac47bd6de": {
+      "allocations": [
+        {
+          "amount": 4,
+          "description": "15 Años - 2026-10-29",
+          "fecha": "2026-10-29",
+          "id": "-P4pwqUVussor5_7lmrU",
+          "reservaId": "-P4pwqUVussor5_7lmrU",
+          "reservaSnapshot": {
+            "descripcion": "Cumpleaños de xv de micaela",
+            "estado": "pendiente",
+            "fecha": "2026-10-29",
+            "id": "-P4pwqUVussor5_7lmrU",
+            "pagado": 0,
+            "servicios": [
+              {
+                "categoria": "15_años",
+                "detalle": "Cobertura fílmica completa y edición final de la fiesta de 15 años.",
+                "icono": "🎬",
+                "id": "15-video-fiesta",
+                "nombre": "Video - Fiesta",
+                "precio": 1,
+                "precioPromocional": 16500
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Filmación en exteriores previa al evento para video cronológico o de presentación.",
+                "icono": "🎬",
+                "id": "15-video-exteriores",
+                "nombre": "Video - Exteriores",
+                "precio": 1,
+                "precioPromocional": 8500
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Cobertura fotográfica completa de toda la fiesta de 15 años.",
+                "icono": "📸",
+                "id": "15-foto-fiesta",
+                "nombre": "Fotografía - Fiesta",
+                "precio": 1,
+                "precioPromocional": 13000
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Sesión fotográfica en exteriores previa al evento.",
+                "icono": "📸",
+                "id": "15-foto-exteriores",
+                "nombre": "Fotografía - Exteriores",
+                "precio": 1,
+                "precioPromocional": 4000
+              }
+            ],
+            "tipoEvento": "15_años",
+            "total": 4,
+            "usuario": "brian.uru@gmail.com"
+          },
+          "tipoEvento": "15_años"
+        }
+      ],
+      "aprobado": "2026-10-25T22:11:05.000-04:00",
+      "creado": "2026-10-26T02:10:42.876Z",
+      "estado": "approved",
+      "moneda": "UYU",
+      "monto": 4,
+      "paymentId": "186119573360",
+      "preferenceId": "391606738-465b8302-4c50-4219-aaa1-68fa20f938e2",
+      "usuario": "brian.uru@gmail.com"
+    },
+    "28469d61-331b-4af2-94da-2713988fbf70": {
+      "allocations": [
+        {
+          "amount": 1,
+          "description": "15 Años - 2026-10-30",
+          "fecha": "2026-10-30",
+          "id": "-P4iBCYvnYgFYcLtlIbk",
+          "reservaId": "-P4iBCYvnYgFYcLtlIbk",
+          "reservaSnapshot": {
+            "descripcion": "Prueba cumple",
+            "estado": "pendiente",
+            "fecha": "2026-10-30",
+            "id": "-P4iBCYvnYgFYcLtlIbk",
+            "pagado": 0,
+            "servicios": [
+              {
+                "categoria": "15_años",
+                "detalle": "Filmación en exteriores previa al evento para video cronológico o de presentación.",
+                "icono": "🎬",
+                "id": "15-video-exteriores",
+                "nombre": "Video - Exteriores",
+                "precio": 1,
+                "precioPromocional": 8500
+              }
+            ],
+            "tipoEvento": "15_años",
+            "total": 1,
+            "usuario": "esteban.garriga@gmail.com"
+          },
+          "tipoEvento": "15_años"
+        }
+      ],
+      "creado": "2026-10-24T13:55:59.947Z",
+      "estado": "pending",
+      "moneda": "UYU",
+      "monto": 1,
+      "preferenceId": "391606738-f571bbca-5be6-4748-995c-8f69edc08a5b",
+      "usuario": "esteban.garriga@gmail.com"
+    },
+    "2f44fbe0-2584-4711-a131-8b9f2cc7dec7": {
+      "allocations": [
+        {
+          "amount": 1,
+          "description": "15 Años - 2026-10-30",
+          "fecha": "2026-10-30",
+          "id": "-P4iBCYvnYgFYcLtlIbk",
+          "reservaId": "-P4iBCYvnYgFYcLtlIbk",
+          "reservaSnapshot": {
+            "descripcion": "Prueba cumple",
+            "estado": "pendiente",
+            "fecha": "2026-10-30",
+            "id": "-P4iBCYvnYgFYcLtlIbk",
+            "pagado": 0,
+            "servicios": [
+              {
+                "categoria": "15_años",
+                "detalle": "Filmación en exteriores previa al evento para video cronológico o de presentación.",
+                "icono": "🎬",
+                "id": "15-video-exteriores",
+                "nombre": "Video - Exteriores",
+                "precio": 1,
+                "precioPromocional": 8500
+              }
+            ],
+            "tipoEvento": "15_años",
+            "total": 1,
+            "usuario": "esteban.garriga@gmail.com"
+          },
+          "tipoEvento": "15_años"
+        }
+      ],
+      "creado": "2026-10-24T13:54:27.146Z",
+      "estado": "pending",
+      "moneda": "UYU",
+      "monto": 1,
+      "preferenceId": "391606738-19397f2d-d01c-4978-94c7-86d6ee1e7bb2",
+      "usuario": "esteban.garriga@gmail.com"
+    },
+    "32fea4d7-b247-4595-b9e5-7e7d1e5a9767": {
+      "allocations": [
+        {
+          "amount": 4.41,
+          "description": "Boda - 2026-11-05",
+          "fecha": "2026-11-05",
+          "id": "-P4thLF-fXaq93ALkmAd",
+          "reservaId": "-P4thLF-fXaq93ALkmAd",
+          "reservaSnapshot": {
+            "descripcion": "Casamiento de Prueba",
+            "descuento": 0.7,
+            "estado": "pendiente",
+            "fecha": "2026-11-05",
+            "id": "-P4thLF-fXaq93ALkmAd",
+            "pagado": 1.89,
+            "servicios": [
+              {
+                "categoria": "bodas",
+                "id": "b-1",
+                "nombre": "Boda: Civil & Brindis",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-2",
+                "nombre": "Boda: Fiesta Completa",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-3",
+                "nombre": "Cobertura Civil",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-4",
+                "nombre": "Sesión de Exteriores",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-5",
+                "nombre": "Cobertura de Fiesta",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-6",
+                "nombre": "Fotos de Preparativos (Getting Ready)",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-7",
+                "nombre": "Video Highlights",
+                "precio": 1
+              }
+            ],
+            "tipoEvento": "bodas",
+            "total": 6.3,
+            "usuario": "esteban.garriga@gmail.com"
+          },
+          "tipoEvento": "bodas",
+          "tipoPago": "total"
+        }
+      ],
+      "aprobado": "2026-10-26T15:38:03.000-04:00",
+      "creado": "2026-10-26T19:36:31.656Z",
+      "estado": "approved",
+      "moneda": "UYU",
+      "monto": 4.41,
+      "paymentId": "186223759754",
+      "preferenceId": "391606738-cef7bbd6-d7da-4b42-af39-d5c01f347e5b",
+      "tipoPago": "total",
+      "usuario": "esteban.garriga@gmail.com"
+    },
+    "3c1914d7-df59-42a4-b12a-d3d623795e3f": {
+      "allocations": [
+        {
+          "amount": 1.2,
+          "description": "15 Años - 2026-11-30",
+          "fecha": "2026-11-30",
+          "id": "-P4stWLvahhcDMTD1Qj-",
+          "reservaId": "-P4stWLvahhcDMTD1Qj-",
+          "reservaSnapshot": {
+            "descripcion": "Prueba cumple",
+            "estado": "pendiente",
+            "fecha": "2026-11-30",
+            "id": "-P4stWLvahhcDMTD1Qj-",
+            "pagado": 0,
+            "servicios": [
+              {
+                "categoria": "15_años",
+                "detalle": "Sesión fotográfica en exteriores previa al evento.",
+                "icono": "📸",
+                "id": "15-foto-exteriores",
+                "nombre": "Fotografía - Exteriores",
+                "precio": 1,
+                "precioPromocional": 4000
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Captura de preparativos y sesión exclusiva con el vestido antes del ingreso al salón.",
+                "icono": "📸",
+                "id": "15-foto-aprontes",
+                "nombre": "Fotografía - Aprontes",
+                "precio": 1,
+                "precioPromocional": 4000
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Cobertura fotográfica completa de toda la fiesta de 15 años.",
+                "icono": "📸",
+                "id": "15-foto-fiesta",
+                "nombre": "Fotografía - Fiesta",
+                "precio": 1,
+                "precioPromocional": 13000
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Filmación en exteriores previa al evento para video cronológico o de presentación.",
+                "icono": "🎬",
+                "id": "15-video-exteriores",
+                "nombre": "Video - Exteriores",
+                "precio": 1,
+                "precioPromocional": 8500
+              }
+            ],
+            "tipoEvento": "15_años",
+            "total": 4,
+            "usuario": "esteban.garriga@gmail.com"
+          },
+          "tipoEvento": "15_años",
+          "tipoPago": "senia"
+        }
+      ],
+      "aprobado": "2026-10-26T11:56:23.000-04:00",
+      "creado": "2026-10-26T15:48:32.437Z",
+      "estado": "approved",
+      "moneda": "UYU",
+      "monto": 1.2,
+      "paymentId": "186188435494",
+      "preferenceId": "391606738-c3c196f7-f413-461d-bf77-2291dfe1feda",
+      "tipoPago": "senia",
+      "usuario": "esteban.garriga@gmail.com"
+    },
+    "5135113c-15da-4c90-bd6c-c5afdb6e45f6": {
+      "allocations": [
+        {
+          "amount": 1.62,
+          "description": "15 Años - 2026-11-23",
+          "fecha": "2026-11-23",
+          "id": "-P52xfb--Rdp1M_dHKJ9",
+          "reservaId": "-P52xfb--Rdp1M_dHKJ9",
+          "reservaSnapshot": {
+            "descripcion": "Prueba cumple",
+            "descuento": 0.6,
+            "estado": "pendiente",
+            "fecha": "2026-11-23",
+            "id": "-P52xfb--Rdp1M_dHKJ9",
+            "pagado": 0,
+            "servicios": [
+              {
+                "categoria": "15_años",
+                "id": "15-foto-exteriores",
+                "nombre": "Fotografía - Exteriores",
+                "precio": 1
+              },
+              {
+                "categoria": "15_años",
+                "id": "15-foto-aprontes",
+                "nombre": "Fotografía - Aprontes",
+                "precio": 1
+              },
+              {
+                "categoria": "15_años",
+                "id": "15-foto-fiesta",
+                "nombre": "Fotografía - Fiesta",
+                "precio": 1
+              },
+              {
+                "categoria": "15_años",
+                "id": "15-video-exteriores",
+                "nombre": "Video - Exteriores",
+                "precio": 1
+              },
+              {
+                "categoria": "15_años",
+                "id": "15-video-aprontes",
+                "nombre": "Video - Aprontes",
+                "precio": 1
+              },
+              {
+                "categoria": "15_años",
+                "id": "15-video-fiesta",
+                "nombre": "Video - Fiesta",
+                "precio": 1
+              }
+            ],
+            "tipoEvento": "15_años",
+            "total": 5.4,
+            "usuario": "esteban.garriga@gmail.com"
+          },
+          "tipoEvento": "15_años",
+          "tipoPago": "senia"
+        }
+      ],
+      "aprobado": "2026-10-28T15:24:48.000-04:00",
+      "creado": "2026-10-28T19:22:47.097Z",
+      "estado": "approved",
+      "moneda": "UYU",
+      "monto": 1.62,
+      "paymentId": "186556008702",
+      "preferenceId": "391606738-6cea553c-976e-4ff5-8ff3-7b26012ffc89",
+      "tipoPago": "senia",
+      "usuario": "esteban.garriga@gmail.com"
+    },
+    "530a26db-f738-4d9c-b55b-99efdd020fe8": {
+      "allocations": [
+        {
+          "amount": 1,
+          "description": "15 Años - 2026-10-30",
+          "fecha": "2026-10-30",
+          "id": "-P4iBCYvnYgFYcLtlIbk",
+          "reservaId": "-P4iBCYvnYgFYcLtlIbk",
+          "reservaSnapshot": {
+            "descripcion": "Prueba cumple",
+            "estado": "pendiente",
+            "fecha": "2026-10-30",
+            "id": "-P4iBCYvnYgFYcLtlIbk",
+            "pagado": 0,
+            "servicios": [
+              {
+                "categoria": "15_años",
+                "detalle": "Filmación en exteriores previa al evento para video cronológico o de presentación.",
+                "icono": "🎬",
+                "id": "15-video-exteriores",
+                "nombre": "Video - Exteriores",
+                "precio": 1,
+                "precioPromocional": 8500
+              }
+            ],
+            "tipoEvento": "15_años",
+            "total": 1,
+            "usuario": "esteban.garriga@gmail.com"
+          },
+          "tipoEvento": "15_años"
+        }
+      ],
+      "creado": "2026-10-24T13:55:40.925Z",
+      "estado": "pending",
+      "moneda": "UYU",
+      "monto": 1,
+      "preferenceId": "391606738-d1b9ccb1-d29e-4b54-b424-8723b58e7920",
+      "usuario": "esteban.garriga@gmail.com"
+    },
+    "654b62fc-8a18-4c0d-aa00-8c05ab041f13": {
+      "allocations": [
+        {
+          "amount": 1.2,
+          "description": "15 Años - 2026-11-30",
+          "fecha": "2026-11-30",
+          "id": "-P4sT6WygfYXWlwqBxnA",
+          "reservaId": "-P4sT6WygfYXWlwqBxnA",
+          "reservaSnapshot": {
+            "descripcion": "Cumple 15 de Sofia",
+            "estado": "pendiente",
+            "fecha": "2026-11-30",
+            "id": "-P4sT6WygfYXWlwqBxnA",
+            "pagado": 0,
+            "servicios": [
+              {
+                "categoria": "15_años",
+                "detalle": "Sesión fotográfica en exteriores previa al evento.",
+                "icono": "📸",
+                "id": "15-foto-exteriores",
+                "nombre": "Fotografía - Exteriores",
+                "precio": 1,
+                "precioPromocional": 4000
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Captura de preparativos y sesión exclusiva con el vestido antes del ingreso al salón.",
+                "icono": "📸",
+                "id": "15-foto-aprontes",
+                "nombre": "Fotografía - Aprontes",
+                "precio": 1,
+                "precioPromocional": 4000
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Cobertura fotográfica completa de toda la fiesta de 15 años.",
+                "icono": "📸",
+                "id": "15-foto-fiesta",
+                "nombre": "Fotografía - Fiesta",
+                "precio": 1,
+                "precioPromocional": 13000
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Filmación en exteriores previa al evento para video cronológico o de presentación.",
+                "icono": "🎬",
+                "id": "15-video-exteriores",
+                "nombre": "Video - Exteriores",
+                "precio": 1,
+                "precioPromocional": 8500
+              }
+            ],
+            "tipoEvento": "15_años",
+            "total": 4,
+            "usuario": "esteban.garriga@gmail.com"
+          },
+          "tipoEvento": "15_años",
+          "tipoPago": "senia"
+        }
+      ],
+      "creado": "2026-10-26T15:43:15.172Z",
+      "estado": "pending",
+      "moneda": "UYU",
+      "monto": 1.2,
+      "preferenceId": "391606738-9385e5de-9319-4eb5-ba4a-dd68c30367f8",
+      "tipoPago": "senia",
+      "usuario": "esteban.garriga@gmail.com"
+    },
+    "6e461a58-ecf4-4cff-9191-47594e24bad9": {
+      "allocations": [
+        {
+          "amount": 4,
+          "description": "15 Años - 2026-10-29",
+          "fecha": "2026-10-29",
+          "id": "-P4pwqUVussor5_7lmrU",
+          "reservaId": "-P4pwqUVussor5_7lmrU",
+          "reservaSnapshot": {
+            "descripcion": "Cumpleaños de xv de micaela",
+            "estado": "pendiente",
+            "fecha": "2026-10-29",
+            "id": "-P4pwqUVussor5_7lmrU",
+            "pagado": 0,
+            "servicios": [
+              {
+                "categoria": "15_años",
+                "detalle": "Cobertura fílmica completa y edición final de la fiesta de 15 años.",
+                "icono": "🎬",
+                "id": "15-video-fiesta",
+                "nombre": "Video - Fiesta",
+                "precio": 1,
+                "precioPromocional": 16500
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Filmación en exteriores previa al evento para video cronológico o de presentación.",
+                "icono": "🎬",
+                "id": "15-video-exteriores",
+                "nombre": "Video - Exteriores",
+                "precio": 1,
+                "precioPromocional": 8500
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Cobertura fotográfica completa de toda la fiesta de 15 años.",
+                "icono": "📸",
+                "id": "15-foto-fiesta",
+                "nombre": "Fotografía - Fiesta",
+                "precio": 1,
+                "precioPromocional": 13000
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Sesión fotográfica en exteriores previa al evento.",
+                "icono": "📸",
+                "id": "15-foto-exteriores",
+                "nombre": "Fotografía - Exteriores",
+                "precio": 1,
+                "precioPromocional": 4000
+              }
+            ],
+            "tipoEvento": "15_años",
+            "total": 4,
+            "usuario": "brian.uru@gmail.com"
+          },
+          "tipoEvento": "15_años"
+        }
+      ],
+      "creado": "2026-10-26T02:09:43.619Z",
+      "estado": "pending",
+      "moneda": "UYU",
+      "monto": 4,
+      "preferenceId": "391606738-b4734b73-d103-4a80-895c-540e3a6954d5",
+      "usuario": "brian.uru@gmail.com"
+    },
+    "867eb0e5-b1cf-4eb0-a5b1-40ec70106cb9": {
+      "allocations": [
+        {
+          "amount": 5.4,
+          "description": "15 Años - 2026-11-23",
+          "fecha": "2026-11-23",
+          "id": "-P52xfb--Rdp1M_dHKJ9",
+          "reservaId": "-P52xfb--Rdp1M_dHKJ9",
+          "reservaSnapshot": {
+            "descripcion": "Prueba cumple",
+            "descuento": 0.6,
+            "estado": "pendiente",
+            "fecha": "2026-11-23",
+            "id": "-P52xfb--Rdp1M_dHKJ9",
+            "pagado": 0,
+            "servicios": [
+              {
+                "categoria": "15_años",
+                "id": "15-foto-exteriores",
+                "nombre": "Fotografía - Exteriores",
+                "precio": 1
+              },
+              {
+                "categoria": "15_años",
+                "id": "15-foto-aprontes",
+                "nombre": "Fotografía - Aprontes",
+                "precio": 1
+              },
+              {
+                "categoria": "15_años",
+                "id": "15-foto-fiesta",
+                "nombre": "Fotografía - Fiesta",
+                "precio": 1
+              },
+              {
+                "categoria": "15_años",
+                "id": "15-video-exteriores",
+                "nombre": "Video - Exteriores",
+                "precio": 1
+              },
+              {
+                "categoria": "15_años",
+                "id": "15-video-aprontes",
+                "nombre": "Video - Aprontes",
+                "precio": 1
+              },
+              {
+                "categoria": "15_años",
+                "id": "15-video-fiesta",
+                "nombre": "Video - Fiesta",
+                "precio": 1
+              }
+            ],
+            "tipoEvento": "15_años",
+            "total": 5.4,
+            "usuario": "esteban.garriga@gmail.com"
+          },
+          "tipoEvento": "15_años",
+          "tipoPago": "total"
+        }
+      ],
+      "creado": "2026-10-28T19:22:39.625Z",
+      "estado": "pending",
+      "moneda": "UYU",
+      "monto": 5.4,
+      "preferenceId": "391606738-1311d9a0-e02f-4f81-930d-093873ceb35e",
+      "tipoPago": "total",
+      "usuario": "esteban.garriga@gmail.com"
+    },
+    "8d9b3c63-e2c5-413f-a3fb-cce091bdb1e8": {
+      "allocations": [
+        {
+          "amount": 2.8,
+          "description": "15 Años - 2026-11-30",
+          "fecha": "2026-11-30",
+          "id": "-P4stWLvahhcDMTD1Qj-",
+          "reservaId": "-P4stWLvahhcDMTD1Qj-",
+          "reservaSnapshot": {
+            "descripcion": "Prueba cumple",
+            "estado": "pendiente",
+            "fecha": "2026-11-30",
+            "id": "-P4stWLvahhcDMTD1Qj-",
+            "pagado": 1.2,
+            "servicios": [
+              {
+                "categoria": "15_años",
+                "detalle": "Sesión fotográfica en exteriores previa al evento.",
+                "icono": "📸",
+                "id": "15-foto-exteriores",
+                "nombre": "Fotografía - Exteriores",
+                "precio": 1,
+                "precioPromocional": 4000
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Captura de preparativos y sesión exclusiva con el vestido antes del ingreso al salón.",
+                "icono": "📸",
+                "id": "15-foto-aprontes",
+                "nombre": "Fotografía - Aprontes",
+                "precio": 1,
+                "precioPromocional": 4000
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Cobertura fotográfica completa de toda la fiesta de 15 años.",
+                "icono": "📸",
+                "id": "15-foto-fiesta",
+                "nombre": "Fotografía - Fiesta",
+                "precio": 1,
+                "precioPromocional": 13000
+              },
+              {
+                "categoria": "15_años",
+                "detalle": "Filmación en exteriores previa al evento para video cronológico o de presentación.",
+                "icono": "🎬",
+                "id": "15-video-exteriores",
+                "nombre": "Video - Exteriores",
+                "precio": 1,
+                "precioPromocional": 8500
+              }
+            ],
+            "tipoEvento": "15_años",
+            "total": 4,
+            "usuario": "esteban.garriga@gmail.com"
+          },
+          "tipoEvento": "15_años",
+          "tipoPago": "total"
+        }
+      ],
+      "aprobado": "2026-10-26T11:59:18.000-04:00",
+      "creado": "2026-10-26T15:58:22.529Z",
+      "estado": "approved",
+      "moneda": "UYU",
+      "monto": 2.8,
+      "paymentId": "186188927296",
+      "preferenceId": "391606738-0aed8e1a-c99f-4831-968e-79e5b47c6342",
+      "tipoPago": "total",
+      "usuario": "esteban.garriga@gmail.com"
+    },
+    "943a98d2-802a-4560-b524-2876fff05e6a": {
+      "allocations": [
+        {
+          "amount": 1,
+          "description": "15 Años - 2026-10-30",
+          "fecha": "2026-10-30",
+          "id": "-P4iBCYvnYgFYcLtlIbk",
+          "reservaId": "-P4iBCYvnYgFYcLtlIbk",
+          "reservaSnapshot": {
+            "descripcion": "Prueba cumple",
+            "estado": "pendiente",
+            "fecha": "2026-10-30",
+            "id": "-P4iBCYvnYgFYcLtlIbk",
+            "pagado": 0,
+            "servicios": [
+              {
+                "categoria": "15_años",
+                "detalle": "Filmación en exteriores previa al evento para video cronológico o de presentación.",
+                "icono": "🎬",
+                "id": "15-video-exteriores",
+                "nombre": "Video - Exteriores",
+                "precio": 1,
+                "precioPromocional": 8500
+              }
+            ],
+            "tipoEvento": "15_años",
+            "total": 1,
+            "usuario": "esteban.garriga@gmail.com"
+          },
+          "tipoEvento": "15_años"
+        }
+      ],
+      "creado": "2026-10-24T13:54:47.704Z",
+      "estado": "pending",
+      "moneda": "UYU",
+      "monto": 1,
+      "preferenceId": "391606738-6242d089-0700-4299-b27e-d36391327d8e",
+      "usuario": "esteban.garriga@gmail.com"
+    },
+    "a9614214-0c83-4501-b0b2-cd6f3f918d16": {
+      "allocations": [
+        {
+          "amount": 1,
+          "description": "15 Años - 2026-10-30",
+          "fecha": "2026-10-30",
+          "id": "-P4iBCYvnYgFYcLtlIbk",
+          "reservaId": "-P4iBCYvnYgFYcLtlIbk",
+          "reservaSnapshot": {
+            "descripcion": "Prueba cumple",
+            "estado": "pendiente",
+            "fecha": "2026-10-30",
+            "id": "-P4iBCYvnYgFYcLtlIbk",
+            "pagado": 0,
+            "servicios": [
+              {
+                "categoria": "15_años",
+                "detalle": "Filmación en exteriores previa al evento para video cronológico o de presentación.",
+                "icono": "🎬",
+                "id": "15-video-exteriores",
+                "nombre": "Video - Exteriores",
+                "precio": 1,
+                "precioPromocional": 8500
+              }
+            ],
+            "tipoEvento": "15_años",
+            "total": 1,
+            "usuario": "esteban.garriga@gmail.com"
+          },
+          "tipoEvento": "15_años"
+        }
+      ],
+      "aprobado": "2026-10-24T10:05:33.000-04:00",
+      "creado": "2026-10-24T14:04:33.049Z",
+      "estado": "approved",
+      "moneda": "UYU",
+      "monto": 1,
+      "paymentId": "184836358097",
+      "preferenceId": "391606738-d9cd3193-9f9f-48c0-aeca-231ad651f7d4",
+      "usuario": "esteban.garriga@gmail.com"
+    },
+    "f2bdf319-2267-4da2-af85-fa21049d081f": {
+      "allocations": [
+        {
+          "amount": 1.89,
+          "description": "Boda - 2026-11-05",
+          "fecha": "2026-11-05",
+          "id": "-P4thLF-fXaq93ALkmAd",
+          "reservaId": "-P4thLF-fXaq93ALkmAd",
+          "reservaSnapshot": {
+            "descripcion": "Casamiento de Prueba",
+            "descuento": 0.7,
+            "estado": "pendiente",
+            "fecha": "2026-11-05",
+            "id": "-P4thLF-fXaq93ALkmAd",
+            "pagado": 0,
+            "servicios": [
+              {
+                "categoria": "bodas",
+                "id": "b-1",
+                "nombre": "Boda: Civil & Brindis",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-2",
+                "nombre": "Boda: Fiesta Completa",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-3",
+                "nombre": "Cobertura Civil",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-4",
+                "nombre": "Sesión de Exteriores",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-5",
+                "nombre": "Cobertura de Fiesta",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-6",
+                "nombre": "Fotos de Preparativos (Getting Ready)",
+                "precio": 1
+              },
+              {
+                "categoria": "bodas",
+                "id": "b-7",
+                "nombre": "Video Highlights",
+                "precio": 1
+              }
+            ],
+            "tipoEvento": "bodas",
+            "total": 6.3,
+            "usuario": "esteban.garriga@gmail.com"
+          },
+          "tipoEvento": "bodas",
+          "tipoPago": "senia"
+        }
+      ],
+      "aprobado": "2026-10-26T15:36:04.000-04:00",
+      "creado": "2026-10-26T19:35:02.285Z",
+      "estado": "approved",
+      "moneda": "UYU",
+      "monto": 1.89,
+      "paymentId": "185178879577",
+      "preferenceId": "391606738-13a69e1b-8d88-4a9a-bac4-336f9fc4b28e",
+      "tipoPago": "senia",
+      "usuario": "esteban.garriga@gmail.com"
+    }
+  },
+  "reservas": {
+    "admin@gmail,com": {
+      "-P5-T9DvKrGUfoCVulVt": {
+        "descripcion": "15 prueba ",
+        "descuento": 0.6,
+        "estado": "pendiente",
+        "fecha": "2026-11-29",
+        "id": "-P5-T9DvKrGUfoCVulVt",
+        "pagado": 0,
+        "servicios": [
+          {
+            "categoria": "15_años",
+            "detalle": "Sesión fotográfica en exteriores previa al evento.",
+            "icono": "📸",
+            "id": "15-foto-exteriores",
+            "nombre": "Fotografía - Exteriores",
+            "precio": 1,
+            "precioPromocional": 4000
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Captura de preparativos y sesión exclusiva con el vestido antes del ingreso al salón.",
+            "icono": "📸",
+            "id": "15-foto-aprontes",
+            "nombre": "Fotografía - Aprontes",
+            "precio": 1,
+            "precioPromocional": 4000
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Cobertura fotográfica completa de toda la fiesta de 15 años.",
+            "icono": "📸",
+            "id": "15-foto-fiesta",
+            "nombre": "Fotografía - Fiesta",
+            "precio": 1,
+            "precioPromocional": 13000
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Filmación en exteriores previa al evento para video cronológico o de presentación.",
+            "icono": "🎬",
+            "id": "15-video-exteriores",
+            "nombre": "Video - Exteriores",
+            "precio": 1,
+            "precioPromocional": 8500
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Filmación de preparativos y tomas cinematográficas con el vestido antes de la entrada.",
+            "icono": "🎬",
+            "id": "15-video-aprontes",
+            "nombre": "Video - Aprontes",
+            "precio": 1,
+            "precioPromocional": 6500
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Cobertura fílmica completa y edición final de la fiesta de 15 años.",
+            "icono": "🎬",
+            "id": "15-video-fiesta",
+            "nombre": "Video - Fiesta",
+            "precio": 1,
+            "precioPromocional": 16500
+          },
+          {
+            "categoria": "extras",
+            "icono": "🎧",
+            "id": "e-2",
+            "nombre": "DJ y Sonido",
+            "precio": 1
+          },
+          {
+            "categoria": "extras",
+            "icono": "🧹",
+            "id": "e-4",
+            "nombre": "Limpieza Post-Fiesta",
+            "precio": 1
+          },
+          {
+            "categoria": "extras",
+            "icono": "🌸",
+            "id": "e-5",
+            "nombre": "Decoración Básica",
+            "precio": 1
+          }
+        ],
+        "tipoEvento": "15_años",
+        "total": 8.4,
+        "usuario": "admin@gmail.com"
+      }
+    },
+    "brian,uru@gmail,com": {
+      "-P4pwqUVussor5_7lmrU": {
+        "descripcion": "Cumpleaños de xv de micaela",
+        "estado": "pagado",
+        "fecha": "2026-10-29",
+        "id": "-P4pwqUVussor5_7lmrU",
+        "pagado": 4,
+        "pagosMercadoPago": {
+          "186119573360": true
+        },
+        "servicios": [
+          {
+            "categoria": "15_años",
+            "detalle": "Cobertura fílmica completa y edición final de la fiesta de 15 años.",
+            "icono": "🎬",
+            "id": "15-video-fiesta",
+            "nombre": "Video - Fiesta",
+            "precio": 1,
+            "precioPromocional": 16500
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Filmación en exteriores previa al evento para video cronológico o de presentación.",
+            "icono": "🎬",
+            "id": "15-video-exteriores",
+            "nombre": "Video - Exteriores",
+            "precio": 1,
+            "precioPromocional": 8500
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Cobertura fotográfica completa de toda la fiesta de 15 años.",
+            "icono": "📸",
+            "id": "15-foto-fiesta",
+            "nombre": "Fotografía - Fiesta",
+            "precio": 1,
+            "precioPromocional": 13000
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Sesión fotográfica en exteriores previa al evento.",
+            "icono": "📸",
+            "id": "15-foto-exteriores",
+            "nombre": "Fotografía - Exteriores",
+            "precio": 1,
+            "precioPromocional": 4000
+          }
+        ],
+        "tipoEvento": "15_años",
+        "total": 4,
+        "usuario": "brian.uru@gmail.com"
+      }
+    },
+    "esteban,garriga@gmail,com": {
+      "-P4hZZke8ebDjn5PxM4t": {
+        "descripcion": "Casamiento de Sofia",
+        "estado": "pagado",
+        "fecha": "2026-10-31",
+        "id": "-P4hZZke8ebDjn5PxM4t",
+        "pagado": 2,
+        "pagosMercadoPago": {
+          "184816485015": true
+        },
+        "servicios": [
+          {
+            "categoria": "bodas",
+            "detalle": "Una cobertura íntima para acompañar la ceremonia civil y el brindis.",
+            "icono": "🥂",
+            "id": "b-1",
+            "nombre": "Boda: Civil & Brindis",
+            "precio": 1
+          },
+          {
+            "categoria": "bodas",
+            "detalle": "Un resumen en video para volver a disfrutar los momentos destacados de su boda.",
+            "icono": "🎬",
+            "id": "b-7",
+            "nombre": "Video Highlights",
+            "precio": 1
+          }
+        ],
+        "tipoEvento": "bodas",
+        "total": 2,
+        "usuario": "esteban.garriga@gmail.com"
+      },
+      "-P4stWLvahhcDMTD1Qj-": {
+        "descripcion": "Prueba cumple",
+        "estado": "pagado",
+        "fecha": "2026-11-30",
+        "id": "-P4stWLvahhcDMTD1Qj-",
+        "pagado": 4,
+        "pagosMercadoPago": {
+          "186188435494": true,
+          "186188927296": true
+        },
+        "servicios": [
+          {
+            "categoria": "15_años",
+            "detalle": "Sesión fotográfica en exteriores previa al evento.",
+            "icono": "📸",
+            "id": "15-foto-exteriores",
+            "nombre": "Fotografía - Exteriores",
+            "precio": 1,
+            "precioPromocional": 4000
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Captura de preparativos y sesión exclusiva con el vestido antes del ingreso al salón.",
+            "icono": "📸",
+            "id": "15-foto-aprontes",
+            "nombre": "Fotografía - Aprontes",
+            "precio": 1,
+            "precioPromocional": 4000
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Cobertura fotográfica completa de toda la fiesta de 15 años.",
+            "icono": "📸",
+            "id": "15-foto-fiesta",
+            "nombre": "Fotografía - Fiesta",
+            "precio": 1,
+            "precioPromocional": 13000
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Filmación en exteriores previa al evento para video cronológico o de presentación.",
+            "icono": "🎬",
+            "id": "15-video-exteriores",
+            "nombre": "Video - Exteriores",
+            "precio": 1,
+            "precioPromocional": 8500
+          }
+        ],
+        "tipoEvento": "15_años",
+        "total": 4,
+        "usuario": "esteban.garriga@gmail.com"
+      },
+      "-P4tV0kfPuPbnLPfKV2W": {
+        "descripcion": "Prueba Servicios",
+        "descuento": 0.6,
+        "estado": "pendiente",
+        "fecha": "2026-11-01",
+        "id": "-P4tV0kfPuPbnLPfKV2W",
+        "pagado": 0,
+        "servicios": [
+          {
+            "categoria": "15_años",
+            "detalle": "Sesión fotográfica en exteriores previa al evento.",
+            "icono": "📸",
+            "id": "15-foto-exteriores",
+            "nombre": "Fotografía - Exteriores",
+            "precio": 1,
+            "precioPromocional": 4000
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Captura de preparativos y sesión exclusiva con el vestido antes del ingreso al salón.",
+            "icono": "📸",
+            "id": "15-foto-aprontes",
+            "nombre": "Fotografía - Aprontes",
+            "precio": 1,
+            "precioPromocional": 4000
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Cobertura fotográfica completa de toda la fiesta de 15 años.",
+            "icono": "📸",
+            "id": "15-foto-fiesta",
+            "nombre": "Fotografía - Fiesta",
+            "precio": 1,
+            "precioPromocional": 13000
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Filmación en exteriores previa al evento para video cronológico o de presentación.",
+            "icono": "🎬",
+            "id": "15-video-exteriores",
+            "nombre": "Video - Exteriores",
+            "precio": 1,
+            "precioPromocional": 8500
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Filmación de preparativos y tomas cinematográficas con el vestido antes de la entrada.",
+            "icono": "🎬",
+            "id": "15-video-aprontes",
+            "nombre": "Video - Aprontes",
+            "precio": 1,
+            "precioPromocional": 6500
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Cobertura fílmica completa y edición final de la fiesta de 15 años.",
+            "icono": "🎬",
+            "id": "15-video-fiesta",
+            "nombre": "Video - Fiesta",
+            "precio": 1,
+            "precioPromocional": 16500
+          }
+        ],
+        "tipoEvento": "15_años",
+        "total": 5.4,
+        "usuario": "esteban.garriga@gmail.com"
+      },
+      "-P4thLF-fXaq93ALkmAd": {
+        "descripcion": "Casamiento de Prueba",
+        "descuento": 0.7,
+        "estado": "pagado",
+        "fecha": "2026-11-05",
+        "id": "-P4thLF-fXaq93ALkmAd",
+        "pagado": 6.3,
+        "pagosMercadoPago": {
+          "185178879577": true,
+          "186223759754": true
+        },
+        "servicios": [
+          {
+            "categoria": "bodas",
+            "detalle": "Una cobertura íntima para acompañar la ceremonia civil y el brindis.",
+            "icono": "🥂",
+            "id": "b-1",
+            "nombre": "Boda: Civil & Brindis",
+            "precio": 1
+          },
+          {
+            "categoria": "bodas",
+            "detalle": "Cobertura de los momentos más importantes de la celebración y la fiesta.",
+            "icono": "💍",
+            "id": "b-2",
+            "nombre": "Boda: Fiesta Completa",
+            "precio": 1
+          },
+          {
+            "categoria": "bodas",
+            "detalle": "Registro fotográfico de la ceremonia civil y sus momentos especiales.",
+            "icono": "📷",
+            "id": "b-3",
+            "nombre": "Cobertura Civil",
+            "precio": 1
+          },
+          {
+            "categoria": "bodas",
+            "detalle": "Una sesión de fotos en exteriores para celebrar su historia.",
+            "icono": "🌿",
+            "id": "b-4",
+            "nombre": "Sesión de Exteriores",
+            "precio": 1
+          },
+          {
+            "categoria": "bodas",
+            "detalle": "Fotografías de la fiesta, los invitados y cada instante de la celebración.",
+            "icono": "✨",
+            "id": "b-5",
+            "nombre": "Cobertura de Fiesta",
+            "precio": 1
+          },
+          {
+            "categoria": "bodas",
+            "detalle": "Registro de los preparativos y de los momentos previos a la ceremonia.",
+            "icono": "💐",
+            "id": "b-6",
+            "nombre": "Fotos de Preparativos (Getting Ready)",
+            "precio": 1
+          },
+          {
+            "categoria": "bodas",
+            "detalle": "Un resumen en video para volver a disfrutar los momentos destacados de su boda.",
+            "icono": "🎬",
+            "id": "b-7",
+            "nombre": "Video Highlights",
+            "precio": 1
+          }
+        ],
+        "tipoEvento": "bodas",
+        "total": 6.3,
+        "usuario": "esteban.garriga@gmail.com"
+      },
+      "-P52xfb--Rdp1M_dHKJ9": {
+        "descripcion": "Prueba cumple",
+        "descuento": 0.6,
+        "estado": "pendiente",
+        "fecha": "2026-11-23",
+        "id": "-P52xfb--Rdp1M_dHKJ9",
+        "pagado": 1.62,
+        "pagosMercadoPago": {
+          "186556008702": true
+        },
+        "seniaConfirmadaAt": "2026-10-28T19:24:48.000Z",
+        "servicios": [
+          {
+            "categoria": "15_años",
+            "detalle": "Sesión fotográfica en exteriores previa al evento.",
+            "icono": "📸",
+            "id": "15-foto-exteriores",
+            "nombre": "Fotografía - Exteriores",
+            "precio": 1,
+            "precioPromocional": 4000
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Captura de preparativos y sesión exclusiva con el vestido antes del ingreso al salón.",
+            "icono": "📸",
+            "id": "15-foto-aprontes",
+            "nombre": "Fotografía - Aprontes",
+            "precio": 1,
+            "precioPromocional": 4000
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Cobertura fotográfica completa de toda la fiesta de 15 años.",
+            "icono": "📸",
+            "id": "15-foto-fiesta",
+            "nombre": "Fotografía - Fiesta",
+            "precio": 1,
+            "precioPromocional": 13000
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Filmación en exteriores previa al evento para video cronológico o de presentación.",
+            "icono": "🎬",
+            "id": "15-video-exteriores",
+            "nombre": "Video - Exteriores",
+            "precio": 1,
+            "precioPromocional": 8500
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Filmación de preparativos y tomas cinematográficas con el vestido antes de la entrada.",
+            "icono": "🎬",
+            "id": "15-video-aprontes",
+            "nombre": "Video - Aprontes",
+            "precio": 1,
+            "precioPromocional": 6500
+          },
+          {
+            "categoria": "15_años",
+            "detalle": "Cobertura fílmica completa y edición final de la fiesta de 15 años.",
+            "icono": "🎬",
+            "id": "15-video-fiesta",
+            "nombre": "Video - Fiesta",
+            "precio": 1,
+            "precioPromocional": 16500
+          }
+        ],
+        "tipoEvento": "15_años",
+        "total": 5.4,
+        "usuario": "esteban.garriga@gmail.com"
+      }
+    }
+  }
+}

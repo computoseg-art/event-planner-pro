@@ -1472,6 +1472,22 @@ app.get('/api/gallery/:email', requireFirebaseAuth, async (req, res) => {
     );
 
     const mediaItems = photosResponse.data.mediaItems || [];
+    const pageTokens = new Set();
+    let pageToken = photosResponse.data.nextPageToken;
+    while (pageToken) {
+      if (pageTokens.has(pageToken)) {
+        throw new Error('Google Photos devolvió un token de página repetido.');
+      }
+      pageTokens.add(pageToken);
+      const nextPageResponse = await axios.post(
+        'https://photoslibrary.googleapis.com/v1/mediaItems:search',
+        { albumId: albumData.albumId, pageSize: 100, pageToken },
+        { headers: photosResponse.config.headers }
+      );
+      mediaItems.push(...(nextPageResponse.data.mediaItems || []));
+      pageToken = nextPageResponse.data.nextPageToken;
+    }
+
     const photos = mediaItems.map(p => ({
       id: p.id,
       baseUrl: `${p.baseUrl}=w1200-h800`,
