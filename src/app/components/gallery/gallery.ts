@@ -7,6 +7,30 @@ import { GalleryService, Photo } from '../../services/gallery.service';
 import { ImageCarousel } from '../../components/image-carousel/image-carousel';
 import { firstValueFrom, take } from 'rxjs';
 
+const maxPhotoSizeBytes = 100 * 1024 * 1024;
+const allowedPhotoMimeTypes = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+  'image/gif',
+  'image/bmp',
+  'image/tiff',
+  'image/avif',
+  'image/x-icon',
+]);
+const allowedPhotoExtensions = new Set([
+  '.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.gif', '.bmp', '.tif', '.tiff',
+  '.avif', '.ico', '.dng', '.cr2', '.cr3', '.nef', '.arw', '.orf', '.rw2', '.raf',
+]);
+
+function isSupportedPhoto(file: File): boolean {
+  const extension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+  return allowedPhotoMimeTypes.has(file.type) || allowedPhotoExtensions.has(extension);
+}
+
 @Component({
   selector: 'app-gallery',
   standalone: true,
@@ -163,21 +187,12 @@ export class GalleryComponent implements OnInit, OnDestroy {
     const input = event.target;
     if (input instanceof HTMLInputElement) {
       const files = Array.from(input.files || []);
-      if (files.some(file => file.size > 25 * 1024 * 1024)) {
+      if (files.some(file => file.size > maxPhotoSizeBytes)) {
         this.selectedFiles = [];
-        this.errorMessage = 'Cada foto debe pesar como máximo 25 MB.';
-      } else if (files.some(file => ![
-        'image/jpeg',
-        'image/png',
-        'image/webp',
-        'image/heic',
-        'image/heif',
-        'image/gif',
-        'image/bmp',
-        'image/tiff',
-      ].includes(file.type))) {
+        this.errorMessage = 'Cada foto debe pesar como máximo 100 MB.';
+      } else if (files.some(file => !isSupportedPhoto(file))) {
         this.selectedFiles = [];
-        this.errorMessage = 'Usa archivos JPG, PNG, WebP, HEIC, GIF, BMP o TIFF.';
+        this.errorMessage = 'Hay un formato no compatible. Usa JPG, PNG, WebP, HEIC, GIF, BMP, TIFF, AVIF o RAW compatible.';
       } else {
         this.selectedFiles = files;
         this.errorMessage = '';
@@ -203,19 +218,20 @@ export class GalleryComponent implements OnInit, OnDestroy {
     const files = [...this.selectedFiles];
     this.uploadProgress = `0 de ${files.length}`;
 
-    for (let index = 0; index < files.length; index += 5) {
-      const batch = files.slice(index, index + 5);
-      this.uploadProgress = `${index + 1}-${Math.min(index + batch.length, files.length)} de ${files.length}`;
+    for (let index = 0; index < files.length; index++) {
+      const file = files[index];
+      this.uploadProgress = `${index + 1} de ${files.length}`;
       try {
-        await firstValueFrom(this.galleryService.uploadPhotos(targetEmail, batch));
+        await firstValueFrom(this.galleryService.uploadPhotos(targetEmail, [file]));
       } catch (error) {
         console.error('Error al subir fotos:', error);
         this.selectedFiles = files.slice(index);
         this.isUploading = false;
         this.uploadProgress = '';
-        this.errorMessage = error instanceof HttpErrorResponse && typeof error.error?.error === 'string'
+        const detail = error instanceof HttpErrorResponse && typeof error.error?.error === 'string'
           ? error.error.error
-          : 'No se pudieron subir todas las fotos. Intenta nuevamente.';
+          : 'Intenta nuevamente.';
+        this.errorMessage = `No se pudo subir "${file.name}". ${detail}`;
         return;
       }
     }

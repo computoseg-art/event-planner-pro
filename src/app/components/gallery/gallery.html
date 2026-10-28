@@ -20,12 +20,12 @@
           <strong>{{ userEmail }}</strong>.
         </p>
         <label for="photo-files" class="upload-label">
-          Subir fotos originales (25 MB máximo por imagen; puedes seleccionar varias, se suben en lotes)
+          Subir fotos originales (100 MB máximo por imagen; se pueden seleccionar varias)
         </label>
         <input
           id="photo-files"
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif,image/bmp,image/tiff"
+          accept="image/*,.dng,.cr2,.cr3,.nef,.arw,.orf,.rw2,.raf"
           multiple
           (change)="setSelectedFiles($event)"
         />

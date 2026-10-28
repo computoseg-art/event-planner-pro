@@ -1,4 +1,8 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
+import { createReadStream } from 'node:fs';
+import { unlink } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import express from 'express';
 import cors from 'cors';
 import { MercadoPagoConfig, Payment, Preference } from 'mercadopago';
@@ -62,10 +66,32 @@ if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
   throw new Error('PORT debe ser un puerto TCP válido.');
 }
 
-// Configuración de Multer para archivos en memoria
+const maxPhotoSizeBytes = 100 * 1024 * 1024;
+const allowedPhotoMimeTypes = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+  'image/gif',
+  'image/bmp',
+  'image/tiff',
+  'image/avif',
+  'image/x-icon',
+]);
+const allowedPhotoExtensions = new Set([
+  '.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.gif', '.bmp', '.tif', '.tiff',
+  '.avif', '.ico', '.dng', '.cr2', '.cr3', '.nef', '.arw', '.orf', '.rw2', '.raf',
+]);
+
+// Keep large uploads on disk instead of retaining each image in backend memory.
 const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { files: 5, fileSize: 25 * 1024 * 1024 },
+  storage: multer.diskStorage({
+    destination: tmpdir(),
+    filename: (_req, _file, callback) => callback(null, randomUUID()),
+  }),
+  limits: { files: 1, fileSize: maxPhotoSizeBytes },
 });
 
 // Configuración de Mercado Pago
@@ -1511,38 +1537,40 @@ app.get('/api/gallery/:email', requireFirebaseAuth, async (req, res) => {
 // GOOGLE PHOTOS: SUBIR FOTOS AL ÁLBUM
 // ---------------------------------------------
 app.post('/api/upload-photos', requireFirebaseAuth, requireGalleryAdmin, (req, res, next) => {
-  upload.array('photos', 5)(req, res, error => {
+  upload.array('photos', 1)(req, res, error => {
     if (!error) return next();
     if (error instanceof multer.MulterError) {
       const status = error.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
       const message = error.code === 'LIMIT_FILE_SIZE'
-        ? 'Cada foto debe pesar como máximo 25 MB.'
-        : 'Puedes subir hasta 5 fotos por vez.';
+        ? 'Cada foto debe pesar como máximo 100 MB.'
+        : 'Sube una foto por solicitud; la galería procesa automáticamente todas las seleccionadas.';
       return res.status(status).json({ error: message });
     }
     next(error);
   });
 }, async (req, res) => {
   const { targetEmail } = req.body;
-  const files = req.files;
-
-  if (!validEmail(targetEmail) || !files || files.length === 0) {
-    return res.status(400).json({ error: 'Debes especificar el email del destinatario y adjuntar archivos.' });
-  }
-  const allowedImageTypes = new Set([
-    'image/jpeg',
-    'image/png',
-    'image/webp',
-    'image/heic',
-    'image/heif',
-    'image/gif',
-    'image/bmp',
-    'image/tiff',
-  ]);
-  if (!files.every(file => allowedImageTypes.has(file.mimetype))) {
-    return res.status(400).json({ error: 'Formato no permitido. Usa JPG, PNG, WebP, HEIC, GIF, BMP o TIFF.' });
-  }
+  const files = Array.isArray(req.files) ? req.files : [];
+  const cleanupFiles = async () => {
+    const cleanupResults = await Promise.allSettled(files.map(file => unlink(file.path)));
+    for (const result of cleanupResults) {
+      if (result.status === 'rejected' && result.reason?.code !== 'ENOENT') {
+        console.error('No se pudo limpiar un archivo temporal de la galería:', result.reason);
+      }
+    }
+  };
   try {
+    if (!validEmail(targetEmail) || files.length === 0) {
+      return res.status(400).json({ error: 'Debes especificar el email del destinatario y adjuntar archivos.' });
+    }
+    const isAllowedPhoto = file =>
+      allowedPhotoMimeTypes.has(file.mimetype) ||
+      allowedPhotoExtensions.has(path.extname(file.originalname).toLowerCase());
+    if (!files.every(isAllowedPhoto)) {
+      return res.status(400).json({
+        error: 'Formato no permitido. Usa JPG, PNG, WebP, HEIC, GIF, BMP, TIFF, AVIF o RAW compatible.',
+      });
+    }
     let targetUser;
     try {
       targetUser = targetEmail.trim().toLowerCase() === req.authenticatedEmail
@@ -1568,14 +1596,16 @@ app.post('/api/upload-photos', requireFirebaseAuth, requireGalleryAdmin, (req, r
     const uploadRequests = files.map(file =>
       axios.post(
         'https://photoslibrary.googleapis.com/v1/uploads',
-        file.buffer,
+        createReadStream(file.path),
         {
           headers: {
             'Content-Type': 'application/octet-stream',
+            'Content-Length': String(file.size),
             'Authorization': `Bearer ${token}`,
             'X-Goog-Upload-File-Name': file.originalname.replace(/[\r\n]/g, '_').slice(0, 200) || 'foto',
             'X-Goog-Upload-Protocol': 'raw'
-          }
+          },
+          maxBodyLength: Infinity,
         }
       )
     );
@@ -1602,9 +1632,20 @@ app.post('/api/upload-photos', requireFirebaseAuth, requireGalleryAdmin, (req, r
 
   } catch (error) {
     console.error('❌ Error en /api/upload-photos:', error.response?.data?.error || error.message);
-    res.status(500).json({
-      error: galleryErrorMessage(error, 'Error al procesar la subida de fotos.'),
+    const providerMessage = error.response?.data?.error?.message;
+    if (typeof providerMessage === 'string') {
+      return res.status(502).json({ error: `Google Photos rechazó la imagen: ${providerMessage}` });
+    }
+    return res.status(500).json({
+      error: galleryErrorMessage(error, 'Error al procesar la subida de fotos. Revisa el formato y vuelve a intentar.'),
     });
+  } finally {
+    const cleanupResults = await Promise.allSettled(files.map(file => unlink(file.path)));
+    for (const result of cleanupResults) {
+      if (result.status === 'rejected' && result.reason?.code !== 'ENOENT') {
+        console.error('No se pudo limpiar un archivo temporal de la galería:', result.reason);
+      }
+    }
   }
 });
 
