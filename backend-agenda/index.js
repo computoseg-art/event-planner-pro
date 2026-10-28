@@ -227,6 +227,13 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+function requireGalleryAdmin(req, res, next) {
+  if (req.authenticatedEmail !== 'admin@gmail.com') {
+    return res.status(403).json({ error: 'Solo admin@gmail.com puede administrar las fotos.' });
+  }
+  next();
+}
+
 function requireFirebaseUser(req, res, next) {
   const authorization = req.get('Authorization') || '';
   const token = authorization.match(/^Bearer\s+(.+)$/i)?.[1];
@@ -1197,7 +1204,7 @@ app.post('/webhook', async (req, res, next) => {
 // ---------------------------------------------
 // GOOGLE PHOTOS: ASEGURAR / CREAR ÁLBUM
 // ---------------------------------------------
-app.post('/api/ensure-album', requireFirebaseAuth, requireAdmin, async (req, res) => {
+app.post('/api/ensure-album', requireFirebaseAuth, requireGalleryAdmin, async (req, res) => {
   const { email } = req.body;
   if (!validEmail(email)) {
     return res.status(400).json({ error: 'El email debe ser válido.' });
@@ -1250,7 +1257,7 @@ app.post('/api/gallery/ensure-own-folder', requireFirebaseAuth, async (req, res)
     if (!validEmail(requestedEmail)) {
       return res.status(400).json({ error: 'El email debe ser válido.' });
     }
-    if (requestedEmail !== req.authenticatedEmail && !isAdmin(req.authenticatedEmail)) {
+    if (requestedEmail !== req.authenticatedEmail && req.authenticatedEmail !== 'admin@gmail.com') {
       return res.status(403).json({ error: 'Solo puedes preparar tu propia carpeta personal.' });
     }
 
@@ -1296,7 +1303,7 @@ app.get('/api/gallery/:email/folders', requireFirebaseAuth, async (req, res) => 
   if (!validEmail(email)) {
     return res.status(400).json({ error: 'El email debe ser válido.' });
   }
-  if (email.toLowerCase().trim() !== req.authenticatedEmail && !isAdmin(req.authenticatedEmail)) {
+  if (email.toLowerCase().trim() !== req.authenticatedEmail && req.authenticatedEmail !== 'admin@gmail.com') {
     return res.status(403).json({ error: 'Solo puedes acceder a tus propias carpetas.' });
   }
 
@@ -1341,7 +1348,7 @@ app.get('/api/gallery/:email/folders', requireFirebaseAuth, async (req, res) => 
 // ---------------------------------------------
 // GOOGLE PHOTOS: CREAR CARPETA (ÁLBUM)
 // ---------------------------------------------
-app.post('/api/gallery/folders', requireFirebaseAuth, requireAdmin, async (req, res) => {
+app.post('/api/gallery/folders', requireFirebaseAuth, requireGalleryAdmin, async (req, res) => {
   const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
   const title = typeof req.body?.title === 'string' ? req.body.title.trim() : '';
   if (!validEmail(email) || !title || title.length > 100) {
@@ -1381,7 +1388,7 @@ app.post('/api/gallery/folders', requireFirebaseAuth, requireAdmin, async (req, 
 // ---------------------------------------------
 // GOOGLE PHOTOS: ASIGNAR ÁLBUM DEL ADMIN A CLIENTE
 // ---------------------------------------------
-app.post('/api/gallery/folders/assign', requireFirebaseAuth, requireAdmin, async (req, res) => {
+app.post('/api/gallery/folders/assign', requireFirebaseAuth, requireGalleryAdmin, async (req, res) => {
   const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
   const albumId = req.body?.albumId;
   if (!validEmail(email) || !validAlbumId(albumId)) {
@@ -1428,7 +1435,7 @@ app.get('/api/gallery/:email', requireFirebaseAuth, async (req, res) => {
   if (!validEmail(rawEmail)) {
     return res.status(400).json({ error: 'El email debe ser válido.' });
   }
-  if (rawEmail.toLowerCase().trim() !== req.authenticatedEmail && !isAdmin(req.authenticatedEmail)) {
+  if (rawEmail.toLowerCase().trim() !== req.authenticatedEmail && req.authenticatedEmail !== 'admin@gmail.com') {
     return res.status(403).json({ error: 'Solo puedes acceder a tu propia galería.' });
   }
   const cleanEmail = encodeEmail(rawEmail);
@@ -1475,7 +1482,7 @@ app.get('/api/gallery/:email', requireFirebaseAuth, async (req, res) => {
 // ---------------------------------------------
 // GOOGLE PHOTOS: SUBIR FOTOS AL ÁLBUM
 // ---------------------------------------------
-app.post('/api/upload-photos', requireFirebaseAuth, requireAdmin, (req, res, next) => {
+app.post('/api/upload-photos', requireFirebaseAuth, requireGalleryAdmin, (req, res, next) => {
   upload.array('photos', 5)(req, res, error => {
     if (!error) return next();
     if (error instanceof multer.MulterError) {
@@ -1583,8 +1590,8 @@ app.post('/api/delete-photo/:photoId', requireFirebaseAuth, async (req, res) => 
   if (!photoId || !validEmail(email) || !validAlbumId(requestedAlbumId)) {
     return res.status(400).json({ error: 'Falta photoId, email o carpeta válida.' });
   }
-  if (email.toLowerCase().trim() !== req.authenticatedEmail && !isAdmin(req.authenticatedEmail)) {
-    return res.status(403).json({ error: 'Solo puedes eliminar fotos de tu propia galería.' });
+  if (req.authenticatedEmail !== 'admin@gmail.com') {
+    return res.status(403).json({ error: 'Solo admin@gmail.com puede eliminar fotos.' });
   }
 
   const cleanEmail = encodeEmail(email);

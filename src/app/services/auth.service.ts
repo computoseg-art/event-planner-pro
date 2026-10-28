@@ -48,6 +48,8 @@ export class AuthService {
     return email === 'admin@gmail.com' || email === 'estebangarriga@gmail.com';
   });
 
+  esAdminGaleria = computed(() => this.usuarioLogueado() === 'admin@gmail.com');
+
   // --- LOGIN CON GOOGLE ---
   async loginConGoogle() {
     try {

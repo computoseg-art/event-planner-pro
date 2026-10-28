@@ -1,5 +1,6 @@
 import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { GalleryService, Photo } from '../../services/gallery.service';
@@ -24,6 +25,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
   targetEmail = '';
   selectedAlbumId = '';
   selectedFiles: File[] = [];
+  uploadProgress = '';
   errorMessage = '';
   isLoading = false;
   isUploading = false;
@@ -52,7 +54,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
     }
 
     const requestedEmail = this.route.snapshot.queryParamMap.get('email');
-    const esAdmin = this.auth.esAdmin();
+    const esAdmin = this.auth.esAdminGaleria();
     this.userEmail = esAdmin
       ? requestedEmail?.trim().toLowerCase() || currentEmail
       : currentEmail;
@@ -161,10 +163,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
     const input = event.target;
     if (input instanceof HTMLInputElement) {
       const files = Array.from(input.files || []);
-      if (files.length > 5) {
-        this.selectedFiles = [];
-        this.errorMessage = 'Puedes seleccionar hasta 5 fotos por vez.';
-      } else if (files.some(file => file.size > 25 * 1024 * 1024)) {
+      if (files.some(file => file.size > 25 * 1024 * 1024)) {
         this.selectedFiles = [];
         this.errorMessage = 'Cada foto debe pesar como máximo 25 MB.';
       } else if (files.some(file => ![
@@ -186,9 +185,9 @@ export class GalleryComponent implements OnInit, OnDestroy {
     }
   }
 
-  uploadPhotos(): void {
+  async uploadPhotos(): Promise<void> {
     if (
-      !this.auth.esAdmin() ||
+      !this.auth.esAdminGaleria() ||
       !this.userEmail ||
       !this.selectedAlbumId ||
       this.selectedFiles.length === 0 ||
@@ -201,24 +200,36 @@ export class GalleryComponent implements OnInit, OnDestroy {
     this.errorMessage = '';
     const targetEmail = this.userEmail;
     const albumId = this.selectedAlbumId;
-    this.galleryService.uploadPhotos(targetEmail, this.selectedFiles).subscribe({
-      next: () => {
-        this.selectedFiles = [];
+    const files = [...this.selectedFiles];
+    this.uploadProgress = `0 de ${files.length}`;
+
+    for (let index = 0; index < files.length; index += 5) {
+      const batch = files.slice(index, index + 5);
+      this.uploadProgress = `${index + 1}-${Math.min(index + batch.length, files.length)} de ${files.length}`;
+      try {
+        await firstValueFrom(this.galleryService.uploadPhotos(targetEmail, batch));
+      } catch (error) {
+        console.error('Error al subir fotos:', error);
+        this.selectedFiles = files.slice(index);
         this.isUploading = false;
-        this.loadGallery(targetEmail, albumId);
-      },
-      error: (err) => {
-        console.error('❌ Error al subir fotos:', err);
-        this.isUploading = false;
-        this.errorMessage = err.error?.error || 'No se pudieron subir las fotos. Intenta nuevamente.';
+        this.uploadProgress = '';
+        this.errorMessage = error instanceof HttpErrorResponse && typeof error.error?.error === 'string'
+          ? error.error.error
+          : 'No se pudieron subir todas las fotos. Intenta nuevamente.';
+        return;
       }
-    });
+    }
+
+    this.selectedFiles = [];
+    this.isUploading = false;
+    this.uploadProgress = '';
+    this.loadGallery(targetEmail, albumId);
   }
 
   deletePhoto(): void {
     if (
       this.isDeletingPhoto ||
-      (!this.auth.esAdmin() && this.userEmail !== this.auth.usuarioLogueado()) ||
+      !this.auth.esAdminGaleria() ||
       this.photos.length === 0 ||
       this.currentImageIndex < 0 ||
       !this.userEmail ||

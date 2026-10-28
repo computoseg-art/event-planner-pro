@@ -1,7 +1,7 @@
 <div class="gallery-page-container">
   <h1>Galería de fotos</h1>
 
-  @if (auth.esAdmin()) {
+  @if (auth.esAdminGaleria()) {
     <section class="gallery-admin-tools">
       <label for="target-email">Email del cliente</label>
       <div class="gallery-target-row">
@@ -19,7 +19,7 @@
           Las fotos se guardarán en la carpeta personal de Google Photos de
           <strong>{{ userEmail }}</strong>.
         </p>
-        <label for="photo-files" class="upload-label">Subir fotos originales (hasta 5 imágenes de 25 MB)</label>
+        <label for="photo-files" class="upload-label">Subir fotos originales (25 MB máximo por imagen)</label>
         <input
           id="photo-files"
           type="file"
@@ -31,7 +31,7 @@
           <div class="upload-action">
             <span>{{ selectedFiles.length }} foto(s) seleccionada(s)</span>
             <button type="button" (click)="uploadPhotos()" [disabled]="isUploading || !selectedAlbumId">
-              {{ isUploading ? 'Subiendo…' : 'Subir a esta galería' }}
+              {{ isUploading ? 'Subiendo ' + uploadProgress + '…' : 'Subir a esta galería' }}
             </button>
           </div>
         }
@@ -50,7 +50,7 @@
 
   @if (isLoading) {
     <div class="gallery-message">Cargando fotos…</div>
-  } @else if (auth.esAdmin() && !userEmail) {
+  } @else if (auth.esAdminGaleria() && !userEmail) {
     <div class="no-photos-message">
       <p>Ingresa el correo de un cliente para consultar y subir fotos a su carpeta personal.</p>
     </div>
@@ -59,7 +59,7 @@
       <app-image-carousel
         [images]="photoUrls"
         [initialIndex]="currentImageIndex"
-        [canDelete]="true"
+        [canDelete]="auth.esAdminGaleria()"
         [isDeleting]="isDeletingPhoto"
         (imageChanged)="onImageChanged($event)"
         (deletePhotoRequest)="deletePhoto()">
@@ -83,7 +83,10 @@
     </div>
   } @else {
     <div class="no-photos-message">
-      <p>Esta carpeta todavía no tiene fotos.</p>
+      <p>
+        No hay fotos disponibles en esta galería. Las fotos agregadas manualmente en Google Photos
+        no se sincronizan; el administrador debe subirlas desde la app.
+      </p>
     </div>
   }
 </div>
