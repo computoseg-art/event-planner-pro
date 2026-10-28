@@ -36,7 +36,7 @@ Configura el servicio con:
 - **Build Command:** `npm ci`
 - **Start Command:** `npm start`
 
-En **Environment** de Render, configura `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `FIREBASE_SERVICE_ACCOUNT_JSON`, `FIREBASE_DATABASE_URL`, `CLIENT_URL`, `BACKEND_PUBLIC_URL`, `BREVO_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME`, `EMAIL_TO` y las credenciales de Google Photos indicadas abajo. Render proporciona `PORT`; no hace falta definirlo manualmente.
+En **Environment** de Render, configura `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `FIREBASE_SERVICE_ACCOUNT_JSON`, `FIREBASE_DATABASE_URL`, `CLIENT_URL`, `BACKEND_PUBLIC_URL`, `BREVO_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME`, `EMAIL_TO`, `CONTACT_PHONE` y las credenciales de Google Photos indicadas abajo. Render proporciona `PORT`; no hace falta definirlo manualmente.
 
 - `MP_ACCESS_TOKEN`: credencial de producción de Mercado Pago. No la subas a Git ni la compartas por chat.
 - `MP_WEBHOOK_SECRET`: clave secreta de firma que muestra la configuración de Webhooks de Mercado Pago.
@@ -50,6 +50,7 @@ En **Environment** de Render, configura `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, 
 - `EMAIL_FROM`: dirección remitente que hayas verificado en Brevo. Verifica el remitente o dominio en Brevo antes de probar el formulario.
 - `EMAIL_FROM_NAME`: nombre que se muestra como remitente; usa `BSfotografia & Videografia`.
 - `EMAIL_TO`: destinatario del formulario de contacto; por ahora usa `esteban.garriga@gmail.com`. Para cambiar la cuenta más adelante, actualiza este valor en Render.
+- `CONTACT_PHONE`: teléfono incluido en los recordatorios de saldo; por defecto es `+598 97 403 118`.
 
 El formulario público envía mensajes al destinatario configurado en `EMAIL_TO`; el visitante no puede controlar el destinatario. El correo del visitante se establece como `Reply-To`. El backend usa la API HTTPS de Brevo (`api.brevo.com`) y no necesita conexiones SMTP ni puertos 465/587.
 
@@ -64,6 +65,8 @@ En Mercado Pago, registra `https://<BACKEND_PUBLIC_URL>/webhook` como URL de not
 Cuando Mercado Pago confirma un pago, el backend conserva la intención en `pagos_pendientes/<externalReference>` con `estado: "approved"` y además archiva el registro aprobado en `pagos_aprovados/<paymentId>`. El historial visible por cuenta queda en `historial_pagos/<usuario>/<paymentId>`. La escritura de estos tres registros se hace en una única actualización de Realtime Database; los datos de `pagos_pendientes` no se eliminan para preservar la trazabilidad del checkout.
 
 La seña es el 30 % del total y solo puede pagarse si faltan al menos 5 días para el evento. El saldo debe quedar pagado como máximo 3 días antes; al vencer ese plazo, la reserva se cancela y cualquier seña abonada se conserva sin devolución. El backend cancela las reservas vencidas al iniciar y luego las revisa cada hora.
+
+Al confirmarse una seña, la agenda muestra cuántos días quedan para completar el saldo. El backend envía un recordatorio al correo de la cuenta del cliente cada 24 horas desde la confirmación, indicando el saldo pendiente, los días hasta el vencimiento y el teléfono de contacto. Los avisos se detienen cuando la reserva queda pagada o vence el plazo. Este envío necesita `BREVO_API_KEY` y `EMAIL_FROM` configurados en Render; `CONTACT_PHONE` es opcional y tiene un valor predeterminado. Redepliega el backend después de cambiar sus variables de entorno.
 
 Al seleccionar todos los servicios de una categoría (15 años, bodas o extras), se aplica un 10 % de descuento a los servicios de esa categoría. El subtotal, descuento y total final quedan guardados en la reserva y se muestran en los correos de reserva y de pago.
 

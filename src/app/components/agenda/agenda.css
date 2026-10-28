@@ -290,6 +290,12 @@
   font-weight: 600;
 }
 
+.senia-recordatorio {
+  color: #fbbf24;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
 /* Botón Pagar Solo Esta Reserva */
 .btn-pagar-solo {
   width: 100%;

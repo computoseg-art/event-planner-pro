@@ -15,6 +15,7 @@ export interface Reserva {
   total: number;
   descuento?: number;
   pagado: number;
+  seniaConfirmadaAt?: string;
   estado: 'pendiente' | 'pagado' | 'caducada' | 'completado';
 }
 

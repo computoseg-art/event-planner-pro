@@ -59,6 +59,20 @@ export class AgendaComponent implements OnInit {
     return Math.floor((evento - hoyUtc) / 86400000);
   }
 
+  diasParaCompletarPago(fecha: string): number {
+    const [year, month, day] = fecha.split('T')[0].split('-').map(Number);
+    const deadline = Date.UTC(year, month - 1, day - 3);
+    const todayParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Montevideo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date());
+    const todayPart = (type: string) => Number(todayParts.find(part => part.type === type)?.value);
+    const today = Date.UTC(todayPart('year'), todayPart('month') - 1, todayPart('day'));
+    return Math.max(Math.floor((deadline - today) / 86400000), 0);
+  }
+
   ngOnInit() {
     this.route.queryParams.pipe(take(1)).subscribe((params) => {
       const paymentId = params['payment_id'] || params['collection_id'];

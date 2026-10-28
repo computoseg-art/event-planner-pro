@@ -55,6 +55,8 @@ const PORT = Number(process.env.PORT || 3000);
 const clientUrl = process.env.CLIENT_URL.replace(/\/+$/, '');
 const backendPublicUrl = process.env.BACKEND_PUBLIC_URL.replace(/\/+$/, '');
 const clientOrigin = new URL(clientUrl).origin;
+const contactPhone = process.env.CONTACT_PHONE?.trim() || '+598 97 403 118';
+const seniaRecordatorioInterval = 24 * 60 * 60 * 1000;
 
 if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
   throw new Error('PORT debe ser un puerto TCP válido.');
@@ -847,6 +849,10 @@ async function applyApprovedPayment(paymentId, verifiedPayment) {
     .ref(`historial_pagos/${userKey}/${paymentId}`)
     .get();
   const paymentAlreadyRecorded = existingPaymentSnapshot.exists();
+  const approvedAt = typeof payment.date_approved === 'string' &&
+    Number.isFinite(Date.parse(payment.date_approved))
+    ? new Date(payment.date_approved).toISOString()
+    : new Date().toISOString();
 
   for (const allocation of intent.allocations) {
     let reservationRef = db.ref(`reservas/${userKey}/${allocation.id}`);
@@ -1007,6 +1013,12 @@ async function applyApprovedPayment(paymentId, verifiedPayment) {
         }
         reservation.estado =
           toMinorUnits(reservation.pagado) >= toMinorUnits(total) ? 'pagado' : 'pendiente';
+        if (
+          (allocation.tipoPago || intent.tipoPago) === 'senia' &&
+          !reservation.seniaConfirmadaAt
+        ) {
+          reservation.seniaConfirmadaAt = approvedAt;
+        }
         reservation.pagosMercadoPago = reservation.pagosMercadoPago || {};
         reservation.pagosMercadoPago[paymentId] = true;
         return reservation;
@@ -1901,8 +1913,7 @@ async function cancelarReservasVencidas() {
   const fechasOcupadas = fechasSnapshot.val() || {};
   if (!reservasPorUsuario || typeof reservasPorUsuario !== 'object') return;
 
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
+  const hoy = fechaActualUruguay();
   const cambios = {};
 
   for (const [userKey, reservas] of Object.entries(reservasPorUsuario)) {
@@ -1914,20 +1925,8 @@ async function cancelarReservasVencidas() {
       const pagado = Number(reserva.pagado || 0);
       if (total <= 0 || pagado >= total) continue;
 
-      const [year, month, day] = String(reserva.fecha).split('T')[0].split('-').map(Number);
-      const fechaEvento = new Date(year, month - 1, day);
-      if (
-        Number.isNaN(fechaEvento.getTime()) ||
-        fechaEvento.getFullYear() !== year ||
-        fechaEvento.getMonth() !== month - 1 ||
-        fechaEvento.getDate() !== day
-      ) {
-        continue;
-      }
-
-      const fechaLimite = new Date(fechaEvento);
-      fechaLimite.setDate(fechaEvento.getDate() - 3);
-      if (hoy <= fechaLimite) continue;
+      const fechaLimite = fechaLimitePago(reserva.fecha);
+      if (!fechaLimite || hoy <= fechaLimite) continue;
 
       const reservationId = String(reserva.id || reservationKey);
       if (reserva.estado !== 'caducada') {
@@ -1945,15 +1944,273 @@ async function cancelarReservasVencidas() {
   }
 }
 
+function fechaLimitePago(fecha) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(fecha || '').split('T')[0]);
+  if (!match) return null;
+  const [, yearText, monthText, dayText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const fechaEvento = new Date(Date.UTC(year, month - 1, day));
+  if (
+    fechaEvento.getUTCFullYear() !== year ||
+    fechaEvento.getUTCMonth() !== month - 1 ||
+    fechaEvento.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  fechaEvento.setUTCDate(fechaEvento.getUTCDate() - 3);
+  return fechaEvento;
+}
+
+function fechaActualUruguay(ahora = new Date()) {
+  const partes = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Montevideo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(ahora);
+  const obtener = tipo => Number(partes.find(parte => parte.type === tipo)?.value);
+  return new Date(Date.UTC(obtener('year'), obtener('month') - 1, obtener('day')));
+}
+
+function diasHastaFechaLimite(fecha, ahora = new Date()) {
+  const limite = fechaLimitePago(fecha);
+  if (!limite) return null;
+  const hoy = fechaActualUruguay(ahora);
+  return Math.floor((limite.getTime() - hoy.getTime()) / seniaRecordatorioInterval);
+}
+
+async function enviarRecordatorioSaldo(email, reserva, saldo, diasRestantes) {
+  const brevoApiKey = process.env.BREVO_API_KEY?.trim();
+  const emailFrom = process.env.EMAIL_FROM?.trim();
+  if (!brevoApiKey || !emailFrom || !validEmail(emailFrom) || !validEmail(email)) {
+    throw new Error('La configuración de email para recordatorios de saldo no es válida.');
+  }
+
+  const fechaEvento = String(reserva.fecha).split('T')[0];
+  const fechaLimite = fechaLimitePago(fechaEvento);
+  if (!fechaLimite) throw new Error('La fecha de la reserva no es válida para enviar el recordatorio.');
+  const fechaLimiteTexto = fechaLimite.toLocaleDateString('es-UY', { timeZone: 'UTC' });
+  const asunto = `Recordatorio de saldo: quedan ${diasRestantes} días`;
+  const texto = [
+    'Hola,',
+    '',
+    `Te recordamos que queda un saldo de ${formatoMonto(saldo)} para completar el pago de tu evento.`,
+    `Fecha del evento: ${fechaEvento}`,
+    `Días restantes para completar el pago: ${diasRestantes}`,
+    `Fecha límite: ${fechaLimiteTexto} (3 días antes del evento).`,
+    `Consultas: ${contactPhone}`,
+    '',
+    'Este recordatorio se enviará cada 24 horas mientras el saldo siga pendiente y no haya vencido el plazo.',
+  ].join('\n');
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:620px;margin:auto;padding:24px;color:#332927;line-height:1.6">
+      <h2 style="color:#722f4d">Recordatorio de saldo pendiente</h2>
+      <p>Hola, te recordamos que queda un saldo de <strong>${escaparHtml(formatoMonto(saldo))}</strong> para completar el pago de tu evento.</p>
+      <p><strong>Fecha del evento:</strong> ${escaparHtml(fechaEvento)}<br>
+      <strong>Días restantes para completar el pago:</strong> ${diasRestantes}<br>
+      <strong>Fecha límite:</strong> ${escaparHtml(fechaLimiteTexto)} (3 días antes del evento).</p>
+      <p>Si tienes alguna consulta, comunícate al <strong>${escaparHtml(contactPhone)}</strong>.</p>
+      <p style="color:#777;font-size:12px">Este aviso se envía cada 24 horas mientras exista saldo pendiente y el plazo no haya vencido.</p>
+    </div>
+  `;
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      accept: 'application/json',
+      'api-key': brevoApiKey,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      sender: {
+        name: process.env.EMAIL_FROM_NAME?.trim() || 'BSfotografia & Videografia',
+        email: emailFrom,
+      },
+      to: [{ email }],
+      subject: asunto,
+      textContent: texto,
+      htmlContent: html,
+    }),
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!response.ok) {
+    const providerResponse = await response.text();
+    throw new Error(`Brevo respondió ${response.status}: ${providerResponse.slice(0, 300)}`);
+  }
+}
+
+async function enviarRecordatoriosDeSaldo() {
+  const snapshot = await db.ref('reservas').get();
+  const reservasPorUsuario = snapshot.val();
+  if (!reservasPorUsuario || typeof reservasPorUsuario !== 'object') return;
+
+  const ahora = Date.now();
+  for (const [userKey, reservas] of Object.entries(reservasPorUsuario)) {
+    if (!reservas || typeof reservas !== 'object') continue;
+    for (const [reservationKey, reserva] of Object.entries(reservas)) {
+      if (!reserva || typeof reserva !== 'object' || !reserva.fecha) continue;
+      const total = Number(reserva.total || 0);
+      const pagado = Number(reserva.pagado || 0);
+      const saldo = Math.round((total - pagado) * 100) / 100;
+      if (
+        total <= 0 ||
+        pagado <= 0 ||
+        saldo <= 0 ||
+        reserva.estado === 'caducada'
+      ) {
+        continue;
+      }
+      const email = String(reserva.usuario || '').trim().toLowerCase();
+      if (!validEmail(email)) {
+        console.error('No se pudo enviar el recordatorio: la reserva no tiene un email válido.', {
+          reservationId: reservationKey,
+          userKey,
+        });
+        continue;
+      }
+
+      const limite = fechaLimitePago(reserva.fecha);
+      if (!limite) {
+        console.error('No se pudo calcular el vencimiento del recordatorio de saldo:', {
+          reservationId: reservationKey,
+          fecha: reserva.fecha,
+        });
+        continue;
+      }
+      const hoy = fechaActualUruguay();
+      if (hoy > limite) continue;
+
+      const reservationRef = db.ref(`reservas/${userKey}/${reservationKey}`);
+      if (!reserva.seniaConfirmadaAt) {
+        await reservationRef.transaction(current => {
+          if (!current || current.seniaConfirmadaAt) return;
+          if (
+            Number(current.total || 0) <= 0 ||
+            Number(current.pagado || 0) <= 0 ||
+            Number(current.pagado || 0) >= Number(current.total || 0) ||
+            current.estado === 'caducada'
+          ) {
+            return;
+          }
+          return { ...current, seniaConfirmadaAt: new Date(ahora).toISOString() };
+        });
+        continue;
+      }
+
+      const seniaConfirmadaAt = Date.parse(reserva.seniaConfirmadaAt);
+      if (!Number.isFinite(seniaConfirmadaAt)) {
+        console.error('La fecha de confirmación de seña no es válida:', {
+          reservationId: reservationKey,
+          seniaConfirmadaAt: reserva.seniaConfirmadaAt,
+        });
+        continue;
+      }
+
+      const reminderRef = db.ref(`recordatorios_senia/${userKey}/${reservationKey}`);
+      const reminderSnapshot = await reminderRef.get();
+      const lastSentAt = Date.parse(reminderSnapshot.child('enviado').val() || '');
+      const nextDueAt = Number.isFinite(lastSentAt)
+        ? lastSentAt + seniaRecordatorioInterval
+        : seniaConfirmadaAt + seniaRecordatorioInterval;
+      if (ahora < nextDueAt) continue;
+
+      let sendingRecently = false;
+      const claim = await reminderRef.transaction(current => {
+        const lastSent = Date.parse(current?.enviado || '');
+        const startedAt = Date.parse(current?.iniciado || '');
+        sendingRecently =
+          current?.estado === 'sending' &&
+          Number.isFinite(startedAt) &&
+          ahora - startedAt < 2 * 60 * 1000;
+        if (
+          sendingRecently ||
+          (Number.isFinite(lastSent) && ahora - lastSent < seniaRecordatorioInterval)
+        ) {
+          return;
+        }
+        return {
+          ...(current || {}),
+          estado: 'sending',
+          iniciado: new Date(ahora).toISOString(),
+          destinatario: reserva.usuario,
+        };
+      });
+      if (!claim.committed) continue;
+
+      try {
+        const latestSnapshot = await reservationRef.get();
+        const latest = latestSnapshot.val();
+        if (
+          !latest ||
+          latest.estado === 'caducada' ||
+          Number(latest.total || 0) <= Number(latest.pagado || 0) ||
+          diasHastaFechaLimite(latest.fecha, new Date(ahora)) < 0
+        ) {
+          await reminderRef.update({
+            estado: 'stopped',
+            actualizado: new Date(ahora).toISOString(),
+          });
+          continue;
+        }
+
+        const latestEmail = String(latest.usuario || '').trim().toLowerCase();
+        if (!validEmail(latestEmail)) {
+          throw new Error('La reserva no tiene un email de cliente válido.');
+        }
+        const latestSaldo = Math.round(
+          (Number(latest.total) - Number(latest.pagado || 0)) * 100
+        ) / 100;
+        const diasRestantes = diasHastaFechaLimite(latest.fecha, new Date(ahora));
+        if (latestSaldo <= 0 || diasRestantes === null) {
+          await reminderRef.update({
+            estado: 'stopped',
+            actualizado: new Date(ahora).toISOString(),
+          });
+          continue;
+        }
+
+        await enviarRecordatorioSaldo(latestEmail, latest, latestSaldo, diasRestantes);
+        await reminderRef.update({
+          estado: 'sent',
+          enviado: new Date(ahora).toISOString(),
+          destinatario: latestEmail,
+          monto: latestSaldo,
+          diasRestantes,
+        });
+      } catch (error) {
+        await reminderRef.update({
+          estado: 'failed',
+          error: error instanceof Error ? error.message.slice(0, 300) : String(error).slice(0, 300),
+          actualizado: new Date().toISOString(),
+        });
+        console.error('No se pudo enviar el recordatorio de saldo:', {
+          reservationId: reservationKey,
+          email: reserva.usuario,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  }
+}
+
 const ejecutarCancelacionReservasVencidas = () => {
   cancelarReservasVencidas().catch((error) => {
     console.error('No se pudieron cancelar las reservas vencidas:', error);
+  });
+};
+const ejecutarRecordatoriosDeSaldo = () => {
+  enviarRecordatoriosDeSaldo().catch((error) => {
+    console.error('No se pudieron revisar los recordatorios de saldo:', error);
   });
 };
 
 ejecutarCancelacionReservasVencidas();
 const cancelacionReservasTimer = setInterval(ejecutarCancelacionReservasVencidas, 60 * 60 * 1000);
 cancelacionReservasTimer.unref();
+ejecutarRecordatoriosDeSaldo();
+const recordatoriosDeSaldoTimer = setInterval(ejecutarRecordatoriosDeSaldo, 15 * 60 * 1000);
+recordatoriosDeSaldoTimer.unref();
 
 app.listen(PORT, () => {
   console.log(`Backend de BSfotografia & Videografia ejecutándose en el puerto ${PORT}`);

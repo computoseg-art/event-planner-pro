@@ -171,6 +171,18 @@
                     </p>
                   }
 
+                  @if (
+                    res.seniaConfirmadaAt &&
+                    (res.pagado || 0) < res.total &&
+                    !esReservaCaducada(res)
+                  ) {
+                    <p class="senia-recordatorio">
+                      Seña recibida · Quedan
+                      <strong>{{ diasParaCompletarPago(res.fecha) }} días</strong>
+                      para completar el pago.
+                    </p>
+                  }
+
                   @if (res.total - (res.pagado || 0) > 0) {
                     <p class="saldo-pendiente">
                       Saldo pendiente: <strong>${{ res.total - (res.pagado || 0) | number }}</strong>
@@ -207,6 +219,16 @@
                 <span>Total: ${{ res.total | number }}</span>
                 @if (res.pagado > 0) {
                   <span class="pagado-mini"> | Pagó: ${{ res.pagado | number }}</span>
+                }
+                @if (
+                  res.seniaConfirmadaAt &&
+                  (res.pagado || 0) < res.total &&
+                  !esReservaCaducada(res)
+                ) {
+                  <span class="senia-recordatorio">
+                    · Seña recibida: quedan {{ diasParaCompletarPago(res.fecha) }} días para abonar
+                    ${{ res.total - (res.pagado || 0) | number }}
+                  </span>
                 }
 
                 @if (res.total - (res.pagado || 0) > 0 && !auth.esAdmin() && !esReservaCaducada(res)) {
