@@ -1526,7 +1526,20 @@ app.get('/api/gallery/:email', requireFirebaseAuth, async (req, res) => {
     res.status(200).json(photos);
 
   } catch (error) {
-    console.error('❌ Error al cargar galería:', error.message);
+    const googleError = error.response?.data?.error;
+    const googleMessage = typeof googleError?.message === 'string'
+      ? googleError.message
+      : undefined;
+    console.error('❌ Error al cargar galería:', {
+      status: error.response?.status,
+      code: googleError?.status,
+      message: googleMessage || error.message,
+    });
+    if (googleMessage) {
+      return res.status(502).json({
+        error: `Google Photos no pudo abrir este álbum: ${googleMessage}`,
+      });
+    }
     res.status(500).json({
       error: galleryErrorMessage(error, 'Error al recuperar imágenes de la galería.'),
     });
