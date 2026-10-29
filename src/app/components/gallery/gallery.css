@@ -26,6 +26,18 @@
   box-shadow: 0 14px 40px rgb(45 35 31 / 7%);
 }
 
+.gallery-b2-check {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e8e1d8;
+}
+
+.gallery-b2-check p {
+  margin: 0;
+}
+
 .gallery-admin-tools label {
   color: #403632;
   font-size: 0.84rem;
@@ -133,6 +145,44 @@
   margin: 17px 0 28px;
 }
 
+.gallery-collections,
+.photo-preferences {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 auto 24px;
+}
+
+.gallery-collections button,
+.photo-preferences button {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid #ddd4ca;
+  border-radius: 3px;
+  background: #fffdfa;
+  color: #403632;
+  cursor: pointer;
+  font-weight: 700;
+  transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.gallery-collections button.active,
+.photo-preferences button.selected {
+  border-color: #722f4d;
+  background: #722f4d;
+  color: #fff;
+}
+
+.photo-preferences {
+  margin-top: 20px;
+}
+
+.photo-preferences button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .thumbnail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -140,6 +190,7 @@
 }
 
 .thumbnail-item {
+  position: relative;
   overflow: hidden;
   aspect-ratio: 4 / 3;
   border: 2px solid transparent;
@@ -147,6 +198,24 @@
   background: #eee8e0;
   cursor: pointer;
   transition: border-color 180ms ease, transform 180ms ease;
+}
+
+.thumbnail-item.favorite::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(transparent 62%, rgb(31 22 26 / 52%));
+  content: '';
+  pointer-events: none;
+}
+
+.thumbnail-favorite {
+  position: absolute;
+  right: 8px;
+  bottom: 5px;
+  z-index: 1;
+  color: #fff;
+  font-size: 1.15rem;
+  text-shadow: 0 1px 5px rgb(0 0 0 / 60%);
 }
 
 .thumbnail-item:hover {

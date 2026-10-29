@@ -18,6 +18,8 @@ El formulario de contacto local requiere `BREVO_API_KEY` y `EMAIL_FROM` (remiten
 
 Para usar la galería, completa también `ADMIN_EMAILS`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` y `REFRESH_TOKEN` en `.env`. `MP_ACCESS_TOKEN` solo sirve para Mercado Pago; no autoriza a Google Photos. La integración usa los permisos vigentes de Google Photos Library: `photoslibrary.appendonly` para crear álbumes y subir imágenes, `photoslibrary.readonly.appcreateddata` para listar el contenido creado por la aplicación y `photoslibrary.edit.appcreateddata` para quitar imágenes de los álbumes de la aplicación.
 
+Para preparar la integración de Backblaze B2, agrega `B2_KEY_ID`, `B2_APPLICATION_KEY`, `B2_BUCKET_NAME`, `B2_ENDPOINT` y `B2_REGION` a `.env` usando una Application Key limitada al bucket privado. Nunca guardes esas credenciales en Angular, en Git ni en mensajes. El administrador puede verificar la conexión desde la sección de galería; esta comprobación no sube ni borra archivos.
+
 `getToken.js` lee `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y `GOOGLE_REDIRECT_URI` desde `.env`; no requiere `credentials.json`. Para obtener el refresh token, registra en Google Cloud el URI local `http://127.0.0.1:3000/oauth2callback` como URI de redirección autorizada, configura ese mismo valor en `GOOGLE_REDIRECT_URI`, y ejecuta desde `backend-agenda`:
 
 ```powershell
@@ -36,7 +38,7 @@ Configura el servicio con:
 - **Build Command:** `npm ci`
 - **Start Command:** `npm start`
 
-En **Environment** de Render, configura `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `FIREBASE_SERVICE_ACCOUNT_JSON`, `FIREBASE_DATABASE_URL`, `CLIENT_URL`, `BACKEND_PUBLIC_URL`, `BREVO_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME`, `EMAIL_TO`, `CONTACT_PHONE` y las credenciales de Google Photos indicadas abajo. Render proporciona `PORT`; no hace falta definirlo manualmente.
+En **Environment** de Render, configura `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `FIREBASE_SERVICE_ACCOUNT_JSON`, `FIREBASE_DATABASE_URL`, `CLIENT_URL`, `BACKEND_PUBLIC_URL`, `BREVO_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME`, `EMAIL_TO`, `CONTACT_PHONE` y las credenciales de Google Photos indicadas abajo. Para la conexión a B2 agrega además `B2_KEY_ID`, `B2_APPLICATION_KEY`, `B2_BUCKET_NAME`, `B2_ENDPOINT` y `B2_REGION`. Render proporciona `PORT`; no hace falta definirlo manualmente.
 
 - `MP_ACCESS_TOKEN`: credencial de producción de Mercado Pago. No la subas a Git ni la compartas por chat.
 - `MP_WEBHOOK_SECRET`: clave secreta de firma que muestra la configuración de Webhooks de Mercado Pago.
@@ -46,6 +48,10 @@ En **Environment** de Render, configura `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, 
 - `BACKEND_PUBLIC_URL`: URL pública actual de Render (`https://event-planner-pro-k978.onrender.com`), sin barra final.
 - `ADMIN_EMAILS`: lista separada por comas de los correos administradores autorizados para administrar carpetas, subir fotos y borrar fotos de cualquier galería. Debe coincidir con los administradores configurados en el frontend.
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` y `REFRESH_TOKEN`: credenciales OAuth de Google Photos usadas por el backend para crear álbumes y subir/leer imágenes. Configúralas como variables secretas en Render y no las subas a Git.
+- `B2_KEY_ID` y `B2_APPLICATION_KEY`: credenciales de la Application Key restringida al bucket privado. No uses la Master Application Key.
+- `B2_BUCKET_NAME`: nombre del bucket, por ejemplo `bsfotografia-galerias-uy-2026`.
+- `B2_ENDPOINT`: endpoint S3 de la región del bucket, por ejemplo `https://s3.us-east-005.backblazeb2.com`.
+- `B2_REGION`: región S3 del bucket, por ejemplo `us-east-005`.
 - `BREVO_API_KEY`: clave API transaccional creada en Brevo. Guárdala como secreto en Render; no la publiques ni la compartas por chat.
 - `EMAIL_FROM`: dirección remitente que hayas verificado en Brevo. Verifica el remitente o dominio en Brevo antes de probar el formulario.
 - `EMAIL_FROM_NAME`: nombre que se muestra como remitente; usa `BSfotografia & Videografia`.

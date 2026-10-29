@@ -44,19 +44,53 @@ export class GalleryComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
 
   photos: Photo[] = [];
-  photoUrls: string[] = [];
   userEmail = '';
   targetEmail = '';
   selectedAlbumId = '';
   selectedFiles: File[] = [];
   uploadProgress = '';
   errorMessage = '';
+  b2StorageStatus = '';
   isLoading = false;
   isUploading = false;
   isDeletingPhoto = false;
+  isSavingPreference = false;
+  isCheckingB2Storage = false;
   currentImageIndex: number = 0;
+  activeCollection: 'gallery' | 'favorites' | 'hidden' = 'gallery';
   private photoRefreshTimer?: ReturnType<typeof setInterval>;
   private lastPhotoRefreshAt = 0;
+
+  get visiblePhotos(): Photo[] {
+    switch (this.activeCollection) {
+      case 'favorites':
+        return this.photos.filter(photo => photo.isFavorite && !photo.isHidden);
+      case 'hidden':
+        return this.photos.filter(photo => photo.isHidden);
+      default:
+        return this.photos.filter(photo => !photo.isHidden);
+    }
+  }
+
+  get photoUrls(): string[] {
+    return this.visiblePhotos.map(photo => photo.baseUrl);
+  }
+
+  get currentPhoto(): Photo | undefined {
+    return this.visiblePhotos[this.currentImageIndex];
+  }
+
+  get visiblePhotoCount(): number {
+    return this.photos.filter(photo => !photo.isHidden).length;
+  }
+
+  get favoritePhotoCount(): number {
+    return this.photos.filter(photo => photo.isFavorite && !photo.isHidden).length;
+  }
+
+  get hiddenPhotoCount(): number {
+    return this.photos.filter(photo => photo.isHidden).length;
+  }
 
   async ngOnInit(): Promise<void> {
     this.isLoading = true;
@@ -104,7 +138,6 @@ export class GalleryComponent implements OnInit, OnDestroy {
       if (this.userEmail === email) {
         this.isLoading = false;
         this.photos = [];
-        this.photoUrls = [];
         this.errorMessage = this.galleryService.provisioningErrorMessage(error);
       }
     }
@@ -139,7 +172,6 @@ export class GalleryComponent implements OnInit, OnDestroy {
   loadGallery(email: string, albumId = this.selectedAlbumId): void {
     if (!albumId) {
       this.photos = [];
-      this.photoUrls = [];
       this.isLoading = false;
       return;
     }
@@ -148,7 +180,6 @@ export class GalleryComponent implements OnInit, OnDestroy {
     this.galleryService.getPhotos(email, albumId).subscribe({
       next: data => {
         this.photos = data;
-        this.photoUrls = data.map(photo => photo.baseUrl);
         this.currentImageIndex = 0;
         this.lastPhotoRefreshAt = Date.now();
         this.isLoading = false;
@@ -157,7 +188,6 @@ export class GalleryComponent implements OnInit, OnDestroy {
         console.error('Error al cargar la galería:', err);
         this.isLoading = false;
         this.photos = [];
-        this.photoUrls = [];
         this.errorMessage = err.error?.error || 'No se pudo cargar la carpeta. Intenta nuevamente.';
       }
     });
@@ -179,8 +209,71 @@ export class GalleryComponent implements OnInit, OnDestroy {
     this.userEmail = email;
     this.selectedAlbumId = '';
     this.photos = [];
-    this.photoUrls = [];
+    this.activeCollection = 'gallery';
     void this.loadPersonalGallery(email);
+  }
+
+  checkB2Storage(): void {
+    if (this.isCheckingB2Storage || !this.auth.esAdminGaleria()) return;
+    this.isCheckingB2Storage = true;
+    this.b2StorageStatus = '';
+    this.galleryService.checkB2Storage().subscribe({
+      next: status => {
+        this.b2StorageStatus =
+          `Conexión correcta con ${status.bucketName} (${status.region}).`;
+        this.isCheckingB2Storage = false;
+      },
+      error: error => {
+        console.error('No se pudo verificar la conexión a Backblaze B2:', error);
+        this.b2StorageStatus =
+          error.error?.error || 'No se pudo conectar con B2. Revisa las variables del backend.';
+        this.isCheckingB2Storage = false;
+      }
+    });
+  }
+
+  setCollection(collection: 'gallery' | 'favorites' | 'hidden'): void {
+    this.activeCollection = collection;
+    this.currentImageIndex = 0;
+  }
+
+  toggleFavorite(): void {
+    const photo = this.currentPhoto;
+    if (photo) {
+      this.savePhotoPreference(photo, !photo.isFavorite, photo.isHidden);
+    }
+  }
+
+  toggleHidden(): void {
+    const photo = this.currentPhoto;
+    if (photo) {
+      this.savePhotoPreference(photo, photo.isFavorite, !photo.isHidden);
+    }
+  }
+
+  private savePhotoPreference(photo: Photo, isFavorite: boolean, isHidden: boolean): void {
+    if (this.isSavingPreference || !this.selectedAlbumId) return;
+    this.isSavingPreference = true;
+    this.errorMessage = '';
+    this.galleryService.updatePhotoPreference(this.selectedAlbumId, photo.id, {
+      isFavorite,
+      isHidden,
+    }).subscribe({
+      next: preference => {
+        Object.assign(photo, preference);
+        this.isSavingPreference = false;
+        this.currentImageIndex = Math.min(
+          this.currentImageIndex,
+          Math.max(0, this.visiblePhotos.length - 1)
+        );
+      },
+      error: error => {
+        console.error('No se pudo guardar la preferencia de la foto:', error);
+        this.isSavingPreference = false;
+        this.errorMessage =
+          error.error?.error || 'No se pudo guardar la preferencia. Intenta nuevamente.';
+      }
+    });
   }
 
   setSelectedFiles(event: Event): void {
@@ -246,15 +339,15 @@ export class GalleryComponent implements OnInit, OnDestroy {
     if (
       this.isDeletingPhoto ||
       !this.auth.esAdminGaleria() ||
-      this.photos.length === 0 ||
-      this.currentImageIndex < 0 ||
+      !this.currentPhoto ||
       !this.userEmail ||
       !this.selectedAlbumId
     ) {
       return;
     }
 
-    const photoToDelete = this.photos[this.currentImageIndex];
+    const photoToDelete = this.currentPhoto;
+    if (!photoToDelete) return;
 
     if (!confirm('¿Seguro que deseas eliminar esta foto? Esta acción no se puede deshacer.')) {
       return;

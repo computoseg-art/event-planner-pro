@@ -10,6 +10,7 @@ import { MercadoPagoConfig, Payment, Preference } from 'mercadopago';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getDatabase } from 'firebase-admin/database';
+import { HeadBucketCommand, S3Client } from '@aws-sdk/client-s3';
 
 import { google } from 'googleapis';
 import axios from 'axios';
@@ -49,6 +50,45 @@ const firebaseApp = initializeApp({
 
 const auth = getAuth(firebaseApp);
 const db = getDatabase(firebaseApp);
+const b2Environment = {
+  keyId: process.env.B2_KEY_ID?.trim() || '',
+  applicationKey: process.env.B2_APPLICATION_KEY?.trim() || '',
+  bucketName: process.env.B2_BUCKET_NAME?.trim() || '',
+  endpoint: process.env.B2_ENDPOINT?.trim() || '',
+  region: process.env.B2_REGION?.trim() || '',
+};
+const missingB2Environment = Object.entries({
+  B2_KEY_ID: b2Environment.keyId,
+  B2_APPLICATION_KEY: b2Environment.applicationKey,
+  B2_BUCKET_NAME: b2Environment.bucketName,
+  B2_ENDPOINT: b2Environment.endpoint,
+  B2_REGION: b2Environment.region,
+})
+  .filter(([, value]) => !value)
+  .map(([name]) => name);
+let b2Client = null;
+if (missingB2Environment.length === 0) {
+  const b2Endpoint = new URL(b2Environment.endpoint);
+  if (b2Endpoint.protocol !== 'https:') {
+    throw new Error('B2_ENDPOINT debe usar HTTPS.');
+  }
+  if (!/^[a-z0-9-]{1,63}$/.test(b2Environment.bucketName)) {
+    throw new Error('B2_BUCKET_NAME no tiene un formato válido.');
+  }
+  if (!/^[a-z0-9-]{1,63}$/.test(b2Environment.region)) {
+    throw new Error('B2_REGION no tiene un formato válido.');
+  }
+  b2Client = new S3Client({
+    region: b2Environment.region,
+    endpoint: b2Endpoint.origin,
+    forcePathStyle: true,
+    credentials: {
+      accessKeyId: b2Environment.keyId,
+      secretAccessKey: b2Environment.applicationKey,
+    },
+    maxAttempts: 2,
+  });
+}
 const preferenceClient = new Preference(new MercadoPagoConfig({ accessToken }));
 const paymentClient = new Payment(new MercadoPagoConfig({ accessToken }));
 const app = express();
@@ -112,7 +152,7 @@ app.use(cors({
       callback(null, false);
     }
   },
-  methods: ['GET', 'POST', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
@@ -130,6 +170,18 @@ function encodeEmail(email) {
 
 function validAlbumId(albumId) {
   return typeof albumId === 'string' && /^[A-Za-z0-9_-]{1,256}$/.test(albumId);
+}
+
+function validPhotoId(photoId) {
+  return typeof photoId === 'string'
+    && photoId.length > 0
+    && photoId.length <= 1024
+    && photoId.trim() === photoId
+    && !/[\u0000-\u001f\u007f]/.test(photoId);
+}
+
+function photoPreferenceKey(photoId) {
+  return Buffer.from(photoId, 'utf8').toString('base64url');
 }
 
 function galleryErrorMessage(error, fallback) {
@@ -1384,6 +1436,41 @@ app.get('/api/gallery/:email/folders', requireFirebaseAuth, async (req, res) => 
 });
 
 // ---------------------------------------------
+// BACKBLAZE B2: VERIFICAR CONFIGURACIÓN Y ACCESO
+// ---------------------------------------------
+app.get('/api/gallery/storage-status', requireFirebaseAuth, requireGalleryAdmin, async (_req, res) => {
+  if (!b2Client) {
+    return res.status(503).json({
+      error: missingB2Environment.length
+        ? `Faltan variables de Backblaze B2: ${missingB2Environment.join(', ')}.`
+        : 'Backblaze B2 no está configurado.',
+    });
+  }
+
+  try {
+    await b2Client.send(
+      new HeadBucketCommand({ Bucket: b2Environment.bucketName }),
+      { abortSignal: AbortSignal.timeout(10000) }
+    );
+    return res.status(200).json({
+      configured: true,
+      connected: true,
+      bucketName: b2Environment.bucketName,
+      region: b2Environment.region,
+    });
+  } catch (error) {
+    console.error('No se pudo verificar el acceso al bucket de Backblaze B2:', {
+      name: error.name,
+      code: error.Code || error.code,
+      statusCode: error.$metadata?.httpStatusCode,
+    });
+    return res.status(502).json({
+      error: 'El backend no pudo acceder al bucket de Backblaze B2. Revisa el bucket, endpoint, región y permisos de la clave.',
+    });
+  }
+});
+
+// ---------------------------------------------
 // GOOGLE PHOTOS: CREAR CARPETA (ÁLBUM)
 // ---------------------------------------------
 app.post('/api/gallery/folders', requireFirebaseAuth, requireGalleryAdmin, async (req, res) => {
@@ -1490,6 +1577,10 @@ app.get('/api/gallery/:email', requireFirebaseAuth, async (req, res) => {
     }
 
     const token = await getGooglePhotosToken();
+    const preferenceSnapshot = await db
+      .ref(`gallery_photo_preferences/${req.authenticatedUid}/${albumData.albumId}`)
+      .once('value');
+    const preferences = preferenceSnapshot.val() || {};
 
     const photosResponse = await axios.post(
       'https://photoslibrary.googleapis.com/v1/mediaItems:search',
@@ -1520,7 +1611,9 @@ app.get('/api/gallery/:email', requireFirebaseAuth, async (req, res) => {
       thumbnailUrl: `${p.baseUrl}=w320-h240`,
       downloadUrl: `${p.baseUrl}=d`,
       filename: p.filename,
-      mimeType: p.mimeType
+      mimeType: p.mimeType,
+      isFavorite: preferences[photoPreferenceKey(p.id)]?.favorite === true,
+      isHidden: preferences[photoPreferenceKey(p.id)]?.hidden === true,
     }));
 
     res.status(200).json(photos);
@@ -1543,6 +1636,41 @@ app.get('/api/gallery/:email', requireFirebaseAuth, async (req, res) => {
     res.status(500).json({
       error: galleryErrorMessage(error, 'Error al recuperar imágenes de la galería.'),
     });
+  }
+});
+
+// ---------------------------------------------
+// GALERÍA: GUARDAR FAVORITO/OCULTO POR CLIENTE
+// ---------------------------------------------
+app.put('/api/gallery/photo-preferences', requireFirebaseAuth, async (req, res) => {
+  const { albumId, photoId, favorite, hidden } = req.body || {};
+  if (
+    !validAlbumId(albumId) ||
+    !validPhotoId(photoId) ||
+    typeof favorite !== 'boolean' ||
+    typeof hidden !== 'boolean'
+  ) {
+    return res.status(400).json({ error: 'Indica una foto, carpeta y preferencias válidas.' });
+  }
+
+  try {
+    const album = await getGalleryAlbum(req.authenticatedEmail, albumId);
+    if (!album) {
+      return res.status(404).json({ error: 'La carpeta no pertenece a esta cuenta.' });
+    }
+
+    const preferenceRef = db.ref(
+      `gallery_photo_preferences/${req.authenticatedUid}/${album.albumId}/${photoPreferenceKey(photoId)}`
+    );
+    if (!favorite && !hidden) {
+      await preferenceRef.remove();
+    } else {
+      await preferenceRef.set({ favorite, hidden, updatedAt: new Date().toISOString() });
+    }
+    return res.status(200).json({ photoId, isFavorite: favorite, isHidden: hidden });
+  } catch (error) {
+    console.error('Error al guardar las preferencias de la foto:', error.message);
+    return res.status(500).json({ error: 'No se pudo guardar la preferencia de la foto.' });
   }
 });
 

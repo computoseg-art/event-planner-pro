@@ -11,6 +11,8 @@ export interface Photo {
   downloadUrl: string;
   filename?: string;
   mimeType?: string;
+  isFavorite: boolean;
+  isHidden: boolean;
 }
 
 export interface GalleryFolder {
@@ -19,6 +21,13 @@ export interface GalleryFolder {
   email: string;
   createdAt?: string;
   isDefault?: boolean;
+}
+
+export interface B2StorageStatus {
+  configured: boolean;
+  connected: boolean;
+  bucketName: string;
+  region: string;
 }
 
 @Injectable({
@@ -68,12 +77,36 @@ export class GalleryService {
     );
   }
 
+  checkB2Storage(): Observable<B2StorageStatus> {
+    return this.authorizationHeaders().pipe(
+      switchMap(headers =>
+        this.http.get<B2StorageStatus>(`${this.apiUrl}/gallery/storage-status`, { headers })
+      )
+    );
+  }
+
   getPhotos(email: string, albumId: string): Observable<Photo[]> {
     return this.authorizationHeaders().pipe(
       switchMap(headers =>
         this.http.get<Photo[]>(
           `${this.apiUrl}/gallery/${encodeURIComponent(email)}`,
           { headers, params: { albumId, _refresh: Date.now() } }
+        )
+      )
+    );
+  }
+
+  updatePhotoPreference(
+    albumId: string,
+    photoId: string,
+    preference: Pick<Photo, 'isFavorite' | 'isHidden'>
+  ): Observable<{ photoId: string } & Pick<Photo, 'isFavorite' | 'isHidden'>> {
+    return this.authorizationHeaders().pipe(
+      switchMap(headers =>
+        this.http.put<{ photoId: string } & Pick<Photo, 'isFavorite' | 'isHidden'>>(
+          `${this.apiUrl}/gallery/photo-preferences`,
+          { albumId, photoId, ...preference },
+          { headers }
         )
       )
     );

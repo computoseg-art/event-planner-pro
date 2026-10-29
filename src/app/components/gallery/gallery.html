@@ -3,6 +3,17 @@
 
   @if (auth.esAdminGaleria()) {
     <section class="gallery-admin-tools">
+      <div class="gallery-b2-check">
+        <p class="gallery-target-hint">
+          Almacenamiento Backblaze B2: verifica que el backend tenga acceso al bucket privado.
+        </p>
+        <button type="button" (click)="checkB2Storage()" [disabled]="isCheckingB2Storage">
+          {{ isCheckingB2Storage ? 'Verificando…' : 'Probar conexión con B2' }}
+        </button>
+        @if (b2StorageStatus) {
+          <p class="gallery-target-hint" role="status">{{ b2StorageStatus }}</p>
+        }
+      </div>
       <label for="target-email">Email del cliente</label>
       <div class="gallery-target-row">
         <input
@@ -57,6 +68,29 @@
       <p>Ingresa el correo de un cliente para consultar y subir fotos a su carpeta personal.</p>
     </div>
   } @else if (photos.length > 0) {
+    @if (!auth.esAdminGaleria()) {
+      <nav class="gallery-collections" aria-label="Colecciones de fotos">
+        <button
+          type="button"
+          [class.active]="activeCollection === 'gallery'"
+          (click)="setCollection('gallery')">
+          Galería ({{ visiblePhotoCount }})
+        </button>
+        <button
+          type="button"
+          [class.active]="activeCollection === 'favorites'"
+          (click)="setCollection('favorites')">
+          Favoritos ({{ favoritePhotoCount }})
+        </button>
+        <button
+          type="button"
+          [class.active]="activeCollection === 'hidden'"
+          (click)="setCollection('hidden')">
+          Ocultas ({{ hiddenPhotoCount }})
+        </button>
+      </nav>
+    }
+    @if (visiblePhotos.length > 0) {
     <div class="carousel-container">
       <app-image-carousel
         [images]="photoUrls"
@@ -68,21 +102,52 @@
       </app-image-carousel>
     </div>
     <div class="photo-download">
-      <a [href]="photos[currentImageIndex].downloadUrl" target="_blank" rel="noopener">
+      <a [href]="currentPhoto?.downloadUrl" target="_blank" rel="noopener">
         Descargar foto original
       </a>
     </div>
 
+    @if (!auth.esAdminGaleria() && currentPhoto) {
+      <div class="photo-preferences">
+        <button
+          type="button"
+          [class.selected]="currentPhoto.isFavorite"
+          [disabled]="isSavingPreference"
+          (click)="toggleFavorite()">
+          {{ currentPhoto.isFavorite ? '♥ En favoritos' : '♡ Agregar a favoritos' }}
+        </button>
+        <button
+          type="button"
+          [disabled]="isSavingPreference"
+          (click)="toggleHidden()">
+          {{ currentPhoto.isHidden ? 'Mostrar en galería' : 'Ocultar foto' }}
+        </button>
+      </div>
+    }
+
     <div class="thumbnail-grid">
-      @for (photo of photos; track photo.id; let i = $index) {
+      @for (photo of visiblePhotos; track photo.id; let i = $index) {
         <div
           class="thumbnail-item"
           [class.active]="i === currentImageIndex"
+          [class.favorite]="photo.isFavorite"
           (click)="selectImage(i)">
           <img [src]="photo.thumbnailUrl" [alt]="photo.filename || 'Foto de evento'" loading="lazy" />
+          @if (photo.isFavorite) {
+            <span class="thumbnail-favorite" aria-label="Foto favorita">♥</span>
+          }
         </div>
       }
     </div>
+    } @else {
+      <div class="no-photos-message">
+        @switch (activeCollection) {
+          @case ('favorites') { <p>Aún no agregaste fotos a tus favoritos.</p> }
+          @case ('hidden') { <p>No tienes fotos ocultas.</p> }
+          @default { <p>No hay fotos visibles en esta galería.</p> }
+        }
+      </div>
+    }
   } @else {
     <div class="no-photos-message">
       <p>
