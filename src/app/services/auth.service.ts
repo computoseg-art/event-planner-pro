@@ -20,7 +20,6 @@ import {
 import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
-import { GalleryService } from './gallery.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -28,7 +27,6 @@ export class AuthService {
   private router = inject(Router);
   private zone = inject(NgZone);
   private injector = inject(Injector);
-  private galleryService = inject(GalleryService);
 
   user$ = user(this.auth);
   userSignal = toSignal(this.user$);
@@ -157,14 +155,5 @@ export class AuthService {
     this.zone.run(() => {
       void this.router.navigateByUrl(destination);
     });
-    void this.provisionGalleryFolder();
-  }
-
-  private async provisionGalleryFolder(): Promise<void> {
-    try {
-      await firstValueFrom(this.galleryService.ensureOwnFolder());
-    } catch (error) {
-      console.error('No se pudo crear o recuperar la carpeta personal de Google Photos:', error);
-    }
   }
 }

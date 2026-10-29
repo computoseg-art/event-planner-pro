@@ -10,7 +10,18 @@ import { MercadoPagoConfig, Payment, Preference } from 'mercadopago';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getDatabase } from 'firebase-admin/database';
-import { HeadBucketCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  AbortMultipartUploadCommand,
+  CompleteMultipartUploadCommand,
+  CreateMultipartUploadCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadBucketCommand,
+  HeadObjectCommand,
+  S3Client,
+  UploadPartCommand,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 import { google } from 'googleapis';
 import axios from 'axios';
@@ -78,6 +89,9 @@ if (missingB2Environment.length === 0) {
   if (!/^[a-z0-9-]{1,63}$/.test(b2Environment.region)) {
     throw new Error('B2_REGION no tiene un formato válido.');
   }
+  if (b2Endpoint.hostname !== `s3.${b2Environment.region}.backblazeb2.com`) {
+    throw new Error('B2_ENDPOINT debe corresponder al endpoint S3 de B2_REGION.');
+  }
   b2Client = new S3Client({
     region: b2Environment.region,
     endpoint: b2Endpoint.origin,
@@ -101,6 +115,11 @@ const backendPublicUrl = process.env.BACKEND_PUBLIC_URL.replace(/\/+$/, '');
 const clientOrigin = new URL(clientUrl).origin;
 const contactPhone = process.env.CONTACT_PHONE?.trim() || '+598 97 403 118';
 const seniaRecordatorioInterval = 24 * 60 * 60 * 1000;
+const b2PartSizeBytes = 64 * 1024 * 1024;
+const maxB2MediaSizeBytes = 100 * 1024 * 1024 * 1024;
+const b2ApplicationStorageLimitBytes = 9_000_000_000;
+const b2DownloadUrlLifetimeSeconds = 4 * 60 * 60;
+const b2UploadUrlLifetimeSeconds = 4 * 60 * 60;
 
 if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
   throw new Error('PORT debe ser un puerto TCP válido.');
@@ -152,7 +171,7 @@ app.use(cors({
       callback(null, false);
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
@@ -170,6 +189,116 @@ function encodeEmail(email) {
 
 function validAlbumId(albumId) {
   return typeof albumId === 'string' && /^[A-Za-z0-9_-]{1,256}$/.test(albumId);
+}
+
+function validGallerySessionId(sessionId) {
+  return typeof sessionId === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(sessionId);
+}
+
+function validGalleryMediaId(mediaId) {
+  return typeof mediaId === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(mediaId);
+}
+
+function getB2SessionRef(ownerUid, sessionId) {
+  return db.ref(`b2_galerias/${ownerUid}/${sessionId}`);
+}
+
+async function getB2SessionForRequest(req, sessionId, targetEmail) {
+  if (!validGallerySessionId(sessionId)) {
+    return null;
+  }
+  const isGalleryAdmin = req.authenticatedEmail === 'admin@gmail.com';
+  let ownerUid = req.authenticatedUid;
+  let ownerEmail = req.authenticatedEmail;
+  if (isGalleryAdmin && targetEmail) {
+    if (!validEmail(targetEmail)) {
+      return null;
+    }
+    const owner = await auth.getUserByEmail(targetEmail.trim().toLowerCase());
+    ownerUid = owner.uid;
+    ownerEmail = owner.email.toLowerCase().trim();
+  }
+  const snapshot = await getB2SessionRef(ownerUid, sessionId).once('value');
+  const session = snapshot.val();
+  return session?.id === sessionId ? { ownerUid, ownerEmail, session } : null;
+}
+
+function validB2MediaType(mimeType) {
+  return typeof mimeType === 'string'
+    && mimeType.length <= 128
+    && (/^image\/[a-z0-9.+-]+$/i.test(mimeType) || /^video\/[a-z0-9.+-]+$/i.test(mimeType));
+}
+
+function safeMediaFilename(filename) {
+  return path.basename(String(filename || 'archivo').replace(/[\r\n]/g, '_')).slice(0, 200) || 'archivo';
+}
+
+function validB2MediaFile(mimeType, filename) {
+  if (validB2MediaType(mimeType)) {
+    return true;
+  }
+  const extension = path.extname(String(filename || '')).toLowerCase();
+  return mimeType === 'application/octet-stream'
+    && ['.dng', '.cr2', '.cr3', '.nef', '.arw', '.orf', '.rw2', '.raf'].includes(extension);
+}
+
+async function reserveB2Storage(size) {
+  let quotaExceeded = false;
+  const usageRef = db.ref('b2_storage_usage');
+  const result = await usageRef.transaction(current => {
+    quotaExceeded = false;
+    const storedBytes = Number(current?.storedBytes || 0);
+    const reservedBytes = Number(current?.reservedBytes || 0);
+    if (
+      !Number.isSafeInteger(storedBytes) ||
+      !Number.isSafeInteger(reservedBytes) ||
+      storedBytes < 0 ||
+      reservedBytes < 0
+    ) {
+      throw new Error('El contador de almacenamiento B2 no es válido.');
+    }
+    if (storedBytes + reservedBytes + size > b2ApplicationStorageLimitBytes) {
+      quotaExceeded = true;
+      return;
+    }
+    return {
+      storedBytes,
+      reservedBytes: reservedBytes + size,
+      updatedAt: new Date().toISOString(),
+    };
+  });
+  if (!result.committed) {
+    if (quotaExceeded) {
+      const error = new Error('La galería alcanzó el límite gratuito configurado de 9 GB.');
+      error.code = 'B2_STORAGE_QUOTA';
+      throw error;
+    }
+    throw new Error('No se pudo reservar espacio de almacenamiento en B2.');
+  }
+}
+
+async function settleB2StorageReservation(size, stored) {
+  const usageRef = db.ref('b2_storage_usage');
+  const result = await usageRef.transaction(current => {
+    const storedBytes = Number(current?.storedBytes || 0);
+    const reservedBytes = Number(current?.reservedBytes || 0);
+    if (
+      !Number.isSafeInteger(storedBytes) ||
+      !Number.isSafeInteger(reservedBytes) ||
+      storedBytes < 0 ||
+      reservedBytes < size
+    ) {
+      throw new Error('La reserva de almacenamiento B2 no coincide con la carga.');
+    }
+    return {
+      storedBytes: stored ? storedBytes + size : storedBytes,
+      reservedBytes: reservedBytes - size,
+      updatedAt: new Date().toISOString(),
+    };
+  });
+  if (!result.committed) {
+    throw new Error('No se pudo actualizar el espacio reservado en B2.');
+  }
 }
 
 function validPhotoId(photoId) {
@@ -1452,11 +1581,16 @@ app.get('/api/gallery/storage-status', requireFirebaseAuth, requireGalleryAdmin,
       new HeadBucketCommand({ Bucket: b2Environment.bucketName }),
       { abortSignal: AbortSignal.timeout(10000) }
     );
+    const usageSnapshot = await db.ref('b2_storage_usage').once('value');
+    const usage = usageSnapshot.val() || {};
     return res.status(200).json({
       configured: true,
       connected: true,
       bucketName: b2Environment.bucketName,
       region: b2Environment.region,
+      storedBytes: Number(usage.storedBytes || 0),
+      reservedBytes: Number(usage.reservedBytes || 0),
+      limitBytes: b2ApplicationStorageLimitBytes,
     });
   } catch (error) {
     console.error('No se pudo verificar el acceso al bucket de Backblaze B2:', {
@@ -1467,6 +1601,470 @@ app.get('/api/gallery/storage-status', requireFirebaseAuth, requireGalleryAdmin,
     return res.status(502).json({
       error: 'El backend no pudo acceder al bucket de Backblaze B2. Revisa el bucket, endpoint, región y permisos de la clave.',
     });
+  }
+});
+
+// ---------------------------------------------
+// BACKBLAZE B2: GALERÍAS POR SESIÓN/EVENTO
+// ---------------------------------------------
+app.get('/api/gallery/sessions', requireFirebaseAuth, async (req, res) => {
+  res.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+  try {
+    let ownerUid = req.authenticatedUid;
+    if (req.authenticatedEmail === 'admin@gmail.com' && req.query.email) {
+      if (!validEmail(req.query.email)) {
+        return res.status(400).json({ error: 'El email del cliente no es válido.' });
+      }
+      const owner = await auth.getUserByEmail(req.query.email.trim().toLowerCase());
+      ownerUid = owner.uid;
+    }
+
+    const snapshot = await db.ref(`b2_galerias/${ownerUid}`).once('value');
+    const sessions = Object.values(snapshot.val() || {})
+      .filter(session => session && typeof session.id === 'string')
+      .map(session => ({
+        id: session.id,
+        title: session.title,
+        eventDate: session.eventDate || '',
+        description: session.description || '',
+        createdAt: session.createdAt,
+        mediaCount: Object.keys(session.media || {}).length,
+      }))
+      .sort((a, b) => String(b.eventDate || b.createdAt).localeCompare(String(a.eventDate || a.createdAt)));
+    return res.status(200).json(sessions);
+  } catch (error) {
+    console.error('No se pudieron cargar las sesiones B2:', error.message);
+    return res.status(500).json({ error: 'No se pudieron cargar las sesiones de la galería.' });
+  }
+});
+
+app.post('/api/gallery/sessions', requireFirebaseAuth, requireGalleryAdmin, async (req, res) => {
+  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  const title = typeof req.body?.title === 'string' ? req.body.title.trim() : '';
+  const eventDate = typeof req.body?.eventDate === 'string' ? req.body.eventDate.trim() : '';
+  const description = typeof req.body?.description === 'string' ? req.body.description.trim() : '';
+  if (
+    !validEmail(email) ||
+    !title || title.length > 100 ||
+    (eventDate && !/^\d{4}-\d{2}-\d{2}$/.test(eventDate)) ||
+    description.length > 500
+  ) {
+    return res.status(400).json({
+      error: 'Indica un email válido, un nombre de hasta 100 caracteres, una fecha válida y una descripción de hasta 500 caracteres.',
+    });
+  }
+
+  try {
+    const owner = await auth.getUserByEmail(email);
+    const id = randomUUID();
+    const session = {
+      id,
+      ownerUid: owner.uid,
+      ownerEmail: owner.email.toLowerCase().trim(),
+      title,
+      eventDate,
+      description,
+      createdAt: new Date().toISOString(),
+    };
+    await getB2SessionRef(owner.uid, id).set(session);
+    return res.status(201).json({ ...session, mediaCount: 0 });
+  } catch (error) {
+    if (error.code === 'auth/user-not-found') {
+      return res.status(404).json({ error: 'El cliente debe tener una cuenta registrada para asignarle una galería.' });
+    }
+    console.error('No se pudo crear la sesión de galería B2:', error.message);
+    return res.status(500).json({ error: 'No se pudo crear la sesión de la galería.' });
+  }
+});
+
+app.get('/api/gallery/sessions/:sessionId/media', requireFirebaseAuth, async (req, res) => {
+  res.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+  if (!b2Client) {
+    return res.status(503).json({ error: 'El almacenamiento Backblaze B2 no está configurado.' });
+  }
+  try {
+    const resolved = await getB2SessionForRequest(
+      req,
+      req.params.sessionId,
+      req.authenticatedEmail === 'admin@gmail.com' ? req.query.email : ''
+    );
+    if (!resolved) {
+      return res.status(404).json({ error: 'No se encontró esa sesión para esta cuenta.' });
+    }
+    const [mediaSnapshot, preferenceSnapshot] = await Promise.all([
+      getB2SessionRef(resolved.ownerUid, resolved.session.id).child('media').once('value'),
+      db.ref(`gallery_b2_preferences/${resolved.ownerUid}/${resolved.session.id}`).once('value'),
+    ]);
+    const mediaItems = Object.values(mediaSnapshot.val() || {});
+    const preferences = preferenceSnapshot.val() || {};
+    const media = await Promise.all(mediaItems
+      .filter(item => item && validGalleryMediaId(item.id) && typeof item.objectKey === 'string')
+      .map(async item => {
+        const safeFilename = safeMediaFilename(item.filename).replace(/["\\]/g, '_');
+        const [url, downloadUrl] = await Promise.all([
+          getSignedUrl(
+            b2Client,
+            new GetObjectCommand({ Bucket: b2Environment.bucketName, Key: item.objectKey }),
+            { expiresIn: b2DownloadUrlLifetimeSeconds }
+          ),
+          getSignedUrl(
+            b2Client,
+            new GetObjectCommand({
+              Bucket: b2Environment.bucketName,
+              Key: item.objectKey,
+              ResponseContentDisposition:
+                `attachment; filename="${safeFilename}"; filename*=UTF-8''${encodeURIComponent(item.filename)}`,
+            }),
+            { expiresIn: b2DownloadUrlLifetimeSeconds }
+          ),
+        ]);
+        const preference = preferences[item.id] || {};
+        return {
+          id: item.id,
+          filename: item.filename,
+          mimeType: item.mimeType,
+          size: item.size,
+          createdAt: item.createdAt,
+          url,
+          downloadUrl,
+          isFavorite: preference.favorite === true,
+          isHidden: preference.hidden === true,
+        };
+      }));
+    return res.status(200).json(media.sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))));
+  } catch (error) {
+    console.error('No se pudieron listar los medios de la sesión B2:', error.message);
+    return res.status(500).json({ error: 'No se pudieron cargar las fotos y videos de esta sesión.' });
+  }
+});
+
+app.post(
+  '/api/gallery/sessions/:sessionId/uploads/initiate',
+  requireFirebaseAuth,
+  requireGalleryAdmin,
+  async (req, res) => {
+    if (!b2Client) {
+      return res.status(503).json({ error: 'El almacenamiento Backblaze B2 no está configurado.' });
+    }
+    const { email, filename, mimeType, size } = req.body || {};
+    if (
+      !validEmail(email) ||
+      typeof filename !== 'string' || !filename.trim() || filename.length > 255 ||
+      !validB2MediaFile(mimeType, filename) ||
+      !Number.isSafeInteger(size) || size < 1 || size > maxB2MediaSizeBytes
+    ) {
+      return res.status(400).json({
+        error: 'Indica un cliente, archivo, formato de imagen/video y tamaño válido (máximo 100 GB).',
+      });
+    }
+    let reservationHeld = false;
+    let multipartUploadId = '';
+    let multipartObjectKey = '';
+    try {
+      const owner = await auth.getUserByEmail(email.trim().toLowerCase());
+      const resolved = await getB2SessionForRequest(req, req.params.sessionId, owner.email);
+      if (!resolved) {
+        return res.status(404).json({ error: 'No se encontró esa sesión para el cliente.' });
+      }
+      const mediaId = randomUUID();
+      const objectKey = `${owner.uid}/${resolved.session.id}/${mediaId}`;
+      multipartObjectKey = objectKey;
+      await reserveB2Storage(size);
+      reservationHeld = true;
+      const uploadResponse = await b2Client.send(new CreateMultipartUploadCommand({
+        Bucket: b2Environment.bucketName,
+        Key: objectKey,
+        ContentType: mimeType,
+      }));
+      multipartUploadId = uploadResponse.UploadId || '';
+      if (!uploadResponse.UploadId) {
+        throw new Error('B2 no devolvió un identificador de carga multipart.');
+      }
+
+      const uploadToken = randomUUID();
+      const totalParts = Math.ceil(size / b2PartSizeBytes);
+      await db.ref(`b2_pending_uploads/${uploadToken}`).set({
+        uploadToken,
+        createdByUid: req.authenticatedUid,
+        uploadId: uploadResponse.UploadId,
+        mediaId,
+        objectKey,
+        ownerUid: owner.uid,
+        ownerEmail: owner.email.toLowerCase().trim(),
+        sessionId: resolved.session.id,
+        filename: safeMediaFilename(filename),
+        mimeType,
+        size,
+        totalParts,
+        createdAt: new Date().toISOString(),
+      });
+      reservationHeld = false;
+      return res.status(201).json({
+        uploadToken,
+        mediaId,
+        partSize: b2PartSizeBytes,
+        totalParts,
+      });
+    } catch (error) {
+      let canReleaseReservation = reservationHeld;
+      if (multipartUploadId) {
+        try {
+          await b2Client.send(new AbortMultipartUploadCommand({
+            Bucket: b2Environment.bucketName,
+            Key: multipartObjectKey,
+            UploadId: multipartUploadId,
+          }));
+        } catch (abortError) {
+          canReleaseReservation = false;
+          console.error('No se pudo cancelar una carga B2 sin registro pendiente:', abortError.message);
+        }
+      }
+      if (canReleaseReservation) {
+        try {
+          await settleB2StorageReservation(Number(size), false);
+        } catch (reservationError) {
+          console.error('No se pudo liberar una reserva B2 sin carga pendiente:', reservationError.message);
+        }
+      }
+      if (error.code === 'auth/user-not-found') {
+        return res.status(404).json({ error: 'No existe una cuenta registrada con ese correo.' });
+      }
+      if (error.code === 'B2_STORAGE_QUOTA') {
+        return res.status(507).json({ error: error.message });
+      }
+      console.error('No se pudo iniciar la carga multipart en B2:', error.message);
+      return res.status(502).json({ error: 'No se pudo iniciar la carga a Backblaze B2.' });
+    }
+  }
+);
+
+app.post('/api/gallery/uploads/:uploadToken/part-urls', requireFirebaseAuth, requireGalleryAdmin, async (req, res) => {
+  if (!b2Client) {
+    return res.status(503).json({ error: 'El almacenamiento Backblaze B2 no está configurado.' });
+  }
+  const uploadToken = req.params.uploadToken;
+  const partNumbers = req.body?.partNumbers;
+  if (
+    !/^[A-Za-z0-9_-]{1,128}$/.test(uploadToken) ||
+    !Array.isArray(partNumbers) ||
+    partNumbers.length < 1 || partNumbers.length > 100 ||
+    partNumbers.some(part => !Number.isInteger(part) || part < 1)
+  ) {
+    return res.status(400).json({ error: 'La lista de partes no es válida.' });
+  }
+  try {
+    const pendingRef = db.ref(`b2_pending_uploads/${uploadToken}`);
+    const pendingSnapshot = await pendingRef.once('value');
+    const pending = pendingSnapshot.val();
+    if (!pending || pending.createdByUid !== req.authenticatedUid && !isAdmin(req.authenticatedEmail)) {
+      return res.status(404).json({ error: 'No se encontró una carga pendiente.' });
+    }
+    if (partNumbers.some(part => part > pending.totalParts)) {
+      return res.status(400).json({ error: 'El número de parte excede el total de la carga.' });
+    }
+    const urls = await Promise.all(partNumbers.map(async partNumber => ({
+      partNumber,
+      url: await getSignedUrl(
+        b2Client,
+        new UploadPartCommand({
+          Bucket: b2Environment.bucketName,
+          Key: pending.objectKey,
+          UploadId: pending.uploadId,
+          PartNumber: partNumber,
+        }),
+        { expiresIn: b2UploadUrlLifetimeSeconds }
+      ),
+    })));
+    return res.status(200).json({ urls });
+  } catch (error) {
+    console.error('No se pudieron firmar partes de carga B2:', error.message);
+    return res.status(500).json({ error: 'No se pudieron preparar las partes de la carga.' });
+  }
+});
+
+app.post('/api/gallery/uploads/:uploadToken/complete', requireFirebaseAuth, requireGalleryAdmin, async (req, res) => {
+  if (!b2Client) {
+    return res.status(503).json({ error: 'El almacenamiento Backblaze B2 no está configurado.' });
+  }
+  const uploadToken = req.params.uploadToken;
+  const parts = req.body?.parts;
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(uploadToken) || !Array.isArray(parts)) {
+    return res.status(400).json({ error: 'La carga multipart no es válida.' });
+  }
+  const pendingRef = db.ref(`b2_pending_uploads/${uploadToken}`);
+  try {
+    const pendingSnapshot = await pendingRef.once('value');
+    const pending = pendingSnapshot.val();
+    if (!pending) {
+      return res.status(404).json({ error: 'No se encontró una carga pendiente.' });
+    }
+    if (
+      parts.length !== pending.totalParts ||
+      parts.some((part, index) =>
+        !part || part.partNumber !== index + 1 ||
+        typeof part.etag !== 'string' || !/^"?[A-Za-z0-9+/=_-]{1,256}"?$/.test(part.etag)
+      )
+    ) {
+      return res.status(400).json({ error: 'Faltan partes o sus identificadores no son válidos.' });
+    }
+
+    await b2Client.send(new CompleteMultipartUploadCommand({
+      Bucket: b2Environment.bucketName,
+      Key: pending.objectKey,
+      UploadId: pending.uploadId,
+      MultipartUpload: {
+        Parts: parts.map(part => ({ PartNumber: part.partNumber, ETag: part.etag })),
+      },
+    }));
+    const head = await b2Client.send(new HeadObjectCommand({
+      Bucket: b2Environment.bucketName,
+      Key: pending.objectKey,
+    }));
+    if (head.ContentLength !== pending.size) {
+      await b2Client.send(new DeleteObjectCommand({
+        Bucket: b2Environment.bucketName,
+        Key: pending.objectKey,
+      }));
+      await pendingRef.remove();
+      return res.status(502).json({ error: 'El tamaño del archivo almacenado no coincide con el original.' });
+    }
+
+    const media = {
+      id: pending.mediaId,
+      objectKey: pending.objectKey,
+      filename: pending.filename,
+      mimeType: pending.mimeType,
+      size: pending.size,
+      createdAt: new Date().toISOString(),
+      uploadedBy: req.authenticatedUid,
+    };
+    const sessionRef = getB2SessionRef(pending.ownerUid, pending.sessionId);
+    try {
+      await sessionRef.child(`media/${pending.mediaId}`).set(media);
+    } catch (error) {
+      try {
+        await b2Client.send(new DeleteObjectCommand({
+          Bucket: b2Environment.bucketName,
+          Key: pending.objectKey,
+        }));
+      } catch (deleteError) {
+        console.error('No se pudo limpiar un archivo B2 que no se registró en Firebase:', deleteError.message);
+      }
+      throw error;
+    }
+    await settleB2StorageReservation(pending.size, true);
+    await pendingRef.remove();
+    return res.status(201).json({
+      id: media.id,
+      filename: media.filename,
+      mimeType: media.mimeType,
+      size: media.size,
+      createdAt: media.createdAt,
+    });
+  } catch (error) {
+    console.error('No se pudo completar la carga multipart a B2:', error.message);
+    return res.status(502).json({ error: 'No se pudo completar la carga del archivo a Backblaze B2.' });
+  }
+});
+
+app.post('/api/gallery/uploads/:uploadToken/abort', requireFirebaseAuth, requireGalleryAdmin, async (req, res) => {
+  if (!b2Client) {
+    return res.status(503).json({ error: 'El almacenamiento Backblaze B2 no está configurado.' });
+  }
+  const uploadToken = req.params.uploadToken;
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(uploadToken)) {
+    return res.status(400).json({ error: 'El identificador de carga no es válido.' });
+  }
+  const pendingRef = db.ref(`b2_pending_uploads/${uploadToken}`);
+  try {
+    const snapshot = await pendingRef.once('value');
+    const pending = snapshot.val();
+    if (!pending) {
+      return res.status(200).json({ message: 'No hay una carga pendiente que cancelar.' });
+    }
+    if (!pending.uploadAborted) {
+      await b2Client.send(new AbortMultipartUploadCommand({
+        Bucket: b2Environment.bucketName,
+        Key: pending.objectKey,
+        UploadId: pending.uploadId,
+      }));
+      await pendingRef.update({ uploadAborted: true });
+    }
+    await settleB2StorageReservation(pending.size, false);
+    await pendingRef.remove();
+    return res.status(200).json({ message: 'Carga cancelada.' });
+  } catch (error) {
+    console.error('No se pudo cancelar la carga multipart B2:', error.message);
+    return res.status(502).json({ error: 'No se pudo cancelar la carga pendiente.' });
+  }
+});
+
+app.put('/api/gallery/sessions/:sessionId/media/:mediaId/preference', requireFirebaseAuth, async (req, res) => {
+  const { isFavorite, isHidden } = req.body || {};
+  if (
+    !validGalleryMediaId(req.params.mediaId) ||
+    typeof isFavorite !== 'boolean' || typeof isHidden !== 'boolean'
+  ) {
+    return res.status(400).json({ error: 'Las preferencias de la foto no son válidas.' });
+  }
+  try {
+    const resolved = await getB2SessionForRequest(req, req.params.sessionId, '');
+    if (!resolved || resolved.ownerUid !== req.authenticatedUid) {
+      return res.status(404).json({ error: 'No se encontró esa sesión para esta cuenta.' });
+    }
+    const mediaRef = getB2SessionRef(resolved.ownerUid, resolved.session.id)
+      .child(`media/${req.params.mediaId}`);
+    const mediaSnapshot = await mediaRef.once('value');
+    if (!mediaSnapshot.exists()) {
+      return res.status(404).json({ error: 'No se encontró el archivo de la galería.' });
+    }
+    const preferenceRef = db.ref(
+      `gallery_b2_preferences/${resolved.ownerUid}/${resolved.session.id}/${req.params.mediaId}`
+    );
+    if (!isFavorite && !isHidden) {
+      await preferenceRef.remove();
+    } else {
+      await preferenceRef.set({ favorite: isFavorite, hidden: isHidden, updatedAt: new Date().toISOString() });
+    }
+    return res.status(200).json({ mediaId: req.params.mediaId, isFavorite, isHidden });
+  } catch (error) {
+    console.error('No se pudieron guardar preferencias de galería B2:', error.message);
+    return res.status(500).json({ error: 'No se pudieron guardar las preferencias de la foto.' });
+  }
+});
+
+app.delete('/api/gallery/sessions/:sessionId/media/:mediaId', requireFirebaseAuth, requireGalleryAdmin, async (req, res) => {
+  if (!b2Client) {
+    return res.status(503).json({ error: 'El almacenamiento Backblaze B2 no está configurado.' });
+  }
+  const email = typeof req.query.email === 'string' ? req.query.email : '';
+  if (!validGalleryMediaId(req.params.mediaId)) {
+    return res.status(400).json({ error: 'El identificador del archivo no es válido.' });
+  }
+  try {
+    const resolved = await getB2SessionForRequest(req, req.params.sessionId, email);
+    if (!resolved) {
+      return res.status(404).json({ error: 'No se encontró esa sesión para el cliente.' });
+    }
+    const mediaRef = getB2SessionRef(resolved.ownerUid, resolved.session.id)
+      .child(`media/${req.params.mediaId}`);
+    const mediaSnapshot = await mediaRef.once('value');
+    const media = mediaSnapshot.val();
+    if (!media?.objectKey) {
+      return res.status(404).json({ error: 'No se encontró el archivo de la galería.' });
+    }
+    await b2Client.send(new DeleteObjectCommand({
+      Bucket: b2Environment.bucketName,
+      Key: media.objectKey,
+    }));
+    await Promise.all([
+      mediaRef.remove(),
+      db.ref(`gallery_b2_preferences/${resolved.ownerUid}/${resolved.session.id}/${req.params.mediaId}`).remove(),
+    ]);
+    return res.status(200).json({ message: 'Archivo eliminado de la galería.' });
+  } catch (error) {
+    console.error('No se pudo eliminar el archivo de la galería B2:', error.message);
+    return res.status(502).json({ error: 'No se pudo eliminar el archivo de Backblaze B2.' });
   }
 });
 

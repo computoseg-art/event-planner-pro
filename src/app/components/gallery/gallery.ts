@@ -1,40 +1,35 @@
-import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
-import { AuthService } from '../../services/auth.service';
-import { GalleryService, Photo } from '../../services/gallery.service';
-import { ImageCarousel } from '../../components/image-carousel/image-carousel';
 import { firstValueFrom, take } from 'rxjs';
+import { AuthService } from '../../services/auth.service';
+import {
+  GalleryMedia,
+  GalleryService,
+  GallerySession,
+  MultipartUpload,
+} from '../../services/gallery.service';
 
-const maxPhotoSizeBytes = 100 * 1024 * 1024;
-const allowedPhotoMimeTypes = new Set([
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/webp',
-  'image/heic',
-  'image/heif',
-  'image/gif',
-  'image/bmp',
-  'image/tiff',
-  'image/avif',
-  'image/x-icon',
+const maxMediaSizeBytes = 9_000_000_000;
+const allowedRawExtensions = new Set([
+  '.dng', '.cr2', '.cr3', '.nef', '.arw', '.orf', '.rw2', '.raf',
 ]);
-const allowedPhotoExtensions = new Set([
-  '.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.gif', '.bmp', '.tif', '.tiff',
-  '.avif', '.ico', '.dng', '.cr2', '.cr3', '.nef', '.arw', '.orf', '.rw2', '.raf',
-]);
+const partUrlBatchSize = 12;
+const uploadConcurrency = 3;
 
-function isSupportedPhoto(file: File): boolean {
+function isSupportedMedia(file: File): boolean {
+  if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
+    return true;
+  }
   const extension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
-  return allowedPhotoMimeTypes.has(file.type) || allowedPhotoExtensions.has(extension);
+  return allowedRawExtensions.has(extension);
 }
 
 @Component({
   selector: 'app-gallery',
   standalone: true,
-  imports: [CommonModule, ImageCarousel],
+  imports: [CommonModule],
   templateUrl: './gallery.html',
   styleUrls: ['./gallery.css']
 })
@@ -43,174 +38,120 @@ export class GalleryComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   auth = inject(AuthService);
 
-  photos: Photo[] = [];
+  sessions: GallerySession[] = [];
+  media: GalleryMedia[] = [];
   userEmail = '';
   targetEmail = '';
-  selectedAlbumId = '';
+  selectedSessionId = '';
+  sessionTitle = '';
+  sessionDate = '';
+  sessionDescription = '';
   selectedFiles: File[] = [];
   uploadProgress = '';
   errorMessage = '';
   b2StorageStatus = '';
+  activeCollection: 'gallery' | 'favorites' | 'hidden' = 'gallery';
+  currentMediaIndex = 0;
   isLoading = false;
+  isCreatingSession = false;
   isUploading = false;
-  isDeletingPhoto = false;
+  isDeletingMedia = false;
   isSavingPreference = false;
   isCheckingB2Storage = false;
-  currentImageIndex: number = 0;
-  activeCollection: 'gallery' | 'favorites' | 'hidden' = 'gallery';
-  private photoRefreshTimer?: ReturnType<typeof setInterval>;
-  private lastPhotoRefreshAt = 0;
+  private readonly uploadControllers = new Set<AbortController>();
+  private readonly pendingUploadTokens = new Set<string>();
 
-  get visiblePhotos(): Photo[] {
+  get selectedSession(): GallerySession | undefined {
+    return this.sessions.find(session => session.id === this.selectedSessionId);
+  }
+
+  get visibleMedia(): GalleryMedia[] {
     switch (this.activeCollection) {
       case 'favorites':
-        return this.photos.filter(photo => photo.isFavorite && !photo.isHidden);
+        return this.media.filter(item => item.isFavorite && !item.isHidden);
       case 'hidden':
-        return this.photos.filter(photo => photo.isHidden);
+        return this.media.filter(item => item.isHidden);
       default:
-        return this.photos.filter(photo => !photo.isHidden);
+        return this.auth.esAdminGaleria()
+          ? this.media
+          : this.media.filter(item => !item.isHidden);
     }
   }
 
-  get photoUrls(): string[] {
-    return this.visiblePhotos.map(photo => photo.baseUrl);
+  get currentMedia(): GalleryMedia | undefined {
+    return this.visibleMedia[this.currentMediaIndex];
   }
 
-  get currentPhoto(): Photo | undefined {
-    return this.visiblePhotos[this.currentImageIndex];
+  get visibleMediaCount(): number {
+    return this.media.filter(item => !item.isHidden).length;
   }
 
-  get visiblePhotoCount(): number {
-    return this.photos.filter(photo => !photo.isHidden).length;
+  get favoriteMediaCount(): number {
+    return this.media.filter(item => item.isFavorite && !item.isHidden).length;
   }
 
-  get favoritePhotoCount(): number {
-    return this.photos.filter(photo => photo.isFavorite && !photo.isHidden).length;
+  get hiddenMediaCount(): number {
+    return this.media.filter(item => item.isHidden).length;
   }
 
-  get hiddenPhotoCount(): number {
-    return this.photos.filter(photo => photo.isHidden).length;
+  get isCurrentVideo(): boolean {
+    return this.currentMedia?.mimeType.startsWith('video/') === true;
+  }
+
+  formatStorage(bytes: number): string {
+    return `${(bytes / 1_000_000_000).toFixed(2)} GB`;
   }
 
   async ngOnInit(): Promise<void> {
     this.isLoading = true;
-    let currentEmail: string | undefined;
     try {
       const currentUser = await firstValueFrom(this.auth.user$.pipe(take(1)));
-      currentEmail = currentUser?.email?.trim().toLowerCase();
+      const currentEmail = currentUser?.email?.trim().toLowerCase();
+      if (!currentEmail) {
+        this.errorMessage = 'Inicia sesión para ver tus galerías.';
+        this.isLoading = false;
+        return;
+      }
+
+      const requestedEmail = this.route.snapshot.queryParamMap.get('email');
+      this.userEmail = this.auth.esAdminGaleria()
+        ? requestedEmail?.trim().toLowerCase() || ''
+        : currentEmail;
+      this.targetEmail = this.userEmail;
+      if (this.userEmail) {
+        this.loadSessions();
+      } else {
+        this.isLoading = false;
+      }
     } catch (error) {
       console.error('No se pudo comprobar la sesión para cargar la galería:', error);
-      this.isLoading = false;
       this.errorMessage = 'No se pudo comprobar tu sesión. Intenta iniciar sesión nuevamente.';
-      return;
-    }
-
-    if (!currentEmail) {
       this.isLoading = false;
-      this.errorMessage = 'Inicia sesión para ver tu galería.';
-      return;
-    }
-
-    const requestedEmail = this.route.snapshot.queryParamMap.get('email');
-    const esAdmin = this.auth.esAdminGaleria();
-    this.userEmail = esAdmin
-      ? requestedEmail?.trim().toLowerCase() || currentEmail
-      : currentEmail;
-    this.targetEmail = this.userEmail;
-    if (this.userEmail) {
-      void this.loadPersonalGallery(this.userEmail);
-    } else {
-      this.isLoading = false;
-    }
-    this.photoRefreshTimer = setInterval(() => this.refreshExpiringPhotoUrls(), 50 * 60 * 1000);
-  }
-
-  private async loadPersonalGallery(email: string): Promise<void> {
-    this.isLoading = true;
-    this.errorMessage = '';
-    try {
-      const folder = await firstValueFrom(this.galleryService.ensureOwnFolder(email));
-      if (this.userEmail !== email) return;
-      this.selectedAlbumId = folder.albumId;
-      this.loadGallery(email, folder.albumId);
-    } catch (error) {
-      console.error('No se pudo preparar la carpeta personal de Google Photos:', error);
-      if (this.userEmail === email) {
-        this.isLoading = false;
-        this.photos = [];
-        this.errorMessage = this.galleryService.provisioningErrorMessage(error);
-      }
     }
   }
 
   ngOnDestroy(): void {
-    if (this.photoRefreshTimer) {
-      clearInterval(this.photoRefreshTimer);
-    }
-  }
-
-  @HostListener('document:visibilitychange')
-  onVisibilityChange(): void {
-    if (!document.hidden) {
-      this.refreshExpiringPhotoUrls();
-    }
-  }
-
-  private refreshExpiringPhotoUrls(): void {
-    const refreshInterval = 50 * 60 * 1000;
-    if (
-      this.photos.length > 0 &&
-      this.userEmail &&
-      this.selectedAlbumId &&
-      Date.now() - this.lastPhotoRefreshAt >= refreshInterval &&
-      !this.isLoading
-    ) {
-      this.loadGallery(this.userEmail, this.selectedAlbumId);
-    }
-  }
-
-  loadGallery(email: string, albumId = this.selectedAlbumId): void {
-    if (!albumId) {
-      this.photos = [];
-      this.isLoading = false;
-      return;
-    }
-    this.isLoading = true;
-    this.errorMessage = '';
-    this.galleryService.getPhotos(email, albumId).subscribe({
-      next: data => {
-        this.photos = data;
-        this.currentImageIndex = 0;
-        this.lastPhotoRefreshAt = Date.now();
-        this.isLoading = false;
-      },
-      error: err => {
-        console.error('Error al cargar la galería:', err);
-        this.isLoading = false;
-        this.photos = [];
-        this.errorMessage = err.error?.error || 'No se pudo cargar la carpeta. Intenta nuevamente.';
-      }
+    this.uploadControllers.forEach(controller => controller.abort());
+    this.uploadControllers.clear();
+    this.pendingUploadTokens.forEach(uploadToken => {
+      void firstValueFrom(this.galleryService.abortMediaUpload(uploadToken)).catch(error => {
+        console.error('No se pudo cancelar una carga al salir de la galería:', error);
+      });
     });
-  }
-
-  setTargetEmail(event: Event): void {
-    const input = event.target;
-    if (input instanceof HTMLInputElement) {
-      this.targetEmail = input.value.trim().toLowerCase();
-    }
+    this.pendingUploadTokens.clear();
   }
 
   openTargetGallery(): void {
     const email = this.targetEmail.trim().toLowerCase();
     if (!email || !email.includes('@')) {
-      this.errorMessage = 'Ingresa un correo válido para abrir la galería.';
+      this.errorMessage = 'Ingresa un correo válido para abrir las galerías del cliente.';
       return;
     }
     this.userEmail = email;
-    this.selectedAlbumId = '';
-    this.photos = [];
-    this.activeCollection = 'gallery';
-    void this.loadPersonalGallery(email);
+    this.selectedSessionId = '';
+    this.sessions = [];
+    this.media = [];
+    this.loadSessions();
   }
 
   checkB2Storage(): void {
@@ -220,7 +161,9 @@ export class GalleryComponent implements OnInit, OnDestroy {
     this.galleryService.checkB2Storage().subscribe({
       next: status => {
         this.b2StorageStatus =
-          `Conexión correcta con ${status.bucketName} (${status.region}).`;
+          `Conexión correcta con ${status.bucketName} (${status.region}). ` +
+          `Uso reservado/almacenado: ${this.formatStorage(status.storedBytes + status.reservedBytes)} / ` +
+          `${this.formatStorage(status.limitBytes)}.`;
         this.isCheckingB2Storage = false;
       },
       error: error => {
@@ -232,72 +175,124 @@ export class GalleryComponent implements OnInit, OnDestroy {
     });
   }
 
-  setCollection(collection: 'gallery' | 'favorites' | 'hidden'): void {
-    this.activeCollection = collection;
-    this.currentImageIndex = 0;
-  }
-
-  toggleFavorite(): void {
-    const photo = this.currentPhoto;
-    if (photo) {
-      this.savePhotoPreference(photo, !photo.isFavorite, photo.isHidden);
-    }
-  }
-
-  toggleHidden(): void {
-    const photo = this.currentPhoto;
-    if (photo) {
-      this.savePhotoPreference(photo, photo.isFavorite, !photo.isHidden);
-    }
-  }
-
-  private savePhotoPreference(photo: Photo, isFavorite: boolean, isHidden: boolean): void {
-    if (this.isSavingPreference || !this.selectedAlbumId) return;
-    this.isSavingPreference = true;
+  loadSessions(): void {
+    if (!this.userEmail) return;
+    this.isLoading = true;
     this.errorMessage = '';
-    this.galleryService.updatePhotoPreference(this.selectedAlbumId, photo.id, {
-      isFavorite,
-      isHidden,
+    this.galleryService.getSessions(
+      this.auth.esAdminGaleria() ? this.userEmail : undefined
+    ).subscribe({
+      next: sessions => {
+        this.sessions = sessions;
+        this.isLoading = false;
+        if (!sessions.some(session => session.id === this.selectedSessionId)) {
+          this.selectedSessionId = '';
+          this.media = [];
+        }
+      },
+      error: error => {
+        console.error('No se pudieron cargar las sesiones de la galería:', error);
+        this.errorMessage =
+          error.error?.error || 'No se pudieron cargar las sesiones de la galería.';
+        this.isLoading = false;
+      }
+    });
+  }
+
+  createSession(): void {
+    if (
+      !this.auth.esAdminGaleria() ||
+      !this.userEmail ||
+      !this.sessionTitle.trim() ||
+      this.isCreatingSession
+    ) {
+      return;
+    }
+    this.isCreatingSession = true;
+    this.errorMessage = '';
+    this.galleryService.createSession({
+      email: this.userEmail,
+      title: this.sessionTitle.trim(),
+      eventDate: this.sessionDate,
+      description: this.sessionDescription.trim(),
     }).subscribe({
-      next: preference => {
-        Object.assign(photo, preference);
-        this.isSavingPreference = false;
-        this.currentImageIndex = Math.min(
-          this.currentImageIndex,
-          Math.max(0, this.visiblePhotos.length - 1)
+      next: session => {
+        this.sessions = [session, ...this.sessions];
+        this.sessionTitle = '';
+        this.sessionDate = '';
+        this.sessionDescription = '';
+        this.isCreatingSession = false;
+        this.selectSession(session.id);
+      },
+      error: error => {
+        console.error('No se pudo crear la sesión de la galería:', error);
+        this.errorMessage =
+          error.error?.error || 'No se pudo crear la sesión. Intenta nuevamente.';
+        this.isCreatingSession = false;
+      }
+    });
+  }
+
+  selectSession(sessionId: string): void {
+    this.selectedSessionId = sessionId;
+    this.activeCollection = 'gallery';
+    this.currentMediaIndex = 0;
+    this.loadSessionMedia();
+  }
+
+  loadSessionMedia(): void {
+    if (!this.selectedSessionId) {
+      this.media = [];
+      return;
+    }
+    this.isLoading = true;
+    this.errorMessage = '';
+    this.galleryService.getSessionMedia(
+      this.selectedSessionId,
+      this.auth.esAdminGaleria() ? this.userEmail : undefined
+    ).subscribe({
+      next: media => {
+        this.media = media;
+        this.currentMediaIndex = 0;
+        this.isLoading = false;
+        this.sessions = this.sessions.map(session =>
+          session.id === this.selectedSessionId
+            ? { ...session, mediaCount: media.length }
+            : session
         );
       },
       error: error => {
-        console.error('No se pudo guardar la preferencia de la foto:', error);
-        this.isSavingPreference = false;
+        console.error('No se pudo cargar la galería de la sesión:', error);
+        this.media = [];
         this.errorMessage =
-          error.error?.error || 'No se pudo guardar la preferencia. Intenta nuevamente.';
+          error.error?.error || 'No se pudo cargar la galería. Intenta nuevamente.';
+        this.isLoading = false;
       }
     });
   }
 
   setSelectedFiles(event: Event): void {
     const input = event.target;
-    if (input instanceof HTMLInputElement) {
-      const files = Array.from(input.files || []);
-      if (files.some(file => file.size > maxPhotoSizeBytes)) {
-        this.selectedFiles = [];
-        this.errorMessage = 'Cada foto debe pesar como máximo 100 MB.';
-      } else if (files.some(file => !isSupportedPhoto(file))) {
-        this.selectedFiles = [];
-        this.errorMessage = 'Hay un formato no compatible. Usa JPG, PNG, WebP, HEIC, GIF, BMP, TIFF, AVIF o RAW compatible.';
-      } else {
-        this.selectedFiles = files;
-        this.errorMessage = '';
-      }
+    if (!(input instanceof HTMLInputElement)) return;
+    const files = Array.from(input.files || []);
+    if (files.some(file => file.size > maxMediaSizeBytes)) {
+      this.selectedFiles = [];
+      this.errorMessage = 'El límite gratuito de esta galería es 9 GB en total para todas las sesiones.';
+    } else if (files.some(file => !isSupportedMedia(file))) {
+      this.selectedFiles = [];
+      this.errorMessage = 'Elige fotos o videos compatibles (por ejemplo JPG, PNG, WebP, MP4 o WebM).';
+    } else {
+      this.selectedFiles = files;
+      this.errorMessage = '';
     }
+    input.value = '';
   }
 
-  async uploadPhotos(): Promise<void> {
+  async uploadMedia(): Promise<void> {
     if (
       !this.auth.esAdminGaleria() ||
       !this.userEmail ||
-      !this.selectedAlbumId ||
+      !this.selectedSessionId ||
       this.selectedFiles.length === 0 ||
       this.isUploading
     ) {
@@ -306,25 +301,55 @@ export class GalleryComponent implements OnInit, OnDestroy {
 
     this.isUploading = true;
     this.errorMessage = '';
-    const targetEmail = this.userEmail;
-    const albumId = this.selectedAlbumId;
     const files = [...this.selectedFiles];
-    this.uploadProgress = `0 de ${files.length}`;
+    let uploadedBytes = 0;
+    const totalBytes = files.reduce((total, file) => total + file.size, 0);
 
-    for (let index = 0; index < files.length; index++) {
-      const file = files[index];
-      this.uploadProgress = `${index + 1} de ${files.length}`;
+    for (let fileIndex = 0; fileIndex < files.length; fileIndex++) {
+      const file = files[fileIndex];
+      let upload: MultipartUpload | undefined;
       try {
-        await firstValueFrom(this.galleryService.uploadPhotos(targetEmail, [file]));
+        upload = await firstValueFrom(
+          this.galleryService.initiateMediaUpload(this.selectedSessionId, this.userEmail, file)
+        );
+        this.pendingUploadTokens.add(upload.uploadToken);
+        const parts: Array<{ partNumber: number; etag: string }> = [];
+        for (let firstPart = 1; firstPart <= upload.totalParts; firstPart += partUrlBatchSize) {
+          const partNumbers = Array.from(
+            { length: Math.min(partUrlBatchSize, upload.totalParts - firstPart + 1) },
+            (_value, offset) => firstPart + offset
+          );
+          const { urls } = await firstValueFrom(
+            this.galleryService.getMultipartPartUrls(upload.uploadToken, partNumbers)
+          );
+          const uploadedParts = await this.uploadPartBatch(file, upload, urls, uploadedBytes, totalBytes);
+          parts.push(...uploadedParts);
+          uploadedBytes += uploadedParts.reduce((total, part) => {
+            const start = (part.partNumber - 1) * upload!.partSize;
+            return total + Math.min(upload!.partSize, file.size - start);
+          }, 0);
+          this.uploadProgress =
+            `${fileIndex + 1}/${files.length} archivos · ${Math.round(uploadedBytes / totalBytes * 100)}%`;
+        }
+        await firstValueFrom(this.galleryService.completeMediaUpload(upload.uploadToken, parts));
+        this.pendingUploadTokens.delete(upload.uploadToken);
       } catch (error) {
-        console.error('Error al subir fotos:', error);
-        this.selectedFiles = files.slice(index);
-        this.isUploading = false;
-        this.uploadProgress = '';
+        console.error(`No se pudo cargar "${file.name}" a B2:`, error);
+        if (upload) {
+          try {
+            await firstValueFrom(this.galleryService.abortMediaUpload(upload.uploadToken));
+          } catch (abortError) {
+            console.error('No se pudo cancelar la carga parcial a B2:', abortError);
+          }
+          this.pendingUploadTokens.delete(upload.uploadToken);
+        }
         const detail = error instanceof HttpErrorResponse && typeof error.error?.error === 'string'
           ? error.error.error
-          : 'Intenta nuevamente.';
+          : error instanceof Error ? error.message : 'Intenta nuevamente.';
         this.errorMessage = `No se pudo subir "${file.name}". ${detail}`;
+        this.isUploading = false;
+        this.uploadProgress = '';
+        this.loadSessionMedia();
         return;
       }
     }
@@ -332,48 +357,154 @@ export class GalleryComponent implements OnInit, OnDestroy {
     this.selectedFiles = [];
     this.isUploading = false;
     this.uploadProgress = '';
-    this.loadGallery(targetEmail, albumId);
+    this.loadSessionMedia();
   }
 
-  deletePhoto(): void {
-    if (
-      this.isDeletingPhoto ||
-      !this.auth.esAdminGaleria() ||
-      !this.currentPhoto ||
-      !this.userEmail ||
-      !this.selectedAlbumId
-    ) {
-      return;
+  private async uploadPartBatch(
+    file: File,
+    upload: MultipartUpload,
+    partUrls: Array<{ partNumber: number; url: string }>,
+    uploadedBytes: number,
+    totalBytes: number
+  ): Promise<Array<{ partNumber: number; etag: string }>> {
+    const results: Array<{ partNumber: number; etag: string }> = [];
+    let nextIndex = 0;
+    const workers = Array.from(
+      { length: Math.min(uploadConcurrency, partUrls.length) },
+      async () => {
+        while (nextIndex < partUrls.length) {
+          const partUrl = partUrls[nextIndex++];
+          const start = (partUrl.partNumber - 1) * upload.partSize;
+          const end = Math.min(start + upload.partSize, file.size);
+          const body = file.slice(start, end);
+          let lastError: unknown;
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            const controller = new AbortController();
+            this.uploadControllers.add(controller);
+            try {
+              const response = await fetch(partUrl.url, {
+                method: 'PUT',
+                body,
+                signal: controller.signal,
+              });
+              if (!response.ok) {
+                throw new Error(`B2 respondió HTTP ${response.status} al subir una parte.`);
+              }
+              const etag = response.headers.get('ETag');
+              if (!etag) {
+                throw new Error('B2 no expuso el encabezado ETag. Revisa la regla CORS del bucket.');
+              }
+              results.push({ partNumber: partUrl.partNumber, etag });
+              const progressBytes = uploadedBytes + body.size;
+              this.uploadProgress =
+                `${Math.round(progressBytes / totalBytes * 100)}% subiendo archivo`;
+              lastError = undefined;
+              break;
+            } catch (error) {
+              if (controller.signal.aborted) {
+                throw error;
+              }
+              lastError = error;
+              if (attempt < 3) {
+                await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+              }
+            } finally {
+              this.uploadControllers.delete(controller);
+            }
+          }
+          if (lastError) throw lastError;
+        }
+      }
+    );
+    await Promise.all(workers);
+    return results.sort((a, b) => a.partNumber - b.partNumber);
+  }
+
+  setCollection(collection: 'gallery' | 'favorites' | 'hidden'): void {
+    this.activeCollection = collection;
+    this.currentMediaIndex = 0;
+  }
+
+  selectMedia(index: number): void {
+    this.currentMediaIndex = index;
+  }
+
+  previousMedia(): void {
+    if (this.visibleMedia.length > 1) {
+      this.currentMediaIndex =
+        (this.currentMediaIndex - 1 + this.visibleMedia.length) % this.visibleMedia.length;
     }
+  }
 
-    const photoToDelete = this.currentPhoto;
-    if (!photoToDelete) return;
-
-    if (!confirm('¿Seguro que deseas eliminar esta foto? Esta acción no se puede deshacer.')) {
-      return;
+  nextMedia(): void {
+    if (this.visibleMedia.length > 1) {
+      this.currentMediaIndex = (this.currentMediaIndex + 1) % this.visibleMedia.length;
     }
+  }
 
-    const targetEmail = this.userEmail;
-    const albumId = this.selectedAlbumId;
-    this.isDeletingPhoto = true;
-    this.galleryService.deletePhoto(photoToDelete.id, targetEmail, albumId).subscribe({
-      next: () => {
-        this.isDeletingPhoto = false;
-        this.loadGallery(targetEmail, albumId);
+  toggleFavorite(): void {
+    if (this.currentMedia) {
+      this.saveMediaPreference(this.currentMedia, !this.currentMedia.isFavorite, this.currentMedia.isHidden);
+    }
+  }
+
+  toggleHidden(): void {
+    if (this.currentMedia) {
+      this.saveMediaPreference(this.currentMedia, this.currentMedia.isFavorite, !this.currentMedia.isHidden);
+    }
+  }
+
+  private saveMediaPreference(media: GalleryMedia, isFavorite: boolean, isHidden: boolean): void {
+    if (this.isSavingPreference || !this.selectedSessionId) return;
+    this.isSavingPreference = true;
+    this.errorMessage = '';
+    this.galleryService.updateSessionMediaPreference(this.selectedSessionId, media.id, {
+      isFavorite,
+      isHidden,
+    }).subscribe({
+      next: preference => {
+        Object.assign(media, preference);
+        this.isSavingPreference = false;
+        this.currentMediaIndex = Math.min(
+          this.currentMediaIndex,
+          Math.max(0, this.visibleMedia.length - 1)
+        );
       },
-      error: (err) => {
-        console.error('❌ Error al eliminar la foto:', err);
-        this.isDeletingPhoto = false;
-        this.errorMessage = err.error?.error || 'No se pudo eliminar la foto. Intenta nuevamente.';
+      error: error => {
+        console.error('No se pudo guardar la preferencia del archivo:', error);
+        this.isSavingPreference = false;
+        this.errorMessage =
+          error.error?.error || 'No se pudo guardar la preferencia. Intenta nuevamente.';
       }
     });
   }
 
-  selectImage(index: number): void {
-    this.currentImageIndex = index;
-  }
-
-  onImageChanged(index: number): void {
-    this.currentImageIndex = index;
+  deleteCurrentMedia(): void {
+    const current = this.currentMedia;
+    if (
+      !current ||
+      this.isDeletingMedia ||
+      !this.auth.esAdminGaleria() ||
+      !this.userEmail ||
+      !this.selectedSessionId
+    ) {
+      return;
+    }
+    if (!confirm(`¿Eliminar "${current.filename}" de esta galería? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+    this.isDeletingMedia = true;
+    this.galleryService.deleteSessionMedia(this.selectedSessionId, current.id, this.userEmail).subscribe({
+      next: () => {
+        this.isDeletingMedia = false;
+        this.loadSessionMedia();
+      },
+      error: error => {
+        console.error('No se pudo eliminar el archivo de B2:', error);
+        this.isDeletingMedia = false;
+        this.errorMessage =
+          error.error?.error || 'No se pudo eliminar el archivo. Intenta nuevamente.';
+      }
+    });
   }
 }
