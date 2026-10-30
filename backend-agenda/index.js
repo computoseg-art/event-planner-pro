@@ -280,6 +280,10 @@ async function reserveB2Storage(size) {
 async function settleB2StorageReservation(size, stored) {
   const usageRef = db.ref('b2_storage_usage');
   const result = await usageRef.transaction(current => {
+    // La primera llamada puede recibir null mientras Firebase aún no tiene el valor real; se devuelve igual para forzar el reintento.
+    if (current === null) {
+      return current;
+    }
     const storedBytes = Number(current?.storedBytes || 0);
     const reservedBytes = Number(current?.reservedBytes || 0);
     if (
