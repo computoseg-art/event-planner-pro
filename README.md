@@ -1,10 +1,10 @@
-# 📅 EventPlanner Pro — Sistema de Gestión de Reservas
+# 📅 BSfotografia & Videografia — Sistema de Gestión de Reservas
 
 ![Angular](https://img.shields.io/badge/Angular-19+-DD0031?style=for-the-badge&logo=angular&logoColor=white)
 ![Firebase](https://img.shields.io/badge/Firebase-Realtime%20DB-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 
-**EventPlanner Pro** es una aplicación de gestión de reservas diseñada para salones de fiestas y organizadores de eventos. Permite a los usuarios finales reservar fechas y servicios de forma intuitiva, mientras que ofrece a los administradores un control total sobre la agenda y el estado financiero de cada evento.
+**BSfotografia & Videografia** es una aplicación de gestión de reservas para servicios de fotografía, video y celebraciones. Permite a los clientes reservar fechas y servicios de forma intuitiva, mientras que ofrece a los administradores control sobre la agenda y el estado financiero de cada evento.
 
 ---
 
@@ -26,6 +26,8 @@
 - **Selección por Categorías:** El usuario elige primero el tipo de evento (Bodas, 15 Años, etc.) para filtrar los servicios compatibles.
 - **Cálculo en Tiempo Real:** Cálculo automático de totales, montos de seña mínima y saldos pendientes.
 - **Servicios Extras:** Posibilidad de añadir complementos generales a cualquier tipo de reserva.
+- **Catálogo centralizado:** Los servicios, precios promocionales y condiciones del presupuesto de 15 años se mantienen en `src/app/services/catalogo-servicios.ts`. Los precios promocionales son informativos; el importe de la reserva y el pago se toma del campo `precio` del catálogo y se mantiene en `$ 1` mientras se prueba la aplicación.
+- **Acceso separado de la portada:** La página promocional es pública en `/home`; el inicio de sesión y registro están en `/login`.
 
 ### 👤 Panel Administrativo (Admin Mode)
 

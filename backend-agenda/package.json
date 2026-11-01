@@ -3,10 +3,15 @@
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1160.0",
+    "@aws-sdk/s3-request-presigner": "^3.1160.0",
     "axios": "^1.20.0",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
@@ -14,7 +19,6 @@
     "firebase-admin": "^14.5.0",
     "googleapis": "^183.0.0",
     "mercadopago": "^2.5.0",
-    "multer": "^2.4.0",
-    "nodemailer": "^10.0.14"
+    "multer": "^2.4.0"
   }
 }

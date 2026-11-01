@@ -1,0 +1,258 @@
+<div class="gallery-page-container">
+  <h1>Galería de fotos y videos</h1>
+
+  @if (auth.esAdminGaleria()) {
+    <section class="gallery-admin-tools">
+      <div class="gallery-b2-check">
+        <p class="gallery-target-hint">
+          Almacenamiento Backblaze B2: el bucket se mantiene privado.
+        </p>
+        <p class="gallery-target-hint">
+          El límite global de la aplicación es 9 GB. Al borrar un archivo, B2 puede conservar su versión anterior.
+        </p>
+        <button type="button" (click)="checkB2Storage()" [disabled]="isCheckingB2Storage">
+          {{ isCheckingB2Storage ? 'Verificando…' : 'Probar conexión con B2' }}
+        </button>
+        @if (b2StorageStatus) {
+          <p class="gallery-target-hint" role="status">{{ b2StorageStatus }}</p>
+        }
+      </div>
+
+      <label for="target-email">Email del cliente</label>
+      <div class="gallery-target-row">
+        <input
+          id="target-email"
+          type="email"
+          [value]="targetEmail"
+          (input)="targetEmail = $any($event.target).value.trim().toLowerCase()"
+          placeholder="cliente@correo.com"
+        />
+        <button type="button" (click)="openTargetGallery()">Ver sesiones</button>
+      </div>
+
+      @if (userEmail) {
+        <p class="gallery-target-hint">
+          Administrando las galerías de <strong>{{ userEmail }}</strong>.
+        </p>
+        <div class="session-create-form">
+          <label for="session-title">Nueva sesión o evento</label>
+          <input
+            id="session-title"
+            type="text"
+            maxlength="100"
+            [value]="sessionTitle"
+            (input)="sessionTitle = $any($event.target).value"
+            placeholder="Ej. Boda de Ana y Luis"
+          />
+          <label for="session-date">Fecha del evento (opcional)</label>
+          <input
+            id="session-date"
+            type="date"
+            [value]="sessionDate"
+            (input)="sessionDate = $any($event.target).value"
+          />
+          <label for="session-description">Descripción (opcional)</label>
+          <textarea
+            id="session-description"
+            maxlength="500"
+            rows="2"
+            [value]="sessionDescription"
+            (input)="sessionDescription = $any($event.target).value"
+            placeholder="Información de la sesión">
+          </textarea>
+          <button
+            type="button"
+            (click)="createSession()"
+            [disabled]="isCreatingSession || !sessionTitle.trim()">
+            {{ isCreatingSession ? 'Creando…' : 'Crear sesión' }}
+          </button>
+        </div>
+      }
+
+      @if (selectedSession) {
+        <label for="media-files" class="upload-label">Subir fotos o videos a esta sesión</label>
+        <p class="gallery-target-hint">
+          Carga directa y multipart a B2. Límite total configurado: 9 GB para este bucket.
+        </p>
+        <input
+          id="media-files"
+          type="file"
+          accept="image/*,video/*,.dng,.cr2,.cr3,.nef,.arw,.orf,.rw2,.raf"
+          multiple
+          (change)="setSelectedFiles($event)"
+        />
+        @if (selectedFiles.length > 0) {
+          <div class="upload-action">
+            <span>{{ selectedFiles.length }} archivo(s) seleccionado(s)</span>
+            <button type="button" (click)="uploadMedia()" [disabled]="isUploading">
+              {{ isUploading ? 'Subiendo ' + uploadProgress : 'Subir a esta sesión' }}
+            </button>
+          </div>
+        }
+      }
+    </section>
+  }
+
+  @if (errorMessage) {
+    <p class="gallery-message gallery-error" role="alert">{{ errorMessage }}</p>
+  }
+
+  @if (auth.esAdminGaleria() && !userEmail) {
+    <div class="no-photos-message">
+      <p>Ingresa el correo de un cliente para ver o crear sus sesiones de fotos.</p>
+    </div>
+  } @else if (userEmail && sessions.length > 0) {
+    <nav class="session-list" aria-label="Sesiones del cliente">
+      @for (session of sessions; track session.id) {
+        <button
+          type="button"
+          class="session-card"
+          [class.active]="selectedSessionId === session.id"
+          (click)="selectSession(session.id)">
+          <strong>{{ session.title }}</strong>
+          @if (session.eventDate) {
+            <span>{{ session.eventDate }}</span>
+          }
+          <span>{{ session.mediaCount }} archivo(s)</span>
+        </button>
+      }
+    </nav>
+  } @else if (!isLoading && userEmail) {
+    <div class="no-photos-message">
+      @if (auth.esAdminGaleria()) {
+        <p>Aún no hay sesiones para este cliente. Crea una sesión para empezar a subir fotos y videos.</p>
+      } @else {
+        <p>Todavía no tienes sesiones de fotos disponibles.</p>
+      }
+    </div>
+  }
+
+  @if (isLoading) {
+    <div class="gallery-message">Cargando galería…</div>
+  } @else if (selectedSessionId && media.length > 0 && visibleMedia.length > 0) {
+    @if (!auth.esAdminGaleria()) {
+      <nav class="gallery-collections" aria-label="Colecciones de archivos">
+        <button
+          type="button"
+          [class.active]="activeCollection === 'gallery'"
+          (click)="setCollection('gallery')">
+          Galería ({{ visibleMediaCount }})
+        </button>
+        <button
+          type="button"
+          [class.active]="activeCollection === 'favorites'"
+          (click)="setCollection('favorites')">
+          Favoritos ({{ favoriteMediaCount }})
+        </button>
+        <button
+          type="button"
+          [class.active]="activeCollection === 'hidden'"
+          (click)="setCollection('hidden')">
+          Ocultos ({{ hiddenMediaCount }})
+        </button>
+      </nav>
+    }
+
+    @if (currentMedia) {
+      <section class="media-viewer" aria-label="Vista del archivo">
+        @if (auth.esAdminGaleria()) {
+          <button
+            type="button"
+            class="media-delete-button"
+            (click)="deleteCurrentMedia()"
+            [disabled]="isDeletingMedia">
+            {{ isDeletingMedia ? 'Eliminando…' : 'Eliminar archivo' }}
+          </button>
+        }
+        @if (visibleMedia.length > 1) {
+          <button type="button" class="media-nav previous" (click)="previousMedia()" aria-label="Anterior">
+            &#10094;
+          </button>
+        }
+
+        <div class="media-stage">
+          @if (isCurrentVideo) {
+            <video [src]="currentMedia.url" controls playsinline preload="metadata">
+              Tu navegador no puede reproducir este video.
+            </video>
+          } @else if (currentMedia.mimeType.startsWith('image/')) {
+            <img [src]="currentMedia.url" [alt]="currentMedia.filename" />
+          } @else {
+            <div class="media-download-fallback">
+              <span aria-hidden="true">RAW</span>
+              <p>Este formato se puede descargar, pero no previsualizar en el navegador.</p>
+            </div>
+          }
+        </div>
+
+        @if (visibleMedia.length > 1) {
+          <button type="button" class="media-nav next" (click)="nextMedia()" aria-label="Siguiente">
+            &#10095;
+          </button>
+        }
+        <div class="media-counter">
+          {{ currentMediaIndex + 1 }} / {{ visibleMedia.length }}
+        </div>
+      </section>
+
+      <div class="media-details">
+        <span>{{ currentMedia.filename }} · {{ currentMedia.mimeType }} · {{ currentMedia.size | number }} bytes</span>
+        <a [href]="currentMedia.downloadUrl">Descargar original</a>
+      </div>
+
+      @if (!auth.esAdminGaleria()) {
+        <div class="photo-preferences">
+          <button
+            type="button"
+            [class.selected]="currentMedia.isFavorite"
+            [disabled]="isSavingPreference"
+            (click)="toggleFavorite()">
+            {{ currentMedia.isFavorite ? '♥ En favoritos' : '♡ Agregar a favoritos' }}
+          </button>
+          <button
+            type="button"
+            [disabled]="isSavingPreference"
+            (click)="toggleHidden()">
+            {{ currentMedia.isHidden ? 'Mostrar en galería' : 'Ocultar archivo' }}
+          </button>
+        </div>
+      }
+    }
+
+    <div class="thumbnail-grid">
+      @for (item of visibleMedia; track item.id; let i = $index) {
+        <button
+          type="button"
+          class="thumbnail-item"
+          [class.active]="i === currentMediaIndex"
+          [class.favorite]="item.isFavorite"
+          (click)="selectMedia(i)"
+          [attr.aria-label]="item.filename">
+          @if (item.mimeType.startsWith('image/')) {
+            <img [src]="item.url" [alt]="item.filename" loading="lazy" />
+          } @else {
+            <span class="video-thumbnail">
+              <span aria-hidden="true">{{ item.mimeType.startsWith('video/') ? '▶' : 'RAW' }}</span>
+              <small>{{ item.filename }}</small>
+            </span>
+          }
+          @if (item.isFavorite) {
+            <span class="thumbnail-favorite" aria-label="Favorito">♥</span>
+          }
+        </button>
+      }
+    </div>
+  } @else if (selectedSessionId && !isLoading) {
+    <div class="no-photos-message">
+      @if (activeCollection === 'favorites') {
+        <p>Aún no agregaste archivos a tus favoritos.</p>
+      } @else if (activeCollection === 'hidden') {
+        <p>No tienes archivos ocultos.</p>
+      } @else if (auth.esAdminGaleria()) {
+        <p>Esta sesión todavía no tiene fotos ni videos.</p>
+      } @else {
+        <p>Esta sesión todavía no tiene archivos disponibles.</p>
+      }
+    </div>
+  }
+</div>

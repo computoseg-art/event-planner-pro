@@ -34,9 +34,9 @@ app.post('/create_preference', async (req, res) => {
         },
       ],
       back_urls: {
-        success: 'https://calendario-71490.web.app/agenda',
-        failure: 'https://calendario-71490.web.app/agenda',
-        pending: 'https://calendario-71490.web.app/agenda',
+        success: 'https://fotos-44002.web.app/agenda',
+        failure: 'https://fotos-44002.web.app/agenda',
+        pending: 'https://fotos-44002.web.app/agenda',
       },
       auto_return: 'approved',
     };

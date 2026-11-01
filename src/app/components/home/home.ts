@@ -1,39 +1,51 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { AuthService } from '../../services/auth.service';
+import { RouterLink } from '@angular/router';
+import { CartService } from '../../services/cart.service';
+import { PRESUPUESTO_QUINCE } from '../../services/catalogo-servicios';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './home.html',
-  styleUrl: './home.css',
+  styleUrls: ['./home.css', './wedding.css'],
 })
 export class HomeComponent {
-  auth = inject(AuthService);
+  private cart = inject(CartService);
+  readonly presupuestoQuince = PRESUPUESTO_QUINCE;
+  serviciosQuince = computed(() =>
+    this.cart.serviciosDisponibles().filter((servicio) => servicio.categoria === '15_años'),
+  );
+  serviciosBodas = computed(() =>
+    this.cart.serviciosDisponibles().filter((servicio) => servicio.categoria === 'bodas'),
+  );
 
-  nombreUsuario = signal('');
-  passwordUsuario = signal('');
-  esRegistro = signal(false);
-
-  accionPrincipal() {
-    const email = this.nombreUsuario().trim();
-    const pass = this.passwordUsuario().trim();
-
-    if (email.length > 0 && pass.length >= 6) {
-      if (this.esRegistro()) {
-        this.auth.registrar(email, pass);
-      } else {
-        this.auth.login(email, pass);
-      }
-    } else {
-      alert('Por favor, ingresa un correo y una contraseña (mínimo 6 caracteres).');
-    }
+  formatearPrecio(precio: number): string {
+    return `$ ${new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(precio)}`;
   }
 
-  // --- NUEVO MÉTODO PARA GOOGLE ---
-  ingresarConGoogle() {
-    this.auth.loginConGoogle();
+  get precioEfectivo(): number {
+    return this.presupuestoQuince.precioLista * (1 - this.presupuestoQuince.descuentoEfectivoPorcentaje / 100);
+  }
+
+  get descuentoEfectivo(): number {
+    return this.presupuestoQuince.precioLista - this.precioEfectivo;
+  }
+
+  get reservaLista(): number {
+    return this.presupuestoQuince.precioLista * (this.presupuestoQuince.reservaPorcentaje / 100);
+  }
+
+  get saldoLista(): number {
+    return this.presupuestoQuince.precioLista * (this.presupuestoQuince.saldoPorcentaje / 100);
+  }
+
+  get reservaEfectivo(): number {
+    return this.precioEfectivo * (this.presupuestoQuince.reservaPorcentaje / 100);
+  }
+
+  get saldoEfectivo(): number {
+    return this.precioEfectivo * (this.presupuestoQuince.saldoPorcentaje / 100);
   }
 }

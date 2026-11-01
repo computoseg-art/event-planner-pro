@@ -1,44 +1,13 @@
 import { Injectable, signal, computed } from '@angular/core';
-
-export interface ServicioExtra {
-  id: string;
-  nombre: string;
-  precio: number;
-  icono: string;
-  categoria: '15_años' | 'bodas' | 'extras';
-}
+import { CATALOGO_SERVICIOS } from './catalogo-servicios';
+import type { CategoriaServicio, ServicioExtra } from './catalogo-servicios';
 
 @Injectable({ providedIn: 'root' })
 export class CartService {
   // Catálogo agrupado por tipo de evento
-  serviciosDisponibles = signal<ServicioExtra[]>([
-    // PAQUETES 15 AÑOS
-    {
-      id: '15-1',
-      nombre: 'Paquete Quince: Basic',
-      precio: 1,
-      icono: '👑',
-      categoria: '15_años',
-    },
-    {
-      id: '15-2',
-      nombre: 'Paquete Quince: Full Premium',
-      precio: 1,
-      icono: '💎',
-      categoria: '15_años',
-    },
+  readonly serviciosDisponibles = signal<ServicioExtra[]>([...CATALOGO_SERVICIOS]);
 
-    // PAQUETES BODAS
-    { id: 'b-1', nombre: 'Boda: Civil & Brindis', precio: 1, icono: '🥂', categoria: 'bodas' },
-    { id: 'b-2', nombre: 'Boda: Fiesta Completa', precio: 1, icono: '💍', categoria: 'bodas' },
-
-    // SERVICIOS EXTRAS (Generales)
-    { id: 'e-1', nombre: 'Alquiler Luces Pro', precio: 1, icono: '💡', categoria: 'extras' },
-    { id: 'e-2', nombre: 'DJ y Sonido', precio: 1, icono: '🎧', categoria: 'extras' },
-    { id: 'e-3', nombre: 'Fotografía & Video', precio: 1, icono: '📸', categoria: 'extras' },
-  ]);
-
-  categoriaSeleccionada = signal<string>('extras'); // Por defecto muestra extras
+  categoriaSeleccionada = signal<CategoriaServicio>('extras');
   serviciosSeleccionados = signal<ServicioExtra[]>([]);
 
   // Filtra los servicios según la categoría que el usuario clickea
@@ -46,15 +15,32 @@ export class CartService {
     this.serviciosDisponibles().filter((s) => s.categoria === this.categoriaSeleccionada()),
   );
 
-  totalCarrito = computed(() =>
+  subtotalCarrito = computed(() =>
     this.serviciosSeleccionados().reduce((acc, s) => acc + s.precio, 0),
   );
 
-  montoSenia = computed(() => this.totalCarrito() * 0.2);
+  descuentoCarrito = computed(() =>
+    this.calcularDescuento(this.serviciosSeleccionados()),
+  );
+
+  totalCarrito = computed(() =>
+    Math.round((this.subtotalCarrito() - this.descuentoCarrito()) * 100) / 100,
+  );
+
+  montoSenia = computed(() => this.totalCarrito() * 0.3);
 
   todosLosServicios = computed(() => this.serviciosDisponibles());
 
-  setCategoria(cat: string) {
+  categoriaSeleccionadaCompleta = computed(() => {
+    const serviciosCategoria = this.serviciosFiltrados();
+    const idsSeleccionados = new Set(this.serviciosSeleccionados().map((servicio) => servicio.id));
+    return (
+      serviciosCategoria.length > 0 &&
+      serviciosCategoria.every((servicio) => idsSeleccionados.has(servicio.id))
+    );
+  });
+
+  setCategoria(cat: CategoriaServicio) {
     this.categoriaSeleccionada.set(cat);
   }
 
@@ -63,6 +49,50 @@ export class CartService {
       const existe = actuales.find((s) => s.id === servicio.id);
       return existe ? actuales.filter((s) => s.id !== servicio.id) : [...actuales, servicio];
     });
+  }
+
+  toggleTodosServiciosCategoria() {
+    const idsCategoria = new Set(this.serviciosFiltrados().map((servicio) => servicio.id));
+    if (this.categoriaSeleccionadaCompleta()) {
+      this.serviciosSeleccionados.update((seleccionados) =>
+        seleccionados.filter((servicio) => !idsCategoria.has(servicio.id)),
+      );
+      return;
+    }
+
+    this.serviciosSeleccionados.update((seleccionados) => {
+      const seleccionadosFueraCategoria = seleccionados.filter(
+        (servicio) => !idsCategoria.has(servicio.id),
+      );
+      return [...seleccionadosFueraCategoria, ...this.serviciosFiltrados()];
+    });
+  }
+
+  calcularDescuento(servicios: Pick<ServicioExtra, 'id' | 'precio' | 'categoria'>[]): number {
+    const seleccionadosPorId = new Map(servicios.map((servicio) => [servicio.id, servicio]));
+    const catalogoPorCategoria = this.serviciosDisponibles().reduce(
+      (categorias, servicio) => {
+        const serviciosCategoria = categorias.get(servicio.categoria) || [];
+        serviciosCategoria.push(servicio);
+        categorias.set(servicio.categoria, serviciosCategoria);
+        return categorias;
+      },
+      new Map<CategoriaServicio, ServicioExtra[]>(),
+    );
+
+    const descuento = [...catalogoPorCategoria.entries()].reduce((total, [categoria, catalogo]) => {
+      if (!catalogo.length || !catalogo.every((servicio) => seleccionadosPorId.has(servicio.id))) {
+        return total;
+      }
+
+      const subtotalCategoria = catalogo.reduce(
+        (subtotal, servicio) => subtotal + Number(seleccionadosPorId.get(servicio.id)?.precio || 0),
+        0,
+      );
+      return total + subtotalCategoria * 0.1;
+    }, 0);
+
+    return Math.round(descuento * 100) / 100;
   }
 
   reset() {

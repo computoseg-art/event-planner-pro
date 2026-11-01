@@ -1,5 +1,9 @@
 {
+  "database": {
+    "rules": "database.rules.json"
+  },
   "hosting": {
+    "site": "fotos-44002",
     "public": "dist/novedades/browser",
     "ignore": [
       "firebase.json",

@@ -1,17 +1,26 @@
-import { Component, signal, computed, inject, OnInit } from '@angular/core';
+// src/app/components/agenda/agenda.ts
+
+//Este componente maneja la agenda de reservas de eventos en la aplicación.
+//Proporciona funcionalidades para seleccionar fechas, agregar y actualizar reservas,
+//procesar pagos y verificar el estado de las reservas.
+//También incluye validaciones para bloquear días ocupados o con menos de 3 días de anticipación,
+// y para determinar si una reserva está pagada o caducada.
+
+import { Component, signal, computed, inject, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ReservaService, Reserva } from '../../services/reserva.service';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
+import { take } from 'rxjs';
 
 @Component({
   selector: 'app-agenda',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './agenda.html',
-  styleUrls: ['./agenda.css'],
+  styleUrls: ['./agenda.css', './agenda-modal.css'],
 })
 export class AgendaComponent implements OnInit {
   rs = inject(ReservaService);
@@ -24,30 +33,76 @@ export class AgendaComponent implements OnInit {
   miDescripcion = signal<string>('');
   reservaExpandida = signal<string | null>(null);
   fechaHoy = signal<Date>(new Date());
+  readonly fechaMaximaReservas = this.calcularFechaMaxima();
   categoriaPrevia = signal<'15_años' | 'bodas' | null>(null);
+  categoriaServicios = signal<'15_años' | 'bodas' | 'extras' | null>(null);
   estaCerrando = signal<boolean>(false);
 
   totalParaReserva = computed(() => this.cart.totalCarrito());
   pagoSenia = computed(() => this.cart.montoSenia());
 
+  puedePagarSenia(reserva: Reserva): boolean {
+    if (Number(reserva.pagado || 0) > 0 || this.esReservaCaducada(reserva)) return false;
+    return this.diasHastaEvento(reserva.fecha) >= 5;
+  }
+
+  puedeReservarConSenia(): boolean {
+    const fecha = this.fechaSeleccionada();
+    return !!fecha && this.diasHastaEvento(fecha) >= 5;
+  }
+
+  private diasHastaEvento(fecha: string): number {
+    const [year, month, day] = fecha.split('T')[0].split('-').map(Number);
+    const evento = Date.UTC(year, month - 1, day);
+    const hoy = new Date();
+    const hoyUtc = Date.UTC(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    return Math.floor((evento - hoyUtc) / 86400000);
+  }
+
+  diasParaCompletarPago(fecha: string): number {
+    const [year, month, day] = fecha.split('T')[0].split('-').map(Number);
+    const deadline = Date.UTC(year, month - 1, day - 3);
+    const todayParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Montevideo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date());
+    const todayPart = (type: string) => Number(todayParts.find(part => part.type === type)?.value);
+    const today = Date.UTC(todayPart('year'), todayPart('month') - 1, todayPart('day'));
+    return Math.max(Math.floor((deadline - today) / 86400000), 0);
+  }
+
   ngOnInit() {
-    this.route.queryParams.subscribe((params) => {
-      const status = params['status'];
-      const paymentId = params['payment_id'];
+    this.route.queryParams.pipe(take(1)).subscribe((params) => {
+      const paymentId = params['payment_id'] || params['collection_id'];
+      const externalReference = params['external_reference'];
 
-      if (status === 'approved') {
-        this.auth.user$.subscribe(async (u) => {
-          if (u && u.email) {
-            console.log('Procesando pago para:', u.email);
-            await this.rs.saldarDeudaUsuario(u.email, paymentId);
-
-            alert('¡Pago procesado con éxito! Deuda saldada.');
-
-            this.router.navigate([], { queryParams: {} });
-          }
-        });
+      if (paymentId && externalReference) {
+        this.confirmarRetornoPago(String(paymentId), String(externalReference));
       }
     });
+  }
+
+  private async confirmarRetornoPago(paymentId: string, externalReference: string) {
+    let pagoConfirmado = false;
+
+    try {
+      const result = await this.rs.confirmarPago(paymentId, externalReference);
+      if (result.status === 'approved') {
+        pagoConfirmado = true;
+        alert('¡Pago confirmado por Mercado Pago!');
+      } else {
+        alert('El pago todavía está pendiente de confirmación. La agenda se actualizará cuando Mercado Pago lo apruebe.');
+      }
+    } catch (error) {
+      console.error('No se pudo verificar el pago:', error);
+      alert(error instanceof Error ? error.message : 'No se pudo verificar el pago con Mercado Pago.');
+    } finally {
+      if (pagoConfirmado) {
+        await this.router.navigate([], { queryParams: {}, replaceUrl: true });
+      }
+    }
   }
 
   // --- VALIDACIONES DE FECHA Y SEGURIDAD ---
@@ -62,6 +117,13 @@ export class AgendaComponent implements OnInit {
   esDiaBloqueado(dia: string): boolean {
     if (!dia) return true;
 
+    const [year, month, day] = dia.split('T')[0].split('-').map(Number);
+    const fechaEvaluada = new Date(year, month - 1, day);
+    fechaEvaluada.setHours(0, 0, 0, 0);
+    const fechaMaxima = new Date(this.fechaMaximaReservas);
+    fechaMaxima.setHours(0, 0, 0, 0);
+    if (fechaEvaluada > fechaMaxima) return true;
+
     // 1. Si ya está ocupado
     if (this.esDiaOcupado(dia)) return true;
 
@@ -69,23 +131,20 @@ export class AgendaComponent implements OnInit {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
 
-    const [year, month, day] = dia.split('T')[0].split('-').map(Number);
-    const fechaEval = new Date(year, month - 1, day);
-    fechaEval.setHours(0, 0, 0, 0);
-
-    const diffTiempo = fechaEval.getTime() - hoy.getTime();
+    const diffTiempo = fechaEvaluada.getTime() - hoy.getTime();
     const diffDias = diffTiempo / (1000 * 60 * 60 * 24);
 
     return diffDias < 3;
   }
 
-  // REGLA 2: Verificar si una reserva caducó por no saldarse/pagarse 2 días antes del evento
+  // El saldo pendiente vence tres días antes del evento.
   esReservaCaducada(reserva: Reserva): boolean {
     const total = Number(reserva.total || 0);
     const pagado = Number(reserva.pagado || 0);
 
     // Si ya está 100% saldada, no caduca
     if (pagado >= total) return false;
+    if (reserva.estado === 'caducada') return true;
 
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
@@ -94,20 +153,32 @@ export class AgendaComponent implements OnInit {
     const fechaEvento = new Date(year, month - 1, day);
     fechaEvento.setHours(0, 0, 0, 0);
 
-    // Fecha límite de pago = 2 días antes del evento
+    // Fecha límite de pago = 3 días antes del evento
     const fechaLimite = new Date(fechaEvento);
-    fechaLimite.setDate(fechaEvento.getDate() - 2);
+    fechaLimite.setDate(fechaEvento.getDate() - 3);
 
     return hoy > fechaLimite;
   }
 
+  estadoVisible(reserva: Reserva): 'pendiente' | 'pagado' | 'caducada' {
+    if (this.esReservaCaducada(reserva)) return 'caducada';
+
+    const total = Number(reserva.total || 0);
+    const pagado = Number(reserva.pagado || 0);
+    return total > 0 && pagado >= total ? 'pagado' : 'pendiente';
+  }
+
   // REGLA 3: Verificar si una reserva está completada o caducada (bloqueada para edición)
   esReservaBloqueada(res: Reserva): boolean {
-    const esCompletada = res.estado === 'completado' || (res.total > 0 && (res.pagado || 0) >= res.total);
+    const esCompletada =
+      res.estado === 'pagado' ||
+      res.estado === 'completado' ||
+      (res.total > 0 && (res.pagado || 0) >= res.total);
+    const tienePagos = Number(res.pagado || 0) > 0;
     const esCaducada = this.esReservaCaducada(res);
 
-    // Los clientes no pueden editar si está completada o caducada. Los admin conservan permisos.
-    return (esCompletada || esCaducada) && !this.auth.esAdmin();
+    // Una seña fija el precio y los servicios; los admin conservan permisos de edición.
+    return (esCompletada || tienePagos || esCaducada) && !this.auth.esAdmin();
   }
 
   // --- NAVEGACIÓN Y CALENDARIO ---
@@ -116,9 +187,27 @@ export class AgendaComponent implements OnInit {
     return this.fechaHoy();
   }
 
+  private calcularFechaMaxima(): Date {
+    const fechaMaxima = new Date();
+    fechaMaxima.setFullYear(fechaMaxima.getFullYear() + 2);
+    fechaMaxima.setHours(0, 0, 0, 0);
+    return fechaMaxima;
+  }
+
+  limiteSuperiorAlcanzado(): boolean {
+    const fechaActual = this.fechaHoy();
+    return (
+      fechaActual.getFullYear() > this.fechaMaximaReservas.getFullYear() ||
+      (fechaActual.getFullYear() === this.fechaMaximaReservas.getFullYear() &&
+        fechaActual.getMonth() >= this.fechaMaximaReservas.getMonth())
+    );
+  }
+
   cambiarMes(delta: number) {
-    const nuevaFecha = new Date(this.fechaHoy());
-    nuevaFecha.setMonth(nuevaFecha.getMonth() + delta);
+    if (delta > 0 && this.limiteSuperiorAlcanzado()) return;
+
+    const fechaActual = this.fechaHoy();
+    const nuevaFecha = new Date(fechaActual.getFullYear(), fechaActual.getMonth() + delta, 1);
     this.fechaHoy.set(nuevaFecha);
   }
 
@@ -161,12 +250,36 @@ export class AgendaComponent implements OnInit {
       this.cerrarConAnimacion();
     } else {
       this.estaCerrando.set(false);
+      this.cart.reset();
+      this.miDescripcion.set('');
+      this.categoriaPrevia.set(null);
+      this.categoriaServicios.set(null);
       this.fechaSeleccionada.set(dia);
     }
   }
 
+  seleccionarCategoria(categoria: '15_años' | 'bodas' | 'extras'): void {
+    this.categoriaServicios.set(categoria);
+    if (categoria !== 'extras') {
+      if (this.categoriaPrevia() && this.categoriaPrevia() !== categoria) {
+        this.cart.serviciosSeleccionados.update((seleccionados) =>
+          seleccionados.filter((servicio) => servicio.categoria === 'extras'),
+        );
+      }
+      this.categoriaPrevia.set(categoria);
+    }
+    this.cart.setCategoria(categoria);
+  }
+
+  @HostListener('document:keydown.escape')
+  cerrarModalConEscape(): void {
+    if (this.fechaSeleccionada()) {
+      this.cerrarConAnimacion();
+    }
+  }
+
   cerrarConAnimacion() {
-    if (!this.fechaSeleccionada()) return;
+    if (!this.fechaSeleccionada() || this.estaCerrando()) return;
 
     this.estaCerrando.set(true);
 
@@ -203,11 +316,18 @@ export class AgendaComponent implements OnInit {
       res.servicios.push(servicio);
     }
 
-    res.total = res.servicios.reduce((acc: number, s: any) => acc + (s.precio || 0), 0);
+    const subtotal = res.servicios.reduce((acc: number, s: any) => acc + (s.precio || 0), 0);
+    res.descuento = this.cart.calcularDescuento(res.servicios);
+    res.total = Math.round((subtotal - res.descuento) * 100) / 100;
   }
 
   async confirmar() {
-    if (!this.fechaSeleccionada() || !this.miDescripcion() || !this.categoriaPrevia()) {
+    if (
+      !this.fechaSeleccionada() ||
+      !this.miDescripcion().trim() ||
+      !this.categoriaPrevia() ||
+      this.totalParaReserva() === 0
+    ) {
       alert('Faltan datos obligatorios');
       return;
     }
@@ -218,16 +338,23 @@ export class AgendaComponent implements OnInit {
     }
 
     try {
-      await this.rs.agregar(
+      const avisoEnviado = await this.rs.agregar(
         this.fechaSeleccionada()!,
         this.miDescripcion(),
         this.totalParaReserva(),
         [...this.cart.serviciosSeleccionados()],
-        this.categoriaPrevia()!
+        this.categoriaPrevia()!,
+        this.cart.descuentoCarrito(),
       );
       this.cart.reset();
       this.miDescripcion.set('');
-      alert('¡Reserva confirmada!');
+      this.categoriaPrevia.set(null);
+      this.categoriaServicios.set(null);
+      alert(
+        avisoEnviado
+          ? '¡Reserva confirmada! Se envió el aviso por correo.'
+          : 'La reserva quedó guardada, pero no se pudo enviar el aviso por correo. Revisa la configuración del correo en Render.'
+      );
       this.cerrarConAnimacion();
     } catch (e) {
       console.error('Error al confirmar:', e);
@@ -257,9 +384,14 @@ export class AgendaComponent implements OnInit {
     }
   }
 
-  async pagarReservaIndividual(res: Reserva) {
+  async pagarReservaIndividual(res: Reserva, tipoPago: 'senia' | 'total' = 'total') {
     if (this.esReservaCaducada(res)) {
-      alert('Esta reserva ha caducado por superar la fecha límite de pago (2 días antes del evento).');
+      alert('Esta reserva caducó por superar la fecha límite de pago (3 días antes del evento).');
+      return;
+    }
+
+    if (tipoPago === 'senia' && !this.puedePagarSenia(res)) {
+      alert('Para pagar una seña, deben faltar al menos 5 días para el evento y no debe haber pagos previos.');
       return;
     }
 
@@ -270,7 +402,7 @@ export class AgendaComponent implements OnInit {
     }
 
     try {
-      await this.rs.procesarPago(pendiente, res);
+      await this.rs.procesarPago(res, tipoPago);
     } catch (e) {
       console.error('Error al procesar el pago:', e);
     }
