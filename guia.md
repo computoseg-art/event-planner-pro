@@ -22,7 +22,7 @@ El frontend nunca debe contener claves privadas, secretos de webhooks, tokens de
 
 1. Confirma que tienes acceso a Firebase Console, Render, Mercado Pago, Brevo y Google Cloud.
 2. Usa el proyecto Firebase **`fotos-44002`** para Hosting, Authentication y Realtime Database.
-3. En este repositorio, `.firebaserc` tiene `calendario-71490` como proyecto predeterminado. Para evitar publicar accidentalmente en otro proyecto, usa siempre `--project fotos-44002` en los comandos de Firebase.
+3. En este repositorio, `.firebaserc` tiene `fotos-44002` como proyecto predeterminado. En comandos de publicación, especifica también `--project fotos-44002` para confirmar explícitamente el destino.
 4. Conserva como dominios de producción los que ya están configurados en la aplicación:
    - Frontend: `https://fotos-44002.web.app`
    - Backend: `https://event-planner-pro-k978.onrender.com`
@@ -187,7 +187,7 @@ Para publicar reglas y Hosting juntos, primero revisa los cambios y luego ejecut
 firebase deploy --only database,hosting --project fotos-44002
 ```
 
-El `--project fotos-44002` es importante: no omitirlo evita depender del proyecto predeterminado de `.firebaserc`, que actualmente es distinto.
+El `--project fotos-44002` confirma explícitamente el destino de publicación, aunque ya esté configurado como proyecto predeterminado en `.firebaserc`.
 
 ## 9. Verificación posterior al despliegue
 
