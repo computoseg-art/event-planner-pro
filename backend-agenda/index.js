@@ -1424,54 +1424,6 @@ app.post('/webhook', async (req, res, next) => {
   }
 });
 
-// ---------------------------------------------
-// GOOGLE PHOTOS: ASEGURAR / CREAR ÁLBUM
-// ---------------------------------------------
-app.post('/api/ensure-album', requireFirebaseAuth, requireGalleryAdmin, async (req, res) => {
-  const { email } = req.body;
-  if (!validEmail(email)) {
-    return res.status(400).json({ error: 'El email debe ser válido.' });
-  }
-  const cleanEmail = encodeEmail(email);
-
-  try {
-    const snapshot = await db.ref(`albumes/${cleanEmail}`).once('value');
-    const albumData = snapshot.val();
-
-    if (albumData && albumData.albumId) {
-      return res.status(200).json({
-        message: 'El álbum ya existe.',
-        albumId: albumData.albumId,
-        email: albumData.email
-      });
-    }
-
-    const token = await getGooglePhotosToken();
-    const albumTitle = `Evento - ${email}`;
-    const albumId = await createAlbumInGooglePhotos(token, albumTitle);
-
-    if (!albumId) {
-      return res.status(500).json({ error: 'Error al generar el álbum en Google Photos.' });
-    }
-
-    await db.ref(`albumes/${cleanEmail}`).set({
-      email: email.toLowerCase().trim(),
-      albumId,
-      createdAt: new Date().toISOString()
-    });
-
-    console.log(`✅ [Álbum Creado] Asignado a: ${cleanEmail} -> AlbumId: ${albumId}`);
-    res.status(201).json({ message: 'Álbum creado exitosamente.', albumId, email });
-
-  } catch (error) {
-    console.error('❌ Error en /api/ensure-album:', error.message);
-    res.status(500).json({ error: 'Error interno del servidor.' });
-  }
-});
-
-// ---------------------------------------------
-// GOOGLE PHOTOS: LISTAR CARPETAS DE UN USUARIO
-// ---------------------------------------------
 app.post('/api/gallery/ensure-own-folder', requireFirebaseAuth, async (req, res) => {
   try {
     const requestedEmail = typeof req.body?.email === 'string'
@@ -1517,54 +1469,6 @@ app.post('/api/gallery/ensure-own-folder', requireFirebaseAuth, async (req, res)
     return res.status(500).json({
       error: galleryErrorMessage(error, 'No se pudo crear la carpeta personal de Google Photos.'),
     });
-  }
-});
-
-app.get('/api/gallery/:email/folders', requireFirebaseAuth, async (req, res) => {
-  res.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
-  const email = req.params.email;
-  if (!validEmail(email)) {
-    return res.status(400).json({ error: 'El email debe ser válido.' });
-  }
-  if (email.toLowerCase().trim() !== req.authenticatedEmail && req.authenticatedEmail !== 'admin@gmail.com') {
-    return res.status(403).json({ error: 'Solo puedes acceder a tus propias carpetas.' });
-  }
-
-  const cleanEmail = encodeEmail(email);
-  try {
-    const [defaultSnapshot, foldersSnapshot] = await Promise.all([
-      db.ref(`albumes/${cleanEmail}`).once('value'),
-      db.ref(`galeria_carpetas/${cleanEmail}`).once('value'),
-    ]);
-    const defaultAlbum = defaultSnapshot.val();
-    const folders = [];
-
-    if (defaultAlbum?.albumId) {
-      folders.push({
-        albumId: defaultAlbum.albumId,
-        title: defaultAlbum.title || 'Galería general',
-        email: defaultAlbum.email || email.toLowerCase().trim(),
-        createdAt: defaultAlbum.createdAt,
-        isDefault: true,
-      });
-    }
-
-    Object.values(foldersSnapshot.val() || {}).forEach(folder => {
-      if (folder?.albumId && folder.title) {
-        folders.push({
-          albumId: folder.albumId,
-          title: folder.title,
-          email: folder.email || email.toLowerCase().trim(),
-          createdAt: folder.createdAt,
-          isDefault: false,
-        });
-      }
-    });
-
-    return res.status(200).json(folders);
-  } catch (error) {
-    console.error('❌ Error al listar carpetas de galería:', error.message);
-    return res.status(500).json({ error: 'No se pudieron cargar las carpetas de la galería.' });
   }
 });
 
@@ -2069,87 +1973,6 @@ app.delete('/api/gallery/sessions/:sessionId/media/:mediaId', requireFirebaseAut
   } catch (error) {
     console.error('No se pudo eliminar el archivo de la galería B2:', error.message);
     return res.status(502).json({ error: 'No se pudo eliminar el archivo de Backblaze B2.' });
-  }
-});
-
-// ---------------------------------------------
-// GOOGLE PHOTOS: CREAR CARPETA (ÁLBUM)
-// ---------------------------------------------
-app.post('/api/gallery/folders', requireFirebaseAuth, requireGalleryAdmin, async (req, res) => {
-  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
-  const title = typeof req.body?.title === 'string' ? req.body.title.trim() : '';
-  if (!validEmail(email) || !title || title.length > 100) {
-    return res.status(400).json({ error: 'Indica un email válido y un nombre de carpeta de hasta 100 caracteres.' });
-  }
-
-  const cleanEmail = encodeEmail(email);
-  try {
-    const foldersSnapshot = await db.ref(`galeria_carpetas/${cleanEmail}`).once('value');
-    const existingFolders = Object.values(foldersSnapshot.val() || {});
-    if (existingFolders.some(folder => folder?.title?.toLowerCase() === title.toLowerCase())) {
-      return res.status(409).json({ error: 'Ya existe una carpeta con ese nombre para este usuario.' });
-    }
-
-    const token = await getGooglePhotosToken();
-    const albumId = await createAlbumInGooglePhotos(token, title);
-    if (!albumId) {
-      return res.status(502).json({ error: 'Google Photos no pudo crear el álbum. Revisa la conexión de Google Photos del backend.' });
-    }
-
-    const folder = {
-      albumId,
-      title,
-      email,
-      createdAt: new Date().toISOString(),
-    };
-    await db.ref(`galeria_carpetas/${cleanEmail}/${albumId}`).set(folder);
-    return res.status(201).json(folder);
-  } catch (error) {
-    console.error('❌ Error al crear carpeta de galería:', error.response?.data?.error || error.message);
-    return res.status(500).json({
-      error: galleryErrorMessage(error, 'No se pudo crear la carpeta de la galería.'),
-    });
-  }
-});
-
-// ---------------------------------------------
-// GOOGLE PHOTOS: ASIGNAR ÁLBUM DEL ADMIN A CLIENTE
-// ---------------------------------------------
-app.post('/api/gallery/folders/assign', requireFirebaseAuth, requireGalleryAdmin, async (req, res) => {
-  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
-  const albumId = req.body?.albumId;
-  if (!validEmail(email) || !validAlbumId(albumId)) {
-    return res.status(400).json({ error: 'Indica un email válido y una carpeta existente.' });
-  }
-  if (email === req.authenticatedEmail) {
-    return res.status(400).json({ error: 'Selecciona el correo del cliente, no el del administrador.' });
-  }
-
-  try {
-    const sourceAlbum = await getGalleryAlbum(req.authenticatedEmail, albumId);
-    if (!sourceAlbum) {
-      return res.status(404).json({ error: 'La carpeta seleccionada no pertenece a tu galería.' });
-    }
-
-    const targetKey = encodeEmail(email);
-    const targetRef = db.ref(`galeria_carpetas/${targetKey}/${albumId}`);
-    const existingSnapshot = await targetRef.once('value');
-    if (existingSnapshot.exists()) {
-      return res.status(409).json({ error: 'Esa carpeta ya está asignada a este cliente.' });
-    }
-
-    const folder = {
-      albumId,
-      title: sourceAlbum.title || 'Galería general',
-      email,
-      createdAt: sourceAlbum.createdAt || new Date().toISOString(),
-      sharedBy: req.authenticatedEmail,
-    };
-    await targetRef.set(folder);
-    return res.status(201).json(folder);
-  } catch (error) {
-    console.error('❌ Error al asignar carpeta al cliente:', error.message);
-    return res.status(500).json({ error: 'No se pudo asignar la carpeta al cliente.' });
   }
 });
 

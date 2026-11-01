@@ -14,13 +14,13 @@ import { InactivityService } from './services/inactivity.service';
   styleUrl: './app.css',
 })
 export class App {
-  protected readonly title = signal('agenda');
   mostrarNavbar = signal<boolean>(true);
   public reservaService = inject(ReservaService);
   private router = inject(Router);
-  private inactivity = inject(InactivityService); // Activa el monitoreo automático
 
   constructor() {
+    inject(InactivityService);
+
     this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe((event: any) => {

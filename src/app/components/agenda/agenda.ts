@@ -408,6 +408,14 @@ export class AgendaComponent implements OnInit {
     }
   }
 
+  async pagarDeudaTotal(): Promise<void> {
+    if (this.auth.esAdmin() || this.rs.deudaTotal() <= 0 || this.rs.cargandoPago()) {
+      return;
+    }
+
+    await this.rs.procesarPago(undefined, 'total');
+  }
+
   async eliminar(res: Reserva) {
     if (!res.id) return;
 

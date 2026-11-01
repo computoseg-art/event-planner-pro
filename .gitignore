@@ -25,6 +25,7 @@ backend-agenda/credentials.json
 /node_modules
 npm-debug.log
 yarn-error.log
+firebase-debug.log
 
 # IDEs and editors
 .idea/

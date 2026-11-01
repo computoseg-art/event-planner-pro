@@ -61,9 +61,13 @@
       <!-- Botón de Deuda Global -->
       @if (rs.deudaTotal() > 0 && !auth.esAdmin()) {
         <div class="pago-general-container">
-          <div class="btn-pago-general">
-            💳 Pagar Deuda Total: <strong>${{ rs.deudaTotal() | number }}</strong>
-          </div>
+          <button
+            type="button"
+            class="btn-pago-general"
+            (click)="pagarDeudaTotal()"
+            [disabled]="rs.cargandoPago()">
+            {{ rs.cargandoPago() ? 'Abriendo pago…' : '💳 Pagar Deuda Total: $' + (rs.deudaTotal() | number) }}
+          </button>
         </div>
       }
 
@@ -197,7 +201,7 @@
                       (click)="pagarReservaIndividual(res)"
                       class="btn-pagar-card"
                     >
-                      Pagar Saldo
+                      {{ (res.pagado || 0) > 0 ? 'Pagar saldo' : 'Pagar total' }}
                     </button>
                     @if (puedePagarSenia(res)) {
                       <button
@@ -236,7 +240,8 @@
                     class="btn-pagar-solo"
                     (click)="pagarReservaIndividual(res); $event.stopPropagation()"
                   >
-                    💳 Pagar saldo (${{ res.total - (res.pagado || 0) | number }})
+                    💳 {{ (res.pagado || 0) > 0 ? 'Pagar saldo' : 'Pagar total' }}
+                    (${{ res.total - (res.pagado || 0) | number }})
                   </button>
                   @if (puedePagarSenia(res)) {
                     <button

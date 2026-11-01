@@ -80,7 +80,7 @@ export class CartService {
       new Map<CategoriaServicio, ServicioExtra[]>(),
     );
 
-    const descuento = [...catalogoPorCategoria.entries()].reduce((total, [categoria, catalogo]) => {
+    const descuento = [...catalogoPorCategoria.entries()].reduce((total, [, catalogo]) => {
       if (!catalogo.length || !catalogo.every((servicio) => seleccionadosPorId.has(servicio.id))) {
         return total;
       }
