@@ -409,7 +409,7 @@ function validateReservationInput(input) {
 
   return {
     fecha: date,
-    descripcion,
+    descripcion: description,
     tipoEvento: input.tipoEvento,
     servicios: services,
     total: Math.round((subtotal - roundedDiscount) * 100) / 100,
