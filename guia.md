@@ -1,6 +1,6 @@
 # Guía de configuración y publicación en producción
 
-Esta aplicación se publica en **Firebase Hosting** y usa un backend Express en **Render**. Firebase administra el acceso y la Realtime Database; Render conecta la aplicación con Mercado Pago, Brevo y Google Photos. En esta guía, “Brave” se interpreta como **Brevo**, el proveedor de correo transaccional usado por el formulario de contacto.
+Esta aplicación se publica en **Firebase Hosting** y usa un backend Express en **Render**. Firebase administra el acceso y la Realtime Database; Render conecta la aplicación con Mercado Pago y Brevo, y la galería almacena sus archivos en Backblaze B2. En esta guía, “Brave” se interpreta como **Brevo**, el proveedor de correo transaccional usado por el formulario de contacto.
 
 ## 1. Arquitectura en producción
 
@@ -13,7 +13,7 @@ Navegador
        ├─ Firebase Admin SDK: valida usuarios y realiza operaciones privilegiadas
        ├─ Mercado Pago: crea preferencias y verifica pagos/webhooks
        ├─ Brevo: envía los mensajes del formulario de contacto
-       └─ Google Photos: crea y administra álbumes de galerías
+       └─ Backblaze B2: almacena archivos privados de galerías
 ```
 
 El frontend nunca debe contener claves privadas, secretos de webhooks, tokens de Mercado Pago, contraseñas OAuth ni credenciales de cuenta de servicio. Los secretos pertenecen a las variables de entorno de Render (y a `backend-agenda/.env` solo para desarrollo local). La configuración Firebase del frontend sí se distribuye en el JavaScript del navegador: no es una credencial de administrador; el acceso se protege con Authentication y las reglas de Realtime Database.
@@ -109,10 +109,11 @@ Estas variables no bloquean el arranque en todos los casos, pero son necesarias 
 | `EMAIL_FROM_NAME` | Por ejemplo, `BSfotografia & Videografia`. | Nombre visible del remitente. Si se omite, el backend usa ese nombre por defecto. |
 | `EMAIL_TO` | Buzón que recibirá los formularios; configura explícitamente el destinatario vigente del negocio. | El visitante no puede elegir el destinatario. Si se omite, actualmente hay un destinatario predeterminado en el backend. |
 | `ADMIN_EMAILS` | Correos separados por coma, en minúscula o separados por coma normal, por ejemplo `admin@dominio.com,otro@dominio.com`. | Autoriza operaciones administrativas del backend, especialmente la gestión de galerías. Mantén la lista alineada con los administradores codificados en frontend y `database.rules.json`; esta variable por sí sola no crea administradores en esos otros componentes. |
-| `GOOGLE_CLIENT_ID` | ID de cliente OAuth 2.0 creado en Google Cloud para Google Photos. | Identifica el cliente OAuth usado por el backend para acceder a los álbumes. |
-| `GOOGLE_CLIENT_SECRET` | Secreto del mismo cliente OAuth. | Permite renovar el acceso OAuth. Guárdalo solo en Render y en el `.env` local protegido. |
-| `GOOGLE_REDIRECT_URI` | Debe coincidir exactamente con un URI autorizado para ese cliente OAuth. En el flujo de obtención local se usa `http://127.0.0.1:3000/oauth2callback`. | Parámetro del cliente OAuth que usa el backend al renovar tokens. |
-| `REFRESH_TOKEN` | Se obtiene una vez autorizando la cuenta Google que administra las galerías (ver sección 6). | Permite al backend obtener tokens de acceso renovables a Google Photos sin volver a pedir autorización al visitante. |
+| `B2_KEY_ID` | ID de una Application Key limitada al bucket de galerías. | Permite al backend acceder a B2; no uses la Master Application Key. |
+| `B2_APPLICATION_KEY` | Secreto de esa Application Key. | Guárdalo solo en Render y en el `.env` local protegido. |
+| `B2_BUCKET_NAME` | Nombre del bucket privado de galerías. | Bucket donde se almacenan los archivos de sesiones. |
+| `B2_ENDPOINT` | Endpoint S3 Compatible de la región del bucket, por ejemplo `https://s3.us-east-005.backblazeb2.com`. | Destino de las operaciones S3 del backend y de las cargas multipartes. |
+| `B2_REGION` | Región del bucket, por ejemplo `us-east-005`. | Región utilizada para firmar las operaciones S3. |
 | `PORT` | No la definas manualmente en Render; Render provee este valor. Para ejecución local se usa normalmente `3000`. | Puerto HTTP en el que escucha Express. |
 
 El correo usa `BREVO_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME` y `EMAIL_TO`. Las variables SMTP antiguas (`EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`, `EMAIL_PASS`) ya no se usan. No es necesario abrir puertos SMTP: el backend llama por HTTPS a Brevo.
@@ -126,6 +127,12 @@ El correo usa `BREVO_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME` y `EMAIL_TO`. Las
 5. Para problemas de arranque, busca en los logs `Faltan variables de entorno requeridas`. Para errores de correo busca `Brevo rechazó el correo de contacto`; nunca copies tokens o secretos a tickets públicos.
 
 ## 5. Integración de Mercado Pago
+
+No es un requisito general usar credenciales de producción (`APP_USR-...`) para ejecutar o probar este backend en local. El código acepta tanto tokens de prueba (`TEST-...`) como tokens de producción y verifica que el tipo de credencial coincida con el modo del pago. Para pruebas, usa credenciales de prueba de la misma aplicación de Mercado Pago y las cuentas/tarjetas de prueba correspondientes; no uses la cuenta real para simular una compra.
+
+Hay una diferencia entre probar el checkout y verificar el flujo completo de notificaciones. El backend envía `notification_url` a `BACKEND_PUBLIC_URL`; si ejecutas el backend en tu computadora, Mercado Pago no puede notificar directamente a `localhost`. Para una prueba integral, usa una URL HTTPS pública temporal que reenvíe al backend local (por ejemplo, un túnel de desarrollo) y configúrala como `BACKEND_PUBLIC_URL`; alternativamente, prueba contra un despliegue de pruebas separado. Revisa también `CLIENT_URL`, porque define a dónde vuelve el navegador después del checkout. No dejes que las pruebas con credenciales TEST actualicen datos o notifiquen clientes desde el backend productivo.
+
+Si Mercado Pago rechaza una operación concreta, revisa el mensaje de error y las restricciones actuales de la cuenta, país, credenciales y usuarios de prueba. Eso no significa por sí solo que el backend requiera claves de producción. No sustituyas un token `TEST-...` por uno `APP_USR-...` para resolver un error de pruebas: las credenciales de producción pueden crear cobros reales.
 
 1. Configura `MP_ACCESS_TOKEN` y `MP_WEBHOOK_SECRET` de la misma aplicación/cuenta de Mercado Pago.
 2. En el panel de Mercado Pago, registra como URL de notificaciones:
@@ -153,18 +160,15 @@ Los usuarios autenticados pueden abrir **Mi perfil** desde el navbar para ver su
 
 El backend valida nombre, email y mensaje, aplica un límite de solicitudes por IP y envía el contenido a `EMAIL_TO`. El email ingresado por el visitante se usa como `Reply-To`, nunca como destinatario. Si falla, revisa los logs del backend y el estado del remitente/API key en Brevo.
 
-## 7. Integración de Google Photos (galerías)
+## 7. Integración de Backblaze B2 (galerías)
 
-Esta integración es independiente de Firebase Authentication y de Mercado Pago:
+1. Crea un bucket privado en Backblaze B2 y una Application Key restringida a ese bucket, con permisos de lectura, escritura y borrado necesarios para la galería.
+2. Configura `B2_KEY_ID`, `B2_APPLICATION_KEY`, `B2_BUCKET_NAME`, `B2_ENDPOINT` y `B2_REGION` en Render. Para pruebas locales, usa los mismos nombres en `backend-agenda/.env`; nunca pongas estas claves en Angular o Git.
+3. Configura en el bucket la regla CORS para el origen HTTPS de Hosting y la S3 Compatible API. El navegador debe poder leer `ETag` para completar las cargas multipartes.
+4. En `/galeria`, el administrador puede comprobar la conexión, crear sesiones y subir archivos. Firebase Authentication sigue usando Google como proveedor de inicio de sesión; no depende del almacenamiento de galerías.
+5. Mantén `ADMIN_EMAILS` sincronizada. El backend comprueba permisos; ocultar botones en Angular no es un control de acceso.
 
-1. En Google Cloud, selecciona el proyecto adecuado y habilita las APIs de Google Photos que el flujo de la aplicación utiliza. La autorización solicita los alcances `photoslibrary.appendonly`, `photoslibrary.readonly.appcreateddata` y `photoslibrary.edit.appcreateddata`.
-2. Configura la pantalla de consentimiento OAuth y crea un cliente OAuth. Añade como URI de redirección autorizado el que uses al obtener el token, por ejemplo `http://127.0.0.1:3000/oauth2callback`.
-3. Añade `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y `GOOGLE_REDIRECT_URI` en el `.env` local del backend.
-4. Desde `backend-agenda`, ejecuta `node getToken.js`. Abre el enlace generado, autoriza la cuenta Google que administrará las galerías y guarda el `REFRESH_TOKEN` que aparece en la consola. No compartas ni registres ese token en Git.
-5. Copia las cuatro variables OAuth (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `REFRESH_TOKEN`) en Render y reinicia el servicio.
-6. Mantén `ADMIN_EMAILS` sincronizada. Render comprueba autorización en el backend; ocultar botones en Angular no es un control de acceso.
-
-El backend usa Google Photos para aprovisionar álbumes y leer/subir/eliminar fotos permitidas por la API y los alcances autorizados. Firebase guarda la relación entre usuarios y álbumes; las imágenes permanecen en Google Photos. La API de Google Photos usada por este proyecto solo permite trabajar con el contenido creado por la aplicación; no importa automáticamente fotos subidas manualmente o creadas fuera de este flujo. Si Google Cloud mantiene la aplicación OAuth en modo de prueba, revisa las restricciones vigentes de usuarios de prueba y duración del refresh token.
+La galería guarda metadatos de sesiones en Realtime Database y los archivos en el bucket privado. Las cargas multipartes se realizan desde el navegador con URLs firmadas de corta duración. Esta aplicación ya no consulta, crea ni modifica álbumes en Google Photos. Quitar esa integración del código no borra archivos ni álbumes que ya existan en una cuenta de Google.
 
 ## 8. Compilar y publicar el frontend en Firebase Hosting
 
@@ -212,7 +216,7 @@ El `--project fotos-44002` confirma explícitamente el destino de publicación, 
 | Mercado Pago no actualiza una reserva | Token y modo correctos, webhook registrado, firma correspondiente en `MP_WEBHOOK_SECRET`, logs y consulta del pago. No marques pagos manualmente como aprobados. |
 | Contacto devuelve servicio temporalmente no disponible | `BREVO_API_KEY`, `EMAIL_FROM` válido/verificado y variables guardadas en el servicio Render desplegado. |
 | Brevo rechaza el correo | Remitente/dominio verificado, clave API activa y logs de Render; revisa también la bandeja de spam del destinatario. |
-| Galería falla al renovar acceso | Los cuatro valores OAuth, refresh token vigente, pantalla de consentimiento, APIs y permisos autorizados. |
+| La galería no conecta o falla al subir | Valores `B2_*`, permisos de la Application Key, región/endpoint del bucket y regla CORS para el dominio de Hosting. |
 
 ## 11. Publicación de cambios
 

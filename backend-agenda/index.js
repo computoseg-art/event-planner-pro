@@ -1,7 +1,4 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
-import { createReadStream } from 'node:fs';
-import { unlink } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
 import express from 'express';
 import cors from 'cors';
@@ -23,9 +20,6 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
-import { google } from 'googleapis';
-import axios from 'axios';
-import multer from 'multer';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -107,7 +101,6 @@ const preferenceClient = new Preference(new MercadoPagoConfig({ accessToken }));
 const paymentClient = new Payment(new MercadoPagoConfig({ accessToken }));
 const app = express();
 app.set('trust proxy', 1);
-const personalAlbumProvisioning = new Map();
 const contactRequests = new Map();
 const PORT = Number(process.env.PORT || 3000);
 const clientUrl = process.env.CLIENT_URL.replace(/\/+$/, '');
@@ -124,34 +117,6 @@ const b2UploadUrlLifetimeSeconds = 4 * 60 * 60;
 if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
   throw new Error('PORT debe ser un puerto TCP válido.');
 }
-
-const maxPhotoSizeBytes = 100 * 1024 * 1024;
-const allowedPhotoMimeTypes = new Set([
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/webp',
-  'image/heic',
-  'image/heif',
-  'image/gif',
-  'image/bmp',
-  'image/tiff',
-  'image/avif',
-  'image/x-icon',
-]);
-const allowedPhotoExtensions = new Set([
-  '.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.gif', '.bmp', '.tif', '.tiff',
-  '.avif', '.ico', '.dng', '.cr2', '.cr3', '.nef', '.arw', '.orf', '.rw2', '.raf',
-]);
-
-// Keep large uploads on disk instead of retaining each image in backend memory.
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: tmpdir(),
-    filename: (_req, _file, callback) => callback(null, randomUUID()),
-  }),
-  limits: { files: 1, fileSize: maxPhotoSizeBytes },
-});
 
 // Configuración de Mercado Pago
 // Dominios permitidos (Producción y Desarrollo local)
@@ -178,18 +143,6 @@ app.use(cors({
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
-
-// ---------------------------------------------
-// HELPER: SANEAR EMAIL (Puntos a Comas para Realtime DB)
-// ---------------------------------------------
-function encodeEmail(email) {
-  if (!email) return '';
-  return email.toLowerCase().trim().replace(/\./g, ',');
-}
-
-function validAlbumId(albumId) {
-  return typeof albumId === 'string' && /^[A-Za-z0-9_-]{1,256}$/.test(albumId);
-}
 
 function validGallerySessionId(sessionId) {
   return typeof sessionId === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(sessionId);
@@ -305,94 +258,6 @@ async function settleB2StorageReservation(size, stored) {
   }
 }
 
-function validPhotoId(photoId) {
-  return typeof photoId === 'string'
-    && photoId.length > 0
-    && photoId.length <= 1024
-    && photoId.trim() === photoId
-    && !/[\u0000-\u001f\u007f]/.test(photoId);
-}
-
-function photoPreferenceKey(photoId) {
-  return Buffer.from(photoId, 'utf8').toString('base64url');
-}
-
-function galleryErrorMessage(error, fallback) {
-  if (error instanceof Error && error.message.startsWith('Faltan credenciales de Google Photos:')) {
-    return error.message;
-  }
-  return fallback;
-}
-
-async function getGalleryAlbum(email, albumId) {
-  const cleanEmail = encodeEmail(email);
-  const defaultSnapshot = await db.ref(`albumes/${cleanEmail}`).once('value');
-  const defaultAlbum = defaultSnapshot.val();
-
-  if ((!albumId || defaultAlbum?.albumId === albumId) && defaultAlbum?.albumId) {
-    return defaultAlbum;
-  }
-  if (!validAlbumId(albumId)) {
-    return null;
-  }
-
-  const folderSnapshot = await db.ref(`galeria_carpetas/${cleanEmail}/${albumId}`).once('value');
-  const folder = folderSnapshot.val();
-  return folder?.albumId === albumId ? folder : null;
-}
-
-async function ensurePersonalGalleryAlbum(email, uid, username) {
-  const cleanEmail = encodeEmail(email);
-  const albumRef = db.ref(`albumes/${cleanEmail}`);
-  const existingSnapshot = await albumRef.once('value');
-  const existingAlbum = existingSnapshot.val();
-  if (existingAlbum?.albumId) {
-    return existingAlbum;
-  }
-
-  const currentProvisioning = personalAlbumProvisioning.get(uid);
-  if (currentProvisioning) {
-    return currentProvisioning;
-  }
-
-  const provisioning = (async () => {
-    const latestSnapshot = await albumRef.once('value');
-    const latestAlbum = latestSnapshot.val();
-    if (latestAlbum?.albumId) {
-      return latestAlbum;
-    }
-
-    const safeUsername = String(username || email.split('@')[0])
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 80) || 'usuario';
-    const title = `Galería - ${safeUsername} - ${uid}`;
-    const token = await getGooglePhotosToken();
-    const albumId = await createAlbumInGooglePhotos(token, title);
-    if (!albumId) {
-      throw new Error('Google Photos no pudo crear la carpeta personal.');
-    }
-
-    const album = {
-      email,
-      albumId,
-      title,
-      createdAt: new Date().toISOString(),
-    };
-    await albumRef.set(album);
-    return album;
-  })();
-
-  personalAlbumProvisioning.set(uid, provisioning);
-  try {
-    return await provisioning;
-  } finally {
-    if (personalAlbumProvisioning.get(uid) === provisioning) {
-      personalAlbumProvisioning.delete(uid);
-    }
-  }
-}
-
 const adminEmails = new Set(
   (process.env.ADMIN_EMAILS || 'admin@gmail.com,estebangarriga@gmail.com')
     .split(',')
@@ -425,7 +290,6 @@ async function requireFirebaseAuth(req, res, next) {
     }
     req.authenticatedEmail = decodedToken.email.toLowerCase().trim();
     req.authenticatedUid = decodedToken.uid;
-    req.authenticatedName = decodedToken.name || '';
   } catch (error) {
     console.error('❌ No se pudo verificar el token de Firebase:', error.message);
     return res.status(401).json({ error: 'La sesión no es válida o expiró. Inicia sesión nuevamente.' });
@@ -1283,58 +1147,6 @@ async function applyApprovedPayment(paymentId, verifiedPayment) {
 }
 
 // ---------------------------------------------
-// HELPER: OBTENER ACCESS TOKEN DE GOOGLE PHOTOS
-// ---------------------------------------------
-async function getGooglePhotosToken() {
-  const requiredVariables = [
-    'GOOGLE_CLIENT_ID',
-    'GOOGLE_CLIENT_SECRET',
-    'GOOGLE_REDIRECT_URI',
-    'REFRESH_TOKEN',
-  ];
-  const missingVariables = requiredVariables.filter(key => !process.env[key]?.trim());
-  if (missingVariables.length) {
-    throw new Error(`Faltan credenciales de Google Photos: ${missingVariables.join(', ')}.`);
-  }
-  try {
-    const auth = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_REDIRECT_URI
-    );
-    auth.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
-    const { token } = await auth.getAccessToken();
-    if (!token) throw new Error('Token devuelto es nulo');
-    return token;
-  } catch (error) {
-    console.error('❌ Error al obtener token de Google Photos:', error.message);
-    throw new Error('No se pudo obtener el token de acceso a Google Photos.');
-  }
-}
-
-// ---------------------------------------------
-// HELPER: CREAR ÁLBUM EN GOOGLE PHOTOS
-// ---------------------------------------------
-async function createAlbumInGooglePhotos(token, albumTitle) {
-  try {
-    const response = await axios.post(
-      'https://photoslibrary.googleapis.com/v1/albums',
-      { album: { title: albumTitle } },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      }
-    );
-    return response.data.id;
-  } catch (error) {
-    console.error('❌ Error creando álbum en Google Photos:', error.response?.data?.error || error.message);
-    return null;
-  }
-}
-
-// ---------------------------------------------
 // RUTAS DEL SERVIDOR
 // ---------------------------------------------
 
@@ -1424,55 +1236,6 @@ app.post('/webhook', async (req, res, next) => {
   }
 });
 
-app.post('/api/gallery/ensure-own-folder', requireFirebaseAuth, async (req, res) => {
-  try {
-    const requestedEmail = typeof req.body?.email === 'string'
-      ? req.body.email.trim().toLowerCase()
-      : req.authenticatedEmail;
-    if (!validEmail(requestedEmail)) {
-      return res.status(400).json({ error: 'El email debe ser válido.' });
-    }
-    if (requestedEmail !== req.authenticatedEmail && req.authenticatedEmail !== 'admin@gmail.com') {
-      return res.status(403).json({ error: 'Solo puedes preparar tu propia carpeta personal.' });
-    }
-
-    let targetUser;
-    try {
-      targetUser = requestedEmail === req.authenticatedEmail
-        ? {
-            uid: req.authenticatedUid,
-            displayName: req.authenticatedName,
-            email: req.authenticatedEmail,
-          }
-        : await auth.getUserByEmail(requestedEmail);
-    } catch (error) {
-      if (error.code === 'auth/user-not-found') {
-        return res.status(404).json({ error: 'No existe una cuenta registrada con ese correo.' });
-      }
-      throw error;
-    }
-
-    const album = await ensurePersonalGalleryAlbum(
-      targetUser.email.toLowerCase().trim(),
-      targetUser.uid,
-      targetUser.displayName
-    );
-    return res.status(200).json({
-      albumId: album.albumId,
-      title: album.title || 'Galería general',
-      email: album.email || targetUser.email,
-      createdAt: album.createdAt,
-      isDefault: true,
-    });
-  } catch (error) {
-    console.error('❌ Error al preparar la carpeta personal de Google Photos:', error.message);
-    return res.status(500).json({
-      error: galleryErrorMessage(error, 'No se pudo crear la carpeta personal de Google Photos.'),
-    });
-  }
-});
-
-// ---------------------------------------------
 // BACKBLAZE B2: VERIFICAR CONFIGURACIÓN Y ACCESO
 // ---------------------------------------------
 app.get('/api/gallery/storage-status', requireFirebaseAuth, requireGalleryAdmin, async (_req, res) => {
@@ -1973,286 +1736,6 @@ app.delete('/api/gallery/sessions/:sessionId/media/:mediaId', requireFirebaseAut
   } catch (error) {
     console.error('No se pudo eliminar el archivo de la galería B2:', error.message);
     return res.status(502).json({ error: 'No se pudo eliminar el archivo de Backblaze B2.' });
-  }
-});
-
-// ---------------------------------------------
-// GOOGLE PHOTOS: OBTENER FOTOS DE UN USUARIO
-// ---------------------------------------------
-app.get('/api/gallery/:email', requireFirebaseAuth, async (req, res) => {
-  res.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
-  const rawEmail = req.params.email;
-  if (!validEmail(rawEmail)) {
-    return res.status(400).json({ error: 'El email debe ser válido.' });
-  }
-  if (rawEmail.toLowerCase().trim() !== req.authenticatedEmail && req.authenticatedEmail !== 'admin@gmail.com') {
-    return res.status(403).json({ error: 'Solo puedes acceder a tu propia galería.' });
-  }
-  const cleanEmail = encodeEmail(rawEmail);
-
-  try {
-    const requestedAlbumId = req.query.albumId;
-    if (requestedAlbumId && !validAlbumId(requestedAlbumId)) {
-      return res.status(400).json({ error: 'La carpeta solicitada no es válida.' });
-    }
-    const albumData = await getGalleryAlbum(cleanEmail, requestedAlbumId);
-
-    if (!albumData) {
-      return res.status(404).json({ error: 'No se encontró una carpeta asociada a este usuario.' });
-    }
-
-    const token = await getGooglePhotosToken();
-    const preferenceSnapshot = await db
-      .ref(`gallery_photo_preferences/${req.authenticatedUid}/${albumData.albumId}`)
-      .once('value');
-    const preferences = preferenceSnapshot.val() || {};
-
-    const photosResponse = await axios.post(
-      'https://photoslibrary.googleapis.com/v1/mediaItems:search',
-      { albumId: albumData.albumId, pageSize: 100 },
-      { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } }
-    );
-
-    const mediaItems = photosResponse.data.mediaItems || [];
-    const pageTokens = new Set();
-    let pageToken = photosResponse.data.nextPageToken;
-    while (pageToken) {
-      if (pageTokens.has(pageToken)) {
-        throw new Error('Google Photos devolvió un token de página repetido.');
-      }
-      pageTokens.add(pageToken);
-      const nextPageResponse = await axios.post(
-        'https://photoslibrary.googleapis.com/v1/mediaItems:search',
-        { albumId: albumData.albumId, pageSize: 100, pageToken },
-        { headers: photosResponse.config.headers }
-      );
-      mediaItems.push(...(nextPageResponse.data.mediaItems || []));
-      pageToken = nextPageResponse.data.nextPageToken;
-    }
-
-    const photos = mediaItems.map(p => ({
-      id: p.id,
-      baseUrl: `${p.baseUrl}=w1200-h800`,
-      thumbnailUrl: `${p.baseUrl}=w320-h240`,
-      downloadUrl: `${p.baseUrl}=d`,
-      filename: p.filename,
-      mimeType: p.mimeType,
-      isFavorite: preferences[photoPreferenceKey(p.id)]?.favorite === true,
-      isHidden: preferences[photoPreferenceKey(p.id)]?.hidden === true,
-    }));
-
-    res.status(200).json(photos);
-
-  } catch (error) {
-    const googleError = error.response?.data?.error;
-    const googleMessage = typeof googleError?.message === 'string'
-      ? googleError.message
-      : undefined;
-    console.error('❌ Error al cargar galería:', {
-      status: error.response?.status,
-      code: googleError?.status,
-      message: googleMessage || error.message,
-    });
-    if (googleMessage) {
-      return res.status(502).json({
-        error: `Google Photos no pudo abrir este álbum: ${googleMessage}`,
-      });
-    }
-    res.status(500).json({
-      error: galleryErrorMessage(error, 'Error al recuperar imágenes de la galería.'),
-    });
-  }
-});
-
-// ---------------------------------------------
-// GALERÍA: GUARDAR FAVORITO/OCULTO POR CLIENTE
-// ---------------------------------------------
-app.put('/api/gallery/photo-preferences', requireFirebaseAuth, async (req, res) => {
-  const { albumId, photoId, favorite, hidden } = req.body || {};
-  if (
-    !validAlbumId(albumId) ||
-    !validPhotoId(photoId) ||
-    typeof favorite !== 'boolean' ||
-    typeof hidden !== 'boolean'
-  ) {
-    return res.status(400).json({ error: 'Indica una foto, carpeta y preferencias válidas.' });
-  }
-
-  try {
-    const album = await getGalleryAlbum(req.authenticatedEmail, albumId);
-    if (!album) {
-      return res.status(404).json({ error: 'La carpeta no pertenece a esta cuenta.' });
-    }
-
-    const preferenceRef = db.ref(
-      `gallery_photo_preferences/${req.authenticatedUid}/${album.albumId}/${photoPreferenceKey(photoId)}`
-    );
-    if (!favorite && !hidden) {
-      await preferenceRef.remove();
-    } else {
-      await preferenceRef.set({ favorite, hidden, updatedAt: new Date().toISOString() });
-    }
-    return res.status(200).json({ photoId, isFavorite: favorite, isHidden: hidden });
-  } catch (error) {
-    console.error('Error al guardar las preferencias de la foto:', error.message);
-    return res.status(500).json({ error: 'No se pudo guardar la preferencia de la foto.' });
-  }
-});
-
-// ---------------------------------------------
-// GOOGLE PHOTOS: SUBIR FOTOS AL ÁLBUM
-// ---------------------------------------------
-app.post('/api/upload-photos', requireFirebaseAuth, requireGalleryAdmin, (req, res, next) => {
-  upload.array('photos', 1)(req, res, error => {
-    if (!error) return next();
-    if (error instanceof multer.MulterError) {
-      const status = error.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
-      const message = error.code === 'LIMIT_FILE_SIZE'
-        ? 'Cada foto debe pesar como máximo 100 MB.'
-        : 'Sube una foto por solicitud; la galería procesa automáticamente todas las seleccionadas.';
-      return res.status(status).json({ error: message });
-    }
-    next(error);
-  });
-}, async (req, res) => {
-  const { targetEmail } = req.body;
-  const files = Array.isArray(req.files) ? req.files : [];
-  const cleanupFiles = async () => {
-    const cleanupResults = await Promise.allSettled(files.map(file => unlink(file.path)));
-    for (const result of cleanupResults) {
-      if (result.status === 'rejected' && result.reason?.code !== 'ENOENT') {
-        console.error('No se pudo limpiar un archivo temporal de la galería:', result.reason);
-      }
-    }
-  };
-  try {
-    if (!validEmail(targetEmail) || files.length === 0) {
-      return res.status(400).json({ error: 'Debes especificar el email del destinatario y adjuntar archivos.' });
-    }
-    const isAllowedPhoto = file =>
-      allowedPhotoMimeTypes.has(file.mimetype) ||
-      allowedPhotoExtensions.has(path.extname(file.originalname).toLowerCase());
-    if (!files.every(isAllowedPhoto)) {
-      return res.status(400).json({
-        error: 'Formato no permitido. Usa JPG, PNG, WebP, HEIC, GIF, BMP, TIFF, AVIF o RAW compatible.',
-      });
-    }
-    let targetUser;
-    try {
-      targetUser = targetEmail.trim().toLowerCase() === req.authenticatedEmail
-        ? {
-            uid: req.authenticatedUid,
-            displayName: req.authenticatedName,
-            email: req.authenticatedEmail,
-          }
-        : await auth.getUserByEmail(targetEmail.trim().toLowerCase());
-    } catch (error) {
-      if (error.code === 'auth/user-not-found') {
-        return res.status(404).json({ error: 'No existe una cuenta registrada con ese correo.' });
-      }
-      throw error;
-    }
-    const albumData = await ensurePersonalGalleryAlbum(
-      targetUser.email.toLowerCase().trim(),
-      targetUser.uid,
-      targetUser.displayName
-    );
-    const token = await getGooglePhotosToken();
-
-    const uploadRequests = files.map(file =>
-      axios.post(
-        'https://photoslibrary.googleapis.com/v1/uploads',
-        createReadStream(file.path),
-        {
-          headers: {
-            'Content-Type': 'application/octet-stream',
-            'Content-Length': String(file.size),
-            'Authorization': `Bearer ${token}`,
-            'X-Goog-Upload-File-Name': file.originalname.replace(/[\r\n]/g, '_').slice(0, 200) || 'foto',
-            'X-Goog-Upload-Protocol': 'raw'
-          },
-          maxBodyLength: Infinity,
-        }
-      )
-    );
-
-    const uploadResponses = await Promise.all(uploadRequests);
-    const newMediaItems = uploadResponses.map(r => ({
-      simpleMediaItem: { uploadToken: r.data }
-    }));
-
-    const batchResponse = await axios.post(
-      'https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate',
-      { albumId: albumData.albumId, newMediaItems },
-      { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } }
-    );
-    const results = batchResponse.data.newMediaItemResults;
-    if (!Array.isArray(results) || results.length !== files.length) {
-      throw new Error('Google Photos no confirmó todas las fotos subidas.');
-    }
-    if (results.some(result => result.status?.code)) {
-      throw new Error('Google Photos rechazó una o más imágenes.');
-    }
-
-    res.status(200).json({ message: 'Fotos subidas y agregadas al álbum correctamente.' });
-
-  } catch (error) {
-    console.error('❌ Error en /api/upload-photos:', error.response?.data?.error || error.message);
-    const providerMessage = error.response?.data?.error?.message;
-    if (typeof providerMessage === 'string') {
-      return res.status(502).json({ error: `Google Photos rechazó la imagen: ${providerMessage}` });
-    }
-    return res.status(500).json({
-      error: galleryErrorMessage(error, 'Error al procesar la subida de fotos. Revisa el formato y vuelve a intentar.'),
-    });
-  } finally {
-    const cleanupResults = await Promise.allSettled(files.map(file => unlink(file.path)));
-    for (const result of cleanupResults) {
-      if (result.status === 'rejected' && result.reason?.code !== 'ENOENT') {
-        console.error('No se pudo limpiar un archivo temporal de la galería:', result.reason);
-      }
-    }
-  }
-});
-
-// ---------------------------------------------
-// GOOGLE PHOTOS: ELIMINAR FOTO
-// ---------------------------------------------
-app.post('/api/delete-photo/:photoId', requireFirebaseAuth, async (req, res) => {
-  const { photoId } = req.params;
-  const { email, albumId: requestedAlbumId } = req.body;
-
-  if (!photoId || !validEmail(email) || !validAlbumId(requestedAlbumId)) {
-    return res.status(400).json({ error: 'Falta photoId, email o carpeta válida.' });
-  }
-  if (req.authenticatedEmail !== 'admin@gmail.com') {
-    return res.status(403).json({ error: 'Solo admin@gmail.com puede eliminar fotos.' });
-  }
-
-  const cleanEmail = encodeEmail(email);
-
-  try {
-    const albumData = await getGalleryAlbum(cleanEmail, requestedAlbumId);
-
-    if (!albumData) {
-      return res.status(404).json({ error: 'Carpeta no encontrada para este usuario.' });
-    }
-
-    const token = await getGooglePhotosToken();
-
-    await axios.post(
-      `https://photoslibrary.googleapis.com/v1/albums/${albumData.albumId}:batchRemoveMediaItems`,
-      { mediaItemIds: [photoId] },
-      { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } }
-    );
-
-    res.status(200).json({ message: 'Foto removida del álbum con éxito.' });
-
-  } catch (error) {
-    console.error('❌ Error al eliminar foto:', error.message);
-    res.status(500).json({
-      error: galleryErrorMessage(error, 'Error al eliminar la foto.'),
-    });
   }
 });
 
