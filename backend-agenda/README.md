@@ -24,6 +24,8 @@ Para preparar la integración de Backblaze B2, agrega `B2_KEY_ID`, `B2_APPLICATI
 
 La galería usa sesiones y archivos almacenados en Backblaze B2. Firebase Authentication sigue usando Google como proveedor de inicio de sesión; esto es independiente del almacenamiento de fotos.
 
+Las altas, modificaciones y eliminaciones de reservas se procesan con endpoints autenticados del backend. El backend deriva el usuario desde el token de Firebase, calcula precios y descuentos con `catalogo-servicios.json` y conserva los campos de pago que ya existan. Angular y el backend importan el mismo catálogo. Los clientes pueden leer sus reservas e historial, pero las reglas de Realtime Database no les permiten escribir reservas, historial de pagos ni disponibilidad directamente.
+
 ## Despliegue en Render
 
 Configura el servicio con:
@@ -53,7 +55,7 @@ En **Environment** de Render, configura `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, 
 
 El formulario público envía mensajes al destinatario configurado en `EMAIL_TO`; el visitante no puede controlar el destinatario. El correo del visitante se establece como `Reply-To`. El backend usa la API HTTPS de Brevo (`api.brevo.com`) y no necesita conexiones SMTP ni puertos 465/587.
 
-Al crear una reserva, el backend verifica la sesión de Firebase, vuelve a leer los datos de esa reserva desde Realtime Database y envía una notificación a `EMAIL_TO` mediante Brevo. El endpoint registra el estado en `notificaciones_reservas/<email-sanitizado>/<id-de-reserva>` para evitar enviar duplicados. Si el correo falla, la reserva permanece guardada y la agenda indica que el aviso no pudo enviarse; revisa los logs de Render y la configuración de Brevo.
+Al crear una reserva, el backend valida la sesión, disponibilidad, servicios y precios desde el catálogo compartido, guarda los datos y luego vuelve a leer la reserva antes de enviar una notificación a `EMAIL_TO` mediante Brevo. El endpoint registra el estado en `notificaciones_reservas/<email-sanitizado>/<id-de-reserva>` para evitar enviar duplicados. Si el correo falla, la reserva permanece guardada y la agenda indica que el aviso no pudo enviarse; revisa los logs de Render y la configuración de Brevo.
 
 La llamada HTTP a Brevo tiene un límite de espera para evitar que el formulario quede indefinidamente en “Enviando…”. Al cambiar el proveedor, elimina de Render las variables SMTP antiguas `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER` y `EMAIL_PASS`, y agrega `BREVO_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME` y `EMAIL_TO`. Luego redepliega el backend. Si Brevo rechaza un mensaje, consulta el log `Brevo rechazó el correo de contacto` en Render; los errores de credencial o remitente no verificado se registran con el estado devuelto por Brevo.
 
@@ -69,7 +71,7 @@ En Mercado Pago, registra `https://<BACKEND_PUBLIC_URL>/webhook` como URL de not
 
 Cuando Mercado Pago confirma un pago, el backend conserva la intención en `pagos_pendientes/<externalReference>` con `estado: "approved"` y además archiva el registro aprobado en `pagos_aprovados/<paymentId>`. El historial visible por cuenta queda en `historial_pagos/<usuario>/<paymentId>`. La escritura de estos tres registros se hace en una única actualización de Realtime Database; los datos de `pagos_pendientes` no se eliminan para preservar la trazabilidad del checkout.
 
-La seña es el 30 % del total y solo puede pagarse si faltan al menos 5 días para el evento. El saldo debe quedar pagado como máximo 3 días antes; al vencer ese plazo, la reserva se cancela y cualquier seña abonada se conserva sin devolución. El backend cancela las reservas vencidas al iniciar y luego las revisa cada hora.
+La seña es el 30 % del total y solo puede pagarse si faltan al menos 5 días para el evento. El saldo debe quedar pagado como máximo 3 días antes; al vencer ese plazo, la reserva se cancela y cualquier seña abonada se conserva sin devolución. Al iniciar la agenda, el backend revisa las reservas vencidas del usuario autenticado; el administrador puede ejecutar la misma revisión para todas las reservas.
 
 Al confirmarse una seña, la agenda muestra cuántos días quedan para completar el saldo. El backend envía un recordatorio al correo de la cuenta del cliente cada 24 horas desde la confirmación, indicando el saldo pendiente, los días hasta el vencimiento y el teléfono de contacto. Los avisos se detienen cuando la reserva queda pagada o vence el plazo. Este envío necesita `BREVO_API_KEY` y `EMAIL_FROM` configurados en Render; `CONTACT_PHONE` es opcional y tiene un valor predeterminado. Redepliega el backend después de cambiar sus variables de entorno.
 
@@ -81,6 +83,6 @@ Antes de iniciar un checkout, el backend conserva una copia de la reserva y vali
 
 Antes de habilitar cobros reales, completa un pago de prueba de punta a punta con credenciales y cuentas de prueba. El backend toma el importe y las reservas pendientes desde Firebase, comprueba la sesión de Firebase y actualiza los saldos solo después de verificar un pago aprobado con Mercado Pago.
 
-Revisa también las reglas de Realtime Database en Firebase Console: los clientes no deben poder editar `pagado`, `estado` ni los marcadores de pagos de una reserva. Ese permiso debe quedar reservado al backend con Admin SDK; las reglas actuales de la consola no están versionadas en este repositorio.
+Las reglas versionadas están en `database.rules.json`. Despliega las reglas junto con la versión del backend y Angular que usa la API de reservas; el backend Admin SDK es quien escribe reservas, historial de pagos e índices de disponibilidad.
 
 Si una clave privada se compartió o se subió a un lugar público, revócala desde **Configuración del proyecto → Cuentas de servicio** y genera una nueva. No reutilices la clave expuesta.

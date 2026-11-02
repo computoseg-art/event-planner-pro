@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, EnvironmentInjector, runInInjectionContext, signal } from '@angular/core';
-import { Database, ref, set, push, objectVal, remove, get, update } from '@angular/fire/database';
+import { Database, ref, objectVal } from '@angular/fire/database';
 import { AuthService } from './auth.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Observable, map, of, catchError, switchMap } from 'rxjs';
@@ -60,13 +60,17 @@ export class ReservaService {
 
   // --- SEÑAL DE ESTADO DE CARGA GLOBAL DE PAGO ---
   cargandoPago = signal<boolean>(false);
-  private disponibilidadMigrada = false;
-  private migrandoDisponibilidad = false;
+  private reservationMaintenanceUid = '';
 
   // --- STREAM DE DATOS: RESERVAS ---
   private todasLasReservas$ = this.auth.user$.pipe(
     switchMap((u) => {
-      if (!u || !u.email) return of([]);
+      if (!u || !u.email) {
+        this.reservationMaintenanceUid = '';
+        return of([]);
+      }
+
+      this.runReservationMaintenance(u.uid);
 
       const esAdmin = ['admin@gmail.com', 'estebangarriga@gmail.com'].includes(
         u.email.toLowerCase()
@@ -97,8 +101,6 @@ export class ReservaService {
               }
             });
 
-            if (esAdmin) this.migrarDisponibilidadInicial(listaPlana);
-            this.cancelarReservasVencidas(listaPlana);
             return listaPlana;
           }),
           catchError((err) => {
@@ -252,76 +254,52 @@ deudaTotal = computed(() => {
     return new Set([...fechas].filter((fecha) => fecha >= hoyStr));
   });
 
+  private fechaFueraDePlazo(fecha: string): boolean {
+    const date = fecha.split('T')[0];
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+    const eventTimestamp = Date.parse(`${date}T00:00:00.000Z`);
+    if (!Number.isFinite(eventTimestamp)) return false;
+    const todayParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Montevideo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date());
+    const part = (type: string) => Number(todayParts.find((item) => item.type === type)?.value);
+    const todayTimestamp = Date.UTC(part('year'), part('month') - 1, part('day'));
+    return Math.floor((eventTimestamp - todayTimestamp) / 86400000) < 3;
+  }
+
   // --- MÉTODOS CRUD DE RESERVAS ---
 
-  private async migrarDisponibilidadInicial(reservas: Reserva[]) {
-    if (this.disponibilidadMigrada || this.migrandoDisponibilidad) return;
-    this.migrandoDisponibilidad = true;
-
-    try {
-      const cambios: Record<string, string> = {};
-      for (const reserva of reservas) {
-        if (
-          !reserva.id ||
-          !reserva.fecha ||
-          reserva.estado === 'caducada' ||
-          this.fechaFueraDePlazo(reserva.fecha)
-        ) {
-          continue;
-        }
-        cambios[`fechas_ocupadas/${reserva.id}`] = reserva.fecha;
-      }
-      if (Object.keys(cambios).length > 0) {
-        await update(ref(this.db), cambios);
-      }
-      this.disponibilidadMigrada = true;
-    } catch (error) {
-      console.error('Error al inicializar el índice de fechas ocupadas:', error);
-    } finally {
-      this.migrandoDisponibilidad = false;
-    }
+  private runReservationMaintenance(uid: string) {
+    if (this.reservationMaintenanceUid === uid) return;
+    this.reservationMaintenanceUid = uid;
+    void this.requestReservationApi('/maintenance', 'POST', {}).catch((error) => {
+      this.reservationMaintenanceUid = '';
+      console.error('No se pudieron actualizar las reservas vencidas:', error);
+    });
   }
 
-  private fechaFueraDePlazo(fecha: string): boolean {
-    const [year, month, day] = fecha.split('T')[0].split('-').map(Number);
-    const fechaEvento = new Date(year, month - 1, day);
-    if (
-      Number.isNaN(fechaEvento.getTime()) ||
-      fechaEvento.getFullYear() !== year ||
-      fechaEvento.getMonth() !== month - 1 ||
-      fechaEvento.getDate() !== day
-    ) {
-      return false;
+  private async requestReservationApi<T>(
+    path: string,
+    method: 'POST' | 'PUT' | 'DELETE',
+    body: object,
+  ): Promise<T> {
+    const idToken = await this.auth.obtenerIdToken();
+    const response = await fetch(`${environment.apiUrl}/api/reservations${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${idToken}`,
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'No se pudo completar la operación de reserva.');
     }
-
-    const fechaLimite = new Date(fechaEvento);
-    fechaLimite.setDate(fechaEvento.getDate() - 3);
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    return hoy > fechaLimite;
-  }
-
-  private cancelarReservasVencidas(reservas: Reserva[]) {
-    const cambios: Record<string, string | null> = {};
-
-    for (const reserva of reservas) {
-      if (!reserva.id || !reserva.usuario || !reserva.fecha) continue;
-      const total = Number(reserva.total || 0);
-      const pagado = Number(reserva.pagado || 0);
-      if (total <= 0 || pagado >= total || !this.fechaFueraDePlazo(reserva.fecha)) continue;
-
-      const userPath = reserva.usuario.toLowerCase().replace(/\./g, ',');
-      if (reserva.estado !== 'caducada') {
-        cambios[`reservas/${userPath}/${reserva.id}/estado`] = 'caducada';
-      }
-      cambios[`fechas_ocupadas/${reserva.id}`] = null;
-    }
-
-    if (Object.keys(cambios).length > 0) {
-      void update(ref(this.db), cambios).catch((error) => {
-        console.error('No se pudieron cancelar las reservas vencidas:', error);
-      });
-    }
+    return data as T;
   }
 
   async agregar(
@@ -336,30 +314,19 @@ deudaTotal = computed(() => {
     if (!email) {
       throw new Error('Debes iniciar sesión para crear una reserva.');
     }
-    const userPath = email.toLowerCase().replace(/\./g, ',');
-    const nuevaRef = push(ref(this.db, `reservas/${userPath}`));
-
-    const nuevaReserva: Reserva = {
-      id: nuevaRef.key || '',
+    const nuevaReserva = {
       fecha,
       descripcion: desc,
-      usuario: email,
       tipoEvento: tipoEvento as '15_años' | 'bodas',
       servicios: servicios,
       total: Number(total),
       descuento: Number(descuento),
-      pagado: 0,
-      estado: 'pendiente',
     };
-
-    await set(nuevaRef, nuevaReserva);
-    try {
-      await set(ref(this.db, `fechas_ocupadas/${nuevaRef.key}`), nuevaReserva.fecha);
-    } catch (error) {
-      console.error('No se pudo actualizar la disponibilidad de la reserva nueva:', error);
-      await remove(nuevaRef);
-      throw error;
-    }
+    const guardada = await this.requestReservationApi<Reserva & { id: string }>(
+      '',
+      'POST',
+      nuevaReserva,
+    );
 
     try {
       const idToken = await this.auth.obtenerIdToken();
@@ -369,7 +336,7 @@ deudaTotal = computed(() => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${idToken}`,
         },
-        body: JSON.stringify({ id: nuevaReserva.id }),
+        body: JSON.stringify({ id: guardada.id }),
       });
       const data = await response.json();
 
@@ -385,76 +352,23 @@ deudaTotal = computed(() => {
 
   async actualizar(res: Reserva) {
     if (!res.id || !res.usuario) return;
-    const userPath = res.usuario.toLowerCase().replace(/\./g, ',');
-    const itemRef = ref(this.db, `reservas/${userPath}/${res.id}`);
-    const snapshot = await get(itemRef);
-    const anterior = snapshot.exists() ? (snapshot.val() as Reserva) : null;
-    const fechaAnterior = anterior?.fecha;
-    const fechaCambio = !!fechaAnterior && fechaAnterior !== res.fecha;
-
-    if (fechaCambio) {
-      await remove(ref(this.db, `fechas_ocupadas/${res.id}`));
-    }
-
-    try {
-      await set(itemRef, {
-        ...res,
-        total: Number(res.total),
-        descuento: Number(res.descuento || 0),
-        pagado: Number(res.pagado),
-        estado:
-          Number(res.total) > 0 && Number(res.pagado) >= Number(res.total)
-            ? 'pagado'
-            : 'pendiente',
-      });
-
-      if (fechaAnterior !== res.fecha) {
-        await set(ref(this.db, `fechas_ocupadas/${res.id}`), res.fecha);
-      }
-    } catch (error) {
-      if (fechaCambio && anterior) {
-        try {
-          await set(itemRef, anterior);
-          await set(ref(this.db, `fechas_ocupadas/${res.id}`), anterior.fecha);
-        } catch (rollbackError) {
-          console.error('No se pudo restaurar la reserva tras fallar la actualización:', rollbackError);
-        }
-      }
-      throw error;
-    }
+    await this.requestReservationApi<Reserva>(`/${encodeURIComponent(res.id)}`, 'PUT', {
+      ...res,
+      total: Number(res.total),
+      descuento: Number(res.descuento || 0),
+    });
   }
 
   async eliminar(res: Reserva) {
     if (!res.id || !res.usuario) return;
-    const userPath = res.usuario.toLowerCase().replace(/\./g, ',');
-    const itemRef = ref(this.db, `reservas/${userPath}/${res.id}`);
-    const disponibilidadRef = ref(this.db, `fechas_ocupadas/${res.id}`);
-    await remove(disponibilidadRef);
-    try {
-      await remove(itemRef);
-    } catch (error) {
-      await set(disponibilidadRef, res.fecha);
-      throw error;
-    }
+    await this.requestReservationApi<{ id: string }>(
+      `/${encodeURIComponent(res.id)}`,
+      'DELETE',
+      { usuario: res.usuario },
+    );
   }
 
   // --- MÉTODOS DE PAGO E HISTORIAL ---
-
-  async registrarEnHistorial(email: string, monto: number, paymentId: string, descripcion: string) {
-    const userPath = email.toLowerCase().replace(/\./g, ',');
-    const historialRef = push(ref(this.db, `historial_pagos/${userPath}`));
-
-    const pago: PagoHistorial = {
-      id: historialRef.key || undefined,
-      fecha: new Date().toISOString(),
-      monto: Number(monto),
-      paymentId: paymentId || 'manual',
-      descripcion,
-      usuario: email,
-    };
-
-    return set(historialRef, pago);
-  }
 
   private async postPago(path: string, body: object) {
     const idToken = await this.auth.obtenerIdToken();

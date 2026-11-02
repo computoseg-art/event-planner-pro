@@ -1,4 +1,5 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import express from 'express';
 import cors from 'cors';
@@ -23,6 +24,11 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import dotenv from 'dotenv';
 
 dotenv.config();
+
+const reservationCatalog = JSON.parse(
+  readFileSync(new URL('./catalogo-servicios.json', import.meta.url), 'utf8')
+);
+const reservationCatalogById = new Map(reservationCatalog.map(service => [service.id, service]));
 
 const requiredEnvironment = [
   'MP_ACCESS_TOKEN',
@@ -333,6 +339,155 @@ function requireFirebaseUser(req, res, next) {
 
 function userDatabaseKey(email) {
   return email.trim().toLowerCase().replace(/\./g, ',');
+}
+
+function validReservationId(id) {
+  return typeof id === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(id);
+}
+
+function validReservationDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+function daysUntilReservationDate(value) {
+  const todayParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Montevideo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const part = type => Number(todayParts.find(item => item.type === type)?.value);
+  const today = Date.UTC(part('year'), part('month') - 1, part('day'));
+  const event = Date.parse(`${value}T00:00:00.000Z`);
+  return Math.floor((event - today) / 86400000);
+}
+
+function validateReservationInput(input) {
+  const date = typeof input?.fecha === 'string' ? input.fecha.split('T')[0] : '';
+  const description = typeof input?.descripcion === 'string' ? input.descripcion.trim() : '';
+  const requestedServices = input?.servicios;
+  if (
+    !validReservationDate(date) ||
+    !description ||
+    description.length > 2000 ||
+    !['15_años', 'bodas'].includes(input?.tipoEvento) ||
+    !Array.isArray(requestedServices) ||
+    requestedServices.length > 30
+  ) {
+    return null;
+  }
+
+  const serviceIds = requestedServices.map(service => service?.id);
+  if (
+    serviceIds.some(id => typeof id !== 'string' || !reservationCatalogById.has(id)) ||
+    new Set(serviceIds).size !== serviceIds.length
+  ) {
+    return null;
+  }
+
+  const services = serviceIds.map(id => reservationCatalogById.get(id));
+  if (services.some(service =>
+    service.categoria !== 'extras' && service.categoria !== input.tipoEvento
+  )) {
+    return null;
+  }
+  const selectedIds = new Set(serviceIds);
+  const subtotal = services.reduce((sum, service) => sum + service.precio, 0);
+  const discount = [...new Set(reservationCatalog.map(service => service.categoria))]
+    .reduce((sum, category) => {
+      const categoryServices = reservationCatalog.filter(service => service.categoria === category);
+      if (categoryServices.every(service => selectedIds.has(service.id))) {
+        return sum + categoryServices.reduce((categoryTotal, service) => categoryTotal + service.precio, 0) * 0.1;
+      }
+      return sum;
+    }, 0);
+  const roundedDiscount = Math.round(discount * 100) / 100;
+
+  return {
+    fecha: date,
+    descripcion,
+    tipoEvento: input.tipoEvento,
+    servicios: services,
+    total: Math.round((subtotal - roundedDiscount) * 100) / 100,
+    descuento: roundedDiscount,
+  };
+}
+
+async function assertReservationDateAvailable(date, excludedUserKey = '', excludedReservationId = '') {
+  const snapshot = await db.ref('reservas').get();
+  const reservationsByUser = snapshot.val() || {};
+  for (const [userKey, reservations] of Object.entries(reservationsByUser)) {
+    if (!reservations || typeof reservations !== 'object') continue;
+    for (const [reservationId, reservation] of Object.entries(reservations)) {
+      if (
+        userKey === excludedUserKey &&
+        reservationId === excludedReservationId
+      ) {
+        continue;
+      }
+      if (
+        reservation?.estado !== 'caducada' &&
+        validReservationDate(String(reservation?.fecha || '').split('T')[0]) &&
+        daysUntilReservationDate(String(reservation.fecha).split('T')[0]) >= 3 &&
+        String(reservation.fecha).split('T')[0] === date
+      ) {
+        const error = new Error('La fecha seleccionada ya está reservada.');
+        error.status = 409;
+        throw error;
+      }
+    }
+  }
+}
+
+async function setReservationDateLock(reservationId, date, oldDate = '') {
+  let dateOccupied = false;
+  const transaction = await db.ref('fechas_ocupadas').transaction(current => {
+    dateOccupied = false;
+    const locks = current && typeof current === 'object' ? current : {};
+    for (const [otherId, otherDate] of Object.entries(locks)) {
+      if (otherId !== reservationId && String(otherDate).split('T')[0] === date) {
+        dateOccupied = true;
+        return;
+      }
+    }
+    const updatedLocks = { ...locks };
+    if (oldDate && String(updatedLocks[reservationId] || '').split('T')[0] === oldDate) {
+      delete updatedLocks[reservationId];
+    }
+    updatedLocks[reservationId] = date;
+    return updatedLocks;
+  });
+  if (!transaction.committed) {
+    if (dateOccupied) {
+      const error = new Error('La fecha seleccionada ya está reservada.');
+      error.status = 409;
+      throw error;
+    }
+    throw new Error('No se pudo reservar la fecha seleccionada.');
+  }
+}
+
+async function restoreReservationDateLock(reservationId, date) {
+  if (!date) {
+    await db.ref(`fechas_ocupadas/${reservationId}`).remove();
+    return;
+  }
+  await db.ref(`fechas_ocupadas/${reservationId}`).set(date);
+}
+
+function reservationOwnerForRequest(req, requestedEmail) {
+  const authenticatedEmail = req.authenticatedEmail;
+  const email = isAdmin(authenticatedEmail) && typeof requestedEmail === 'string'
+    ? requestedEmail.trim().toLowerCase()
+    : authenticatedEmail;
+  if (!validEmail(email) || (!isAdmin(authenticatedEmail) && email !== authenticatedEmail)) {
+    return null;
+  }
+  return { email, key: userDatabaseKey(email) };
 }
 
 function toMinorUnits(amount) {
@@ -1153,6 +1308,285 @@ async function applyApprovedPayment(paymentId, verifiedPayment) {
 // Endpoint de prueba
 app.get('/', (req, res) => {
   res.send({ status: 'OK', message: 'Backend de BSfotografia & Videografia activo' });
+});
+
+app.post('/api/reservations/maintenance', requireFirebaseAuth, async (req, res) => {
+  try {
+    const admin = isAdmin(req.authenticatedEmail);
+    const reservationsRef = admin
+      ? db.ref('reservas')
+      : db.ref(`reservas/${userDatabaseKey(req.authenticatedEmail)}`);
+    const snapshot = await reservationsRef.get();
+    const reservations = snapshot.val() || {};
+    let updated = 0;
+
+    for (const [userKey, userReservations] of Object.entries(admin ? reservations : {
+      [userDatabaseKey(req.authenticatedEmail)]: reservations,
+    })) {
+      if (!userReservations || typeof userReservations !== 'object') continue;
+      for (const [reservationId, reservation] of Object.entries(userReservations)) {
+        if (!validReservationId(reservationId) || !reservation || typeof reservation !== 'object') continue;
+        const date = String(reservation.fecha || '').split('T')[0];
+        if (!validReservationDate(date)) continue;
+        const reservationRef = db.ref(`reservas/${userKey}/${reservationId}`);
+        const daysUntil = daysUntilReservationDate(date);
+        const total = Number(reservation.total || 0);
+        const paid = Number(reservation.pagado || 0);
+        if (total > 0 && paid < total && daysUntil < 3 && reservation.estado !== 'caducada') {
+          const transaction = await reservationRef.transaction(current => {
+            if (!current || typeof current !== 'object') return;
+            const currentTotal = Number(current.total || 0);
+            const currentPaid = Number(current.pagado || 0);
+            const currentDate = String(current.fecha || '').split('T')[0];
+            if (
+              !Number.isFinite(currentTotal) ||
+              !Number.isFinite(currentPaid) ||
+              currentTotal <= 0 ||
+              currentPaid < 0 ||
+              currentPaid >= currentTotal ||
+              !validReservationDate(currentDate) ||
+              daysUntilReservationDate(currentDate) >= 3 ||
+              current.estado === 'caducada'
+            ) {
+              return;
+            }
+            return { ...current, estado: 'caducada' };
+          });
+          if (transaction.committed && transaction.snapshot.val()?.estado === 'caducada') {
+            updated += 1;
+          }
+        }
+
+        const latest = (await reservationRef.get()).val();
+        const latestDate = String(latest?.fecha || '').split('T')[0];
+        if (
+          !latest ||
+          latest.estado === 'caducada' ||
+          !validReservationDate(latestDate) ||
+          daysUntilReservationDate(latestDate) < 3
+        ) {
+          await db.ref(`fechas_ocupadas/${reservationId}`).remove();
+        } else {
+          await db.ref(`fechas_ocupadas/${reservationId}`).set(latestDate);
+        }
+      }
+    }
+
+    return res.status(200).json({ updated });
+  } catch (error) {
+    console.error('No se pudo actualizar el estado de las reservas:', error.message);
+    return res.status(500).json({ error: 'No se pudieron actualizar las reservas vencidas.' });
+  }
+});
+
+app.post('/api/reservations', requireFirebaseAuth, async (req, res) => {
+  const reservation = validateReservationInput(req.body);
+  if (!reservation || reservation.total <= 0 || !reservation.servicios.length) {
+    return res.status(400).json({ error: 'Los datos de la reserva no son válidos.' });
+  }
+  if (daysUntilReservationDate(reservation.fecha) < 3) {
+    return res.status(400).json({ error: 'La reserva debe realizarse con al menos 3 días de anticipación.' });
+  }
+
+  const userKey = userDatabaseKey(req.authenticatedEmail);
+  const reservationRef = db.ref(`reservas/${userKey}`).push();
+  const reservationId = reservationRef.key;
+  if (!reservationId) {
+    return res.status(500).json({ error: 'No se pudo generar el identificador de la reserva.' });
+  }
+  const newReservation = {
+    ...reservation,
+    id: reservationId,
+    usuario: req.authenticatedEmail,
+    pagado: 0,
+    estado: 'pendiente',
+  };
+
+  try {
+    await assertReservationDateAvailable(reservation.fecha);
+    await setReservationDateLock(reservationId, reservation.fecha);
+    try {
+      await reservationRef.set(newReservation);
+    } catch (error) {
+      await restoreReservationDateLock(reservationId, null);
+      throw error;
+    }
+    return res.status(201).json(newReservation);
+  } catch (error) {
+    console.error('No se pudo crear la reserva:', error.message);
+    return res.status(error.status || 500).json({
+      error: error.status === 409
+        ? error.message
+        : 'No se pudo guardar la reserva. Inténtalo nuevamente.',
+    });
+  }
+});
+
+app.put('/api/reservations/:reservationId', requireFirebaseAuth, async (req, res) => {
+  const reservationId = req.params.reservationId;
+  const owner = reservationOwnerForRequest(req, req.body?.usuario);
+  const reservation = validateReservationInput(req.body);
+  if (!validReservationId(reservationId) || !owner || !reservation) {
+    return res.status(400).json({ error: 'Los datos de la reserva no son válidos.' });
+  }
+
+  const reservationRef = db.ref(`reservas/${owner.key}/${reservationId}`);
+  let oldDate = '';
+  let dateLockChanged = false;
+  try {
+    const snapshot = await reservationRef.get();
+    const existing = snapshot.val();
+    if (!existing || typeof existing !== 'object') {
+      return res.status(404).json({ error: 'No se encontró la reserva.' });
+    }
+    const admin = isAdmin(req.authenticatedEmail);
+    if (!admin && daysUntilReservationDate(reservation.fecha) < 3) {
+      return res.status(400).json({ error: 'La reserva debe realizarse con al menos 3 días de anticipación.' });
+    }
+
+    oldDate = String(existing.fecha || '').split('T')[0];
+    if (oldDate !== reservation.fecha) {
+      await assertReservationDateAvailable(reservation.fecha, owner.key, reservationId);
+      await setReservationDateLock(reservationId, reservation.fecha, oldDate);
+      dateLockChanged = true;
+    }
+    let updateRejection = '';
+    let updatedReservation = null;
+    let transaction;
+    try {
+      transaction = await reservationRef.transaction(current => {
+        updateRejection = '';
+        updatedReservation = null;
+        if (!current || typeof current !== 'object') {
+          updateRejection = 'missing';
+          return;
+        }
+        if (String(current.fecha || '').split('T')[0] !== oldDate) {
+          updateRejection = 'changed';
+          return;
+        }
+        const currentPaid = Number(current.pagado || 0);
+        if (!Number.isFinite(currentPaid) || currentPaid < 0) {
+          updateRejection = 'invalid-paid';
+          return;
+        }
+        if (!admin && (current.estado !== 'pendiente' || currentPaid > 0)) {
+          updateRejection = 'protected';
+          return;
+        }
+        if (reservation.total < currentPaid) {
+          updateRejection = 'below-paid';
+          return;
+        }
+        updatedReservation = {
+          ...current,
+          ...reservation,
+          id: reservationId,
+          usuario: owner.email,
+          pagado: currentPaid,
+          estado: reservation.total > 0 && currentPaid >= reservation.total ? 'pagado' : 'pendiente',
+        };
+        return updatedReservation;
+      });
+    } catch (error) {
+      if (dateLockChanged) {
+        const latest = await reservationRef.get();
+        await restoreReservationDateLock(
+          reservationId,
+          latest.exists() ? String(latest.val()?.fecha || '').split('T')[0] : ''
+        );
+        dateLockChanged = false;
+      }
+      throw error;
+    }
+    if (!transaction.committed) {
+      if (dateLockChanged) {
+        const current = transaction.snapshot.val();
+        await restoreReservationDateLock(
+          reservationId,
+          current ? String(current.fecha || '').split('T')[0] : ''
+        );
+        dateLockChanged = false;
+      }
+      if (updateRejection === 'missing') {
+        return res.status(404).json({ error: 'No se encontró la reserva.' });
+      }
+      if (updateRejection === 'protected') {
+        return res.status(403).json({ error: 'Esta reserva ya no se puede modificar.' });
+      }
+      if (updateRejection === 'below-paid') {
+        return res.status(400).json({ error: 'El total no puede quedar por debajo de los pagos ya confirmados.' });
+      }
+      if (updateRejection === 'invalid-paid') {
+        return res.status(409).json({ error: 'Los datos de pago de la reserva no son válidos; debe revisarlos un administrador.' });
+      }
+      if (updateRejection === 'changed') {
+        return res.status(409).json({ error: 'La reserva cambió al mismo tiempo. Actualiza la página e inténtalo nuevamente.' });
+      }
+      throw new Error('Firebase no confirmó la actualización de la reserva.');
+    }
+    return res.status(200).json(updatedReservation);
+  } catch (error) {
+    console.error('No se pudo actualizar la reserva:', error.message);
+    return res.status(error.status || 500).json({
+      error: error.status === 409
+        ? error.message
+        : 'No se pudo actualizar la reserva. Inténtalo nuevamente.',
+    });
+  }
+});
+
+app.delete('/api/reservations/:reservationId', requireFirebaseAuth, async (req, res) => {
+  const reservationId = req.params.reservationId;
+  const owner = reservationOwnerForRequest(req, req.body?.usuario);
+  if (!validReservationId(reservationId) || !owner) {
+    return res.status(400).json({ error: 'El identificador o propietario de la reserva no es válido.' });
+  }
+
+  const reservationRef = db.ref(`reservas/${owner.key}/${reservationId}`);
+  try {
+    const snapshot = await reservationRef.get();
+    const existing = snapshot.val();
+    if (!existing || typeof existing !== 'object') {
+      return res.status(404).json({ error: 'No se encontró la reserva.' });
+    }
+    const admin = isAdmin(req.authenticatedEmail);
+    let deleteRejection = '';
+    const transaction = await reservationRef.transaction(current => {
+      deleteRejection = '';
+      if (!current || typeof current !== 'object') {
+        deleteRejection = 'missing';
+        return;
+      }
+      const currentPaid = Number(current.pagado || 0);
+      if (!Number.isFinite(currentPaid) || currentPaid < 0) {
+        deleteRejection = 'invalid-paid';
+        return;
+      }
+      if (!admin && (current.estado !== 'pendiente' || currentPaid > 0)) {
+        deleteRejection = 'protected';
+        return;
+      }
+      return null;
+    });
+    if (!transaction.committed) {
+      if (deleteRejection === 'missing') {
+        return res.status(404).json({ error: 'No se encontró la reserva.' });
+      }
+      if (deleteRejection === 'protected') {
+        return res.status(403).json({ error: 'Esta reserva ya no se puede eliminar.' });
+      }
+      if (deleteRejection === 'invalid-paid') {
+        return res.status(409).json({ error: 'Los datos de pago de la reserva no son válidos; debe revisarlos un administrador.' });
+      }
+      throw new Error('Firebase no confirmó la eliminación de la reserva.');
+    }
+    await restoreReservationDateLock(reservationId, null);
+    return res.status(200).json({ id: reservationId });
+  } catch (error) {
+    console.error('No se pudo eliminar la reserva:', error.message);
+    return res.status(500).json({ error: 'No se pudo eliminar la reserva. Inténtalo nuevamente.' });
+  }
 });
 
 // ---------------------------------------------

@@ -41,14 +41,14 @@ En Firebase Console, abre el proyecto `fotos-44002`:
 ### 3.2 Realtime Database y reglas
 
 1. Verifica que Realtime Database esté creada en el proyecto `fotos-44002`.
-2. Revisa `database.rules.json` antes de publicar. Las reglas permiten a cada usuario acceder a sus propios datos y reservan ciertas operaciones a los administradores.
+2. Revisa `database.rules.json` antes de publicar. Las reglas permiten a cada usuario leer sus propios datos y reservan las escrituras de reservas, pagos e índices de disponibilidad al backend con Firebase Admin SDK y a los administradores autorizados.
 3. Publica las reglas con:
 
    ```powershell
    firebase deploy --only database --project fotos-44002
    ```
 
-No abras la base de datos con reglas públicas. Las reglas de cliente no sustituyen las validaciones de Render; las operaciones privilegiadas deben pasar por Firebase Admin SDK en el backend. En particular, revisa las reglas de reservas y pagos antes de habilitar cobros reales.
+No abras la base de datos con reglas públicas. Los usuarios crean, modifican y eliminan reservas mediante la API autenticada de Render; el backend conserva el correo autenticado, calcula los importes desde `shared/catalogo-servicios.json` y no acepta del navegador cambios en `pagado`, `estado` ni marcadores de pagos. El historial de pagos y el índice de disponibilidad tampoco admiten escrituras de clientes. Despliega primero el backend y el frontend actualizados y luego las reglas; si las reglas se aplican antes, la versión antigua del frontend que escribe directamente en Realtime Database dejará de poder guardar reservas.
 
 ### 3.3 Configuración Firebase del frontend
 
@@ -148,7 +148,7 @@ Si Mercado Pago rechaza una operación concreta, revisa el mensaje de error y la
 
 Los usuarios autenticados pueden abrir **Mi perfil** desde el navbar para ver sus reservas, el historial de pagos confirmados y el total abonado. Desde cada pago se puede abrir el diálogo de impresión y elegir **Guardar como PDF** para descargar un comprobante interno con el detalle del evento, importe abonado, total y descuento registrado. Este comprobante no reemplaza una factura fiscal. Los pagos anteriores a esta función pueden no tener detalle de reserva, pero conservan su importe, fecha e identificador de operación.
 
-**Precios durante las pruebas:** el catálogo del frontend mantiene el precio de checkout en `$1` mientras se prueba la aplicación. Los importes promocionales que se muestran al público son informativos y no deben confundirse con el valor cobrado. Antes de habilitar cobros reales, revisa el catálogo y el cálculo del backend para reemplazar los importes de prueba; usa primero credenciales de prueba de Mercado Pago. No cambies solo el texto promocional.
+**Precios durante las pruebas:** el catálogo compartido en `backend-agenda/catalogo-servicios.json` mantiene el precio de checkout en `$1` mientras se prueba la aplicación. El frontend muestra el catálogo y el backend usa ese mismo archivo para calcular y validar los importes; los valores que envía el navegador no son la fuente del precio. Los importes promocionales son informativos y no deben confundirse con lo cobrado. Antes de habilitar cobros reales, actualiza este catálogo compartido; usa primero credenciales de prueba de Mercado Pago. No cambies solo el texto promocional.
 
 ## 6. Integración de Brevo (formulario de contacto)
 
