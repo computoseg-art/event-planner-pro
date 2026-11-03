@@ -1,4 +1,4 @@
-import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import express from 'express';
@@ -488,6 +488,54 @@ function reservationOwnerForRequest(req, requestedEmail) {
     return null;
   }
   return { email, key: userDatabaseKey(email) };
+}
+
+async function findReservationForOwner(owner, reservationId, admin) {
+  let ownerKey = owner.key;
+  let reservationRef = db.ref(`reservas/${ownerKey}/${reservationId}`);
+  let snapshot = await reservationRef.get();
+  const directFound = snapshot.exists() && snapshot.val() && typeof snapshot.val() === 'object';
+  let adminScanPerformed = false;
+  let scannedOwnerCount = 0;
+
+  if (!directFound && admin) {
+    adminScanPerformed = true;
+    const allReservations = (await db.ref('reservas').get()).val() || {};
+    for (const [candidateOwnerKey, reservations] of Object.entries(allReservations)) {
+      scannedOwnerCount += 1;
+      if (
+        !reservations ||
+        typeof reservations !== 'object' ||
+        !Object.prototype.hasOwnProperty.call(reservations, reservationId)
+      ) {
+        continue;
+      }
+
+      ownerKey = candidateOwnerKey;
+      reservationRef = db.ref(`reservas/${ownerKey}/${reservationId}`);
+      snapshot = await reservationRef.get();
+      break;
+    }
+  }
+
+  const reservation = snapshot.val();
+  const found = Boolean(reservation && typeof reservation === 'object');
+  const ownerFingerprint = (key) => createHash('sha256').update(key).digest('hex').slice(0, 12);
+  console.info('Diagnóstico de búsqueda de reserva:', {
+    reservationId,
+    admin,
+    directFound: Boolean(directFound),
+    adminScanPerformed,
+    scannedOwnerCount,
+    found,
+    requestedOwnerFingerprint: ownerFingerprint(owner.key),
+    foundOwnerFingerprint: found ? ownerFingerprint(ownerKey) : null,
+  });
+
+  if (!reservation || typeof reservation !== 'object') {
+    return null;
+  }
+  return { ownerKey, reservationRef, snapshot, reservation };
 }
 
 function toMinorUnits(amount) {
@@ -1430,23 +1478,25 @@ app.put('/api/reservations/:reservationId', requireFirebaseAuth, async (req, res
     return res.status(400).json({ error: 'Los datos de la reserva no son válidos.' });
   }
 
-  const reservationRef = db.ref(`reservas/${owner.key}/${reservationId}`);
+  const admin = isAdmin(req.authenticatedEmail);
   let oldDate = '';
   let dateLockChanged = false;
+  let reservationRef;
+  let ownerKey;
   try {
-    const snapshot = await reservationRef.get();
-    const existing = snapshot.val();
-    if (!existing || typeof existing !== 'object') {
+    const located = await findReservationForOwner(owner, reservationId, admin);
+    if (!located) {
       return res.status(404).json({ error: 'No se encontró la reserva.' });
     }
-    const admin = isAdmin(req.authenticatedEmail);
+    ({ ownerKey, reservationRef } = located);
+    const existing = located.reservation;
     if (!admin && daysUntilReservationDate(reservation.fecha) < 3) {
       return res.status(400).json({ error: 'La reserva debe realizarse con al menos 3 días de anticipación.' });
     }
 
     oldDate = String(existing.fecha || '').split('T')[0];
     if (oldDate !== reservation.fecha) {
-      await assertReservationDateAvailable(reservation.fecha, owner.key, reservationId);
+      await assertReservationDateAvailable(reservation.fecha, ownerKey, reservationId);
       await setReservationDateLock(reservationId, reservation.fecha, oldDate);
       dateLockChanged = true;
     }
@@ -1482,7 +1532,9 @@ app.put('/api/reservations/:reservationId', requireFirebaseAuth, async (req, res
           ...current,
           ...reservation,
           id: reservationId,
-          usuario: owner.email,
+          usuario: validEmail(current.usuario)
+            ? String(current.usuario).trim().toLowerCase()
+            : owner.email,
           pagado: currentPaid,
           estado: reservation.total > 0 && currentPaid >= reservation.total ? 'pagado' : 'pendiente',
         };
@@ -1500,6 +1552,11 @@ app.put('/api/reservations/:reservationId', requireFirebaseAuth, async (req, res
       throw error;
     }
     if (!transaction.committed) {
+      console.warn('La transacción de actualización de reserva no se confirmó:', {
+        reservationId,
+        rejection: updateRejection || 'unknown',
+        ownerFingerprint: createHash('sha256').update(ownerKey).digest('hex').slice(0, 12),
+      });
       if (dateLockChanged) {
         const current = transaction.snapshot.val();
         await restoreReservationDateLock(
@@ -1544,25 +1601,12 @@ app.delete('/api/reservations/:reservationId', requireFirebaseAuth, async (req, 
   }
 
   const admin = isAdmin(req.authenticatedEmail);
-  let reservationRef = db.ref(`reservas/${owner.key}/${reservationId}`);
   try {
-    const snapshot = await reservationRef.get();
-    let existing = snapshot.val();
-    if ((!existing || typeof existing !== 'object') && admin) {
-      const allReservations = (await db.ref('reservas').get()).val() || {};
-      const ownerEntry = Object.entries(allReservations).find(([, reservations]) =>
-        reservations &&
-        typeof reservations === 'object' &&
-        Object.prototype.hasOwnProperty.call(reservations, reservationId)
-      );
-      if (ownerEntry) {
-        reservationRef = db.ref(`reservas/${ownerEntry[0]}/${reservationId}`);
-        existing = (await reservationRef.get()).val();
-      }
-    }
-    if (!existing || typeof existing !== 'object') {
+    const located = await findReservationForOwner(owner, reservationId, admin);
+    if (!located) {
       return res.status(404).json({ error: 'No se encontró la reserva.' });
     }
+    const { reservationRef } = located;
     let deleteRejection = '';
     const transaction = await reservationRef.transaction(current => {
       deleteRejection = '';
@@ -1582,6 +1626,11 @@ app.delete('/api/reservations/:reservationId', requireFirebaseAuth, async (req, 
       return null;
     });
     if (!transaction.committed) {
+      console.warn('La transacción de eliminación de reserva no se confirmó:', {
+        reservationId,
+        rejection: deleteRejection || 'unknown',
+        ownerFingerprint: createHash('sha256').update(located.ownerKey).digest('hex').slice(0, 12),
+      });
       if (deleteRejection === 'missing') {
         return res.status(404).json({ error: 'No se encontró la reserva.' });
       }
@@ -2766,4 +2815,8 @@ recordatoriosDeSaldoTimer.unref();
 
 app.listen(PORT, () => {
   console.log(`Backend de BSfotografia & Videografia ejecutándose en el puerto ${PORT}`);
+  console.info('Diagnóstico de base de datos de reservas:', {
+    projectId: serviceAccount.project_id,
+    databaseHost: new URL(process.env.FIREBASE_DATABASE_URL).hostname,
+  });
 });

@@ -395,6 +395,7 @@ export class AgendaComponent implements OnInit {
       alert('Cambios guardados');
     } catch (e) {
       console.error('Error al actualizar:', e);
+      alert(e instanceof Error ? e.message : 'No se pudieron guardar los cambios de la reserva.');
     }
   }
 
@@ -447,6 +448,7 @@ export class AgendaComponent implements OnInit {
       }
     } catch (e) {
       console.error('Error al eliminar:', e);
+      alert(e instanceof Error ? e.message : 'No se pudo eliminar la reserva.');
     }
   }
 }
