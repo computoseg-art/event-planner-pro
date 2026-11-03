@@ -1543,14 +1543,26 @@ app.delete('/api/reservations/:reservationId', requireFirebaseAuth, async (req, 
     return res.status(400).json({ error: 'El identificador o propietario de la reserva no es válido.' });
   }
 
-  const reservationRef = db.ref(`reservas/${owner.key}/${reservationId}`);
+  const admin = isAdmin(req.authenticatedEmail);
+  let reservationRef = db.ref(`reservas/${owner.key}/${reservationId}`);
   try {
     const snapshot = await reservationRef.get();
-    const existing = snapshot.val();
+    let existing = snapshot.val();
+    if ((!existing || typeof existing !== 'object') && admin) {
+      const allReservations = (await db.ref('reservas').get()).val() || {};
+      const ownerEntry = Object.entries(allReservations).find(([, reservations]) =>
+        reservations &&
+        typeof reservations === 'object' &&
+        Object.prototype.hasOwnProperty.call(reservations, reservationId)
+      );
+      if (ownerEntry) {
+        reservationRef = db.ref(`reservas/${ownerEntry[0]}/${reservationId}`);
+        existing = (await reservationRef.get()).val();
+      }
+    }
     if (!existing || typeof existing !== 'object') {
       return res.status(404).json({ error: 'No se encontró la reserva.' });
     }
-    const admin = isAdmin(req.authenticatedEmail);
     let deleteRejection = '';
     const transaction = await reservationRef.transaction(current => {
       deleteRejection = '';

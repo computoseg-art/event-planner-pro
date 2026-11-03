@@ -123,6 +123,19 @@
                   }
                 </div>
 
+                <button
+                  type="button"
+                  class="booking-select-all"
+                  [class.selected]="categoriaCompletaEnReserva(res)"
+                  [attr.aria-pressed]="categoriaCompletaEnReserva(res)"
+                  (click)="alternarPaquetePromocional(res)">
+                  @if (categoriaCompletaEnReserva(res)) {
+                    Quitar paquete completo de {{ res.tipoEvento === '15_años' ? '15 años' : 'Bodas' }}
+                  } @else {
+                    Agregar paquete completo de {{ res.tipoEvento === '15_años' ? '15 años' : 'Bodas' }} y ahorrar 10%
+                  }
+                </button>
+
                 <details style="margin-top: 5px">
                   <summary
                     style="font-size: 0.75rem; color: #3b82f6; cursor: pointer; font-weight: 600"

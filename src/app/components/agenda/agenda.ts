@@ -304,6 +304,16 @@ export class AgendaComponent implements OnInit {
     return res.servicios?.some((s: any) => s.id === servicioId) || false;
   }
 
+  categoriaCompletaEnReserva(res: Reserva): boolean {
+    return this.cart.categoriaCompletaEn(res.servicios || [], res.tipoEvento);
+  }
+
+  alternarPaquetePromocional(res: Reserva): void {
+    if (this.esReservaBloqueada(res)) return;
+    res.servicios = this.cart.alternarCategoriaCompleta(res.servicios || [], res.tipoEvento);
+    this.recalcularTotalReserva(res);
+  }
+
   toggleServicioEnReserva(res: Reserva, servicio: any) {
     if (this.esReservaBloqueada(res)) return;
 
@@ -316,6 +326,10 @@ export class AgendaComponent implements OnInit {
       res.servicios.push(servicio);
     }
 
+    this.recalcularTotalReserva(res);
+  }
+
+  private recalcularTotalReserva(res: Reserva): void {
     const subtotal = res.servicios.reduce((acc: number, s: any) => acc + (s.precio || 0), 0);
     res.descuento = this.cart.calcularDescuento(res.servicios);
     res.total = Math.round((subtotal - res.descuento) * 100) / 100;

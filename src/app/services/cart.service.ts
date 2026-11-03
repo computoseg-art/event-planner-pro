@@ -95,6 +95,38 @@ export class CartService {
     return Math.round(descuento * 100) / 100;
   }
 
+  categoriaCompletaEn(
+    servicios: Pick<ServicioExtra, 'id' | 'categoria'>[],
+    categoria: CategoriaServicio,
+  ): boolean {
+    const serviciosCategoria = this.serviciosDisponibles().filter(
+      (servicio) => servicio.categoria === categoria,
+    );
+    const idsSeleccionados = new Set(servicios.map((servicio) => servicio.id));
+    return (
+      serviciosCategoria.length > 0 &&
+      serviciosCategoria.every((servicio) => idsSeleccionados.has(servicio.id))
+    );
+  }
+
+  alternarCategoriaCompleta(
+    servicios: ServicioExtra[],
+    categoria: CategoriaServicio,
+  ): ServicioExtra[] {
+    const serviciosCategoria = this.serviciosDisponibles().filter(
+      (servicio) => servicio.categoria === categoria,
+    );
+    const idsCategoria = new Set(serviciosCategoria.map((servicio) => servicio.id));
+    if (this.categoriaCompletaEn(servicios, categoria)) {
+      return servicios.filter((servicio) => !idsCategoria.has(servicio.id));
+    }
+
+    return [
+      ...servicios.filter((servicio) => !idsCategoria.has(servicio.id)),
+      ...serviciosCategoria,
+    ];
+  }
+
   reset() {
     this.serviciosSeleccionados.set([]);
     this.categoriaSeleccionada.set('extras');

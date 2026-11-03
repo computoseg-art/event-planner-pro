@@ -85,6 +85,24 @@ describe('CartService', () => {
     }
   });
 
+  it('adds or removes a complete promotional category while preserving other services', () => {
+    const extra = CATALOGO_SERVICIOS.find((servicio) => servicio.categoria === 'extras')!;
+    const quinceServices = CATALOGO_SERVICIOS.filter(
+      (servicio) => servicio.categoria === '15_años',
+    );
+    const initial = [extra, quinceServices[0]];
+
+    const complete = cart.alternarCategoriaCompleta(initial, '15_años');
+    expect(complete.filter((servicio) => servicio.categoria === '15_años').length)
+      .toBe(quinceServices.length);
+    expect(complete).toContain(extra);
+    expect(cart.calcularDescuento(complete)).toBeCloseTo(0.6);
+
+    const withoutPackage = cart.alternarCategoriaCompleta(complete, '15_años');
+    expect(withoutPackage).toEqual([extra]);
+    expect(cart.calcularDescuento(withoutPackage)).toBe(0);
+  });
+
   it('keeps the quinceañera promotional payment terms in the same catalog configuration', () => {
     expect(PRESUPUESTO_QUINCE.precioLista).toBe(52000);
     expect(PRESUPUESTO_QUINCE.descuentoEfectivoPorcentaje).toBe(10);
