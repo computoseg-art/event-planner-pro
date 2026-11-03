@@ -1502,25 +1502,36 @@ app.put('/api/reservations/:reservationId', requireFirebaseAuth, async (req, res
     }
     let updateRejection = '';
     let updatedReservation = null;
+    let transactionAttempts = 0;
+    let usedReadSnapshotFallback = false;
     let transaction;
     try {
       transaction = await reservationRef.transaction(current => {
+        transactionAttempts += 1;
         updateRejection = '';
         updatedReservation = null;
-        if (!current || typeof current !== 'object') {
+        const currentReservation = current && typeof current === 'object'
+          ? current
+          : transactionAttempts === 1
+            ? existing
+            : null;
+        if (currentReservation === existing && (!current || typeof current !== 'object')) {
+          usedReadSnapshotFallback = true;
+        }
+        if (!currentReservation || typeof currentReservation !== 'object') {
           updateRejection = 'missing';
           return;
         }
-        if (String(current.fecha || '').split('T')[0] !== oldDate) {
+        if (String(currentReservation.fecha || '').split('T')[0] !== oldDate) {
           updateRejection = 'changed';
           return;
         }
-        const currentPaid = Number(current.pagado || 0);
+        const currentPaid = Number(currentReservation.pagado || 0);
         if (!Number.isFinite(currentPaid) || currentPaid < 0) {
           updateRejection = 'invalid-paid';
           return;
         }
-        if (!admin && (current.estado !== 'pendiente' || currentPaid > 0)) {
+        if (!admin && (currentReservation.estado !== 'pendiente' || currentPaid > 0)) {
           updateRejection = 'protected';
           return;
         }
@@ -1529,11 +1540,11 @@ app.put('/api/reservations/:reservationId', requireFirebaseAuth, async (req, res
           return;
         }
         updatedReservation = {
-          ...current,
+          ...currentReservation,
           ...reservation,
           id: reservationId,
-          usuario: validEmail(current.usuario)
-            ? String(current.usuario).trim().toLowerCase()
+          usuario: validEmail(currentReservation.usuario)
+            ? String(currentReservation.usuario).trim().toLowerCase()
             : owner.email,
           pagado: currentPaid,
           estado: reservation.total > 0 && currentPaid >= reservation.total ? 'pagado' : 'pendiente',
@@ -1555,6 +1566,9 @@ app.put('/api/reservations/:reservationId', requireFirebaseAuth, async (req, res
       console.warn('La transacción de actualización de reserva no se confirmó:', {
         reservationId,
         rejection: updateRejection || 'unknown',
+        transactionAttempts,
+        usedReadSnapshotFallback,
+        transactionSnapshotExists: transaction.snapshot.exists(),
         ownerFingerprint: createHash('sha256').update(ownerKey).digest('hex').slice(0, 12),
       });
       if (dateLockChanged) {
@@ -1608,18 +1622,29 @@ app.delete('/api/reservations/:reservationId', requireFirebaseAuth, async (req, 
     }
     const { reservationRef } = located;
     let deleteRejection = '';
+    let transactionAttempts = 0;
+    let usedReadSnapshotFallback = false;
     const transaction = await reservationRef.transaction(current => {
+      transactionAttempts += 1;
       deleteRejection = '';
-      if (!current || typeof current !== 'object') {
+      const currentReservation = current && typeof current === 'object'
+        ? current
+        : transactionAttempts === 1
+          ? located.reservation
+          : null;
+      if (currentReservation === located.reservation && (!current || typeof current !== 'object')) {
+        usedReadSnapshotFallback = true;
+      }
+      if (!currentReservation || typeof currentReservation !== 'object') {
         deleteRejection = 'missing';
         return;
       }
-      const currentPaid = Number(current.pagado || 0);
+      const currentPaid = Number(currentReservation.pagado || 0);
       if (!Number.isFinite(currentPaid) || currentPaid < 0) {
         deleteRejection = 'invalid-paid';
         return;
       }
-      if (!admin && (current.estado !== 'pendiente' || currentPaid > 0)) {
+      if (!admin && (currentReservation.estado !== 'pendiente' || currentPaid > 0)) {
         deleteRejection = 'protected';
         return;
       }
@@ -1629,6 +1654,9 @@ app.delete('/api/reservations/:reservationId', requireFirebaseAuth, async (req, 
       console.warn('La transacción de eliminación de reserva no se confirmó:', {
         reservationId,
         rejection: deleteRejection || 'unknown',
+        transactionAttempts,
+        usedReadSnapshotFallback,
+        transactionSnapshotExists: transaction.snapshot.exists(),
         ownerFingerprint: createHash('sha256').update(located.ownerKey).digest('hex').slice(0, 12),
       });
       if (deleteRejection === 'missing') {
