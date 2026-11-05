@@ -29,28 +29,6 @@
     <app-promo-carousel />
 
     <section class="service-section" id="servicios">
-      <div class="section-heading">
-        <span class="section-kicker">PRESUPUESTO AUDIOVISUAL · 15 AÑOS</span>
-        <h2>Cada instante, <em>bien contado.</em></h2>
-        <p>Empezá por descubrir nuestros servicios para fiestas de 15 y, más abajo, encontrá opciones para bodas.</p>
-      </div>
-
-      <div class="service-grid">
-        @for (servicio of serviciosQuince(); track servicio.id) {
-          <article class="service-card">
-            <div class="service-card-top">
-              <span class="service-icon" aria-hidden="true">{{ servicio.icono }}</span>
-              @if (servicio.precioPromocional !== undefined) {
-                <span class="service-price">{{ formatearPrecio(servicio.precioPromocional) }}</span>
-              }
-            </div>
-            <h3>{{ servicio.nombre }}</h3>
-            <p>{{ servicio.detalle }}</p>
-            <span class="service-type">{{ servicio.icono === '📸' ? 'FOTOGRAFÍA' : 'VIDEO Y FILMACIÓN' }}</span>
-          </article>
-        }
-      </div>
-
       <div class="included-banner">
         <div class="included-icon" aria-hidden="true">✧</div>
         <div>
@@ -85,55 +63,6 @@
           <a class="landing-button landing-button-primary" routerLink="/contacto">Hablemos de su boda <span>↗</span></a>
         </div>
       </section>
-
-      <section class="budget-summary" aria-labelledby="budget-title">
-        <div class="budget-heading">
-          <span class="section-kicker">PRESUPUESTO OFICIAL</span>
-          <h3 id="budget-title">Elegí cómo querés organizarlo.</h3>
-          <p>Valores promocionales del presupuesto audiovisual para cumpleaños de 15. Para bodas, consultanos por una propuesta personalizada.</p>
-        </div>
-        <div class="budget-options">
-          <article class="budget-option">
-            <span class="budget-option-label">PRECIO DE LISTA</span>
-            <strong class="budget-total">{{ formatearPrecio(presupuestoQuince.precioLista) }}</strong>
-            <span class="budget-payment-label">Débito, transferencia o tarjeta hasta 6 cuotas</span>
-            <div class="budget-installment">
-              <span>Reserva de fecha · {{ presupuestoQuince.reservaPorcentaje }} %</span>
-              <strong>{{ formatearPrecio(reservaLista) }}</strong>
-            </div>
-            <div class="budget-installment">
-              <span>Saldo final · {{ presupuestoQuince.saldoPorcentaje }} %</span>
-              <strong>{{ formatearPrecio(saldoLista) }}</strong>
-            </div>
-          </article>
-          <article class="budget-option budget-option-cash">
-            <span class="budget-option-label">PAGO EN EFECTIVO · {{ presupuestoQuince.descuentoEfectivoPorcentaje }} % DE BONIFICACIÓN</span>
-            <span class="budget-original">{{ formatearPrecio(presupuestoQuince.precioLista) }}</span>
-            <span class="budget-discount">− {{ formatearPrecio(descuentoEfectivo) }}</span>
-            <strong class="budget-total">{{ formatearPrecio(precioEfectivo) }}</strong>
-            <div class="budget-installment">
-              <span>Reserva de fecha · {{ presupuestoQuince.reservaPorcentaje }} %</span>
-              <strong>{{ formatearPrecio(reservaEfectivo) }}</strong>
-            </div>
-            <div class="budget-installment">
-              <span>Saldo final · {{ presupuestoQuince.saldoPorcentaje }} %</span>
-              <strong>{{ formatearPrecio(saldoEfectivo) }}</strong>
-            </div>
-          </article>
-        </div>
-        <p class="budget-footnote">
-          Según el presupuesto, el saldo se abona {{ presupuestoQuince.fechaLimiteSaldo }}.
-          Para las pruebas de la web, cada servicio seleccionado en la agenda y el pago mantiene un
-          valor de <strong>$ 1</strong>; estos importes de lista son solo promocionales.
-        </p>
-      </section>
-
-      <div class="payment-notes">
-        <div><span>01</span><p>La reserva de fecha asegura la exclusividad del equipo audiovisual para tu evento.</p></div>
-        <div><span>02</span><p>Podés consultar financiación con tarjeta de crédito de hasta 6 cuotas sin recargo.</p></div>
-        <div><span>03</span><p>En Aprontes, las fotos y videos con el vestido antes del ingreso formal al salón están incluidos.</p></div>
-        <div><span>04</span><p>Al contratar fotografía y video de forma integral, recibís un pendrive con el material digital en alta definición.</p></div>
-      </div>
     </section>
 
     <app-galeria />
