@@ -1,0 +1,31 @@
+<section
+  class="promo-carousel"
+  aria-roledescription="carrusel"
+  aria-label="Fotos de eventos"
+  (mouseenter)="stop()"
+  (mouseleave)="start()"
+>
+  @for (slide of slides; track slide.src; let i = $index) {
+    <figure class="promo-slide" [class.active]="i === current()" [attr.aria-hidden]="i !== current()">
+      <img [src]="slide.src" [alt]="slide.alt" [attr.loading]="i === 0 ? 'eager' : 'lazy'" />
+      <figcaption>
+        <span class="promo-kicker">{{ slide.kicker }}</span>
+        <strong>{{ slide.title }}</strong>
+      </figcaption>
+    </figure>
+  }
+
+  <button type="button" class="promo-nav promo-prev" (click)="prev()" aria-label="Foto anterior">&#10094;</button>
+  <button type="button" class="promo-nav promo-next" (click)="next()" aria-label="Foto siguiente">&#10095;</button>
+
+  <div class="promo-dots">
+    @for (slide of slides; track slide.src; let i = $index) {
+      <button
+        type="button"
+        [class.active]="i === current()"
+        (click)="goTo(i)"
+        [attr.aria-label]="'Ir a la foto ' + (i + 1)"
+      ></button>
+    }
+  </div>
+</section>

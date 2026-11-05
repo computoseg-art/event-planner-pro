@@ -5,11 +5,12 @@ import { CartService } from '../../services/cart.service';
 import { PRESUPUESTO_QUINCE } from '../../services/catalogo-servicios';
 import { GaleriaComponent } from '../galeria/galeria';
 import { AliadosComponent } from '../aliados/aliados';
+import { PromoCarouselComponent } from '../promo-carousel/promo-carousel';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterLink, GaleriaComponent, AliadosComponent],
+  imports: [CommonModule, RouterLink, GaleriaComponent, AliadosComponent, PromoCarouselComponent],
   templateUrl: './home.html',
   styleUrls: ['./home.css', './wedding.css'],
 })

@@ -1,0 +1,128 @@
+:host {
+  display: block;
+}
+
+.promo-carousel {
+  position: relative;
+  height: clamp(320px, 52vw, 560px);
+  overflow: hidden;
+  background: #211b25;
+}
+
+.promo-slide {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+
+.promo-slide.active {
+  opacity: 1;
+}
+
+.promo-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.promo-slide::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: linear-gradient(to top, rgba(33, 27, 37, 0.85), rgba(33, 27, 37, 0) 60%);
+}
+
+.promo-slide figcaption {
+  position: absolute;
+  z-index: 1;
+  bottom: clamp(44px, 7vw, 70px);
+  left: max(7vw, calc((100vw - 1200px) / 2));
+  right: 7vw;
+  display: grid;
+  gap: 8px;
+  color: #fffaf2;
+}
+
+.promo-kicker {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: #e8c98f;
+}
+
+.promo-slide figcaption strong {
+  max-width: 640px;
+  font-size: clamp(1.4rem, 3.4vw, 2.5rem);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.promo-nav {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  width: 46px;
+  height: 46px;
+  transform: translateY(-50%);
+  border: 1px solid rgba(255, 250, 242, 0.5);
+  border-radius: 50%;
+  background: rgba(33, 27, 37, 0.45);
+  color: #fffaf2;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.promo-nav:hover {
+  background: rgba(33, 27, 37, 0.8);
+}
+
+.promo-prev {
+  left: 16px;
+}
+
+.promo-next {
+  right: 16px;
+}
+
+.promo-dots {
+  position: absolute;
+  z-index: 2;
+  bottom: 18px;
+  left: 50%;
+  display: flex;
+  gap: 8px;
+  transform: translateX(-50%);
+}
+
+.promo-dots button {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 250, 242, 0.45);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.promo-dots button.active {
+  width: 26px;
+  border-radius: 6px;
+  background: #e8c98f;
+}
+
+@media (max-width: 600px) {
+  .promo-nav {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .promo-slide {
+    transition: none;
+  }
+}
