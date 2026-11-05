@@ -12,9 +12,8 @@
 
   <!-- NAVEGACIÓN DESKTOP -->
   <nav class="nav-links desktop-only">
-    @if (!(auth.user$ | async)) {
-      <a routerLink="/home" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">Inicio</a>
-    } @else {
+    <a routerLink="/home" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">Inicio</a>
+    @if (auth.user$ | async) {
       <a routerLink="/eventos" routerLinkActive="active" class="nav-item">Experiencias</a>
       <a routerLink="/agenda" routerLinkActive="active" class="nav-item">Agenda</a>
       <a routerLink="/perfil" routerLinkActive="active" class="nav-item">Mi perfil</a>
@@ -67,9 +66,8 @@
   <!-- DESPLEGABLE MÓVIL -->
   <div class="mobile-menu" [class.open]="menuAbierto()">
     <nav class="mobile-nav-links">
-      @if (!(auth.user$ | async)) {
-        <a routerLink="/home" (click)="cerrarMenu()" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Inicio</a>
-      } @else {
+      <a routerLink="/home" (click)="cerrarMenu()" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Inicio</a>
+      @if (auth.user$ | async) {
         <a routerLink="/eventos" (click)="cerrarMenu()" routerLinkActive="active">Experiencias</a>
         <a routerLink="/agenda" (click)="cerrarMenu()" routerLinkActive="active">Agenda</a>
         <a routerLink="/perfil" (click)="cerrarMenu()" routerLinkActive="active">Mi perfil</a>
