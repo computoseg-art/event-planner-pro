@@ -10,13 +10,13 @@ import { GalleryComponent } from './components/gallery/gallery'; // Importa la c
 import { ProfileComponent } from './components/profile/profile';
 
 export const routes: Routes = [
-  { path: 'home', component: HomeComponent, canActivate: [guestGuard] },
+  { path: 'home', component: HomeComponent },
   { path: 'login', component: Login, canActivate: [guestGuard] },
   { path: 'contacto', component: ContactoComponent },
   { path: 'eventos', component: Eventos, canActivate: [authGuard] }, // Nueva carátula protegida
   { path: 'agenda', component: AgendaComponent, canActivate: [authGuard] },
   { path: 'perfil', component: ProfileComponent, canActivate: [authGuard] },
   { path: 'galeria', component: GalleryComponent, canActivate: [authGuard] },
-  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  { path: '', redirectTo: 'home', pathMatch: 'full' },
   { path: '**', redirectTo: 'login' }
 ];
