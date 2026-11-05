@@ -3,11 +3,13 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { CartService } from '../../services/cart.service';
 import { PRESUPUESTO_QUINCE } from '../../services/catalogo-servicios';
+import { GaleriaComponent } from '../galeria/galeria';
+import { AliadosComponent } from '../aliados/aliados';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, GaleriaComponent, AliadosComponent],
   templateUrl: './home.html',
   styleUrls: ['./home.css', './wedding.css'],
 })

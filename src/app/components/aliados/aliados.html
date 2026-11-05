@@ -1,0 +1,16 @@
+<section class="aliados">
+  <h2>Nuestros aliados</h2>
+  <p class="subtitulo">Empresas de confianza que complementan tu evento.</p>
+
+  <div class="grid">
+    @for (a of aliados; track a.nombre) {
+      <article class="aliado">
+        <span class="icono">{{ a.icono }}</span>
+        <span class="rubro">{{ a.rubro }}</span>
+        <h3>{{ a.nombre }}</h3>
+        <p>{{ a.descripcion }}</p>
+        <a [href]="a.contacto" target="_blank" rel="noopener noreferrer">Contactar</a>
+      </article>
+    }
+  </div>
+</section>

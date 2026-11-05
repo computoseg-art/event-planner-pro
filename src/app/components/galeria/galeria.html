@@ -1,0 +1,34 @@
+<section class="galeria">
+  <h2 class="titulo">Momentos que hemos creado</h2>
+  <p class="subtitulo">Una muestra de nuestros eventos y lo mejor de nuestros servicios.</p>
+
+  <div class="grid-fotos">
+    @for (foto of fotos; track foto.url) {
+      <figure class="foto" (click)="abrir(foto)">
+        <img [src]="foto.url" [alt]="foto.titulo" loading="lazy" />
+        <figcaption>
+          <span class="categoria">{{ foto.categoria }}</span>
+          <strong>{{ foto.titulo }}</strong>
+        </figcaption>
+      </figure>
+    }
+  </div>
+
+  <h3 class="titulo-servicios">Nuestros servicios destacados</h3>
+  <div class="grid-servicios">
+    @for (s of servicios; track s.titulo) {
+      <article class="servicio">
+        <span class="icono">{{ s.icono }}</span>
+        <h4>{{ s.titulo }}</h4>
+        <p>{{ s.descripcion }}</p>
+      </article>
+    }
+  </div>
+
+  @if (fotoSeleccionada(); as f) {
+    <div class="lightbox" (click)="cerrar()">
+      <img [src]="f.url" [alt]="f.titulo" />
+      <p>{{ f.titulo }}</p>
+    </div>
+  }
+</section>
