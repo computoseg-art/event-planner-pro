@@ -20,12 +20,12 @@ interface ServicioDestacado {
 })
 export class GaleriaComponent {
   fotos: FotoEvento[] = [
-    { url: 'https://picsum.photos/seed/boda1/600/450', titulo: 'Boda en jardín', categoria: 'Bodas' },
-    { url: '/images/quince/quince-jardin.jpg', titulo: 'Quince en el jardín', categoria: '15 años' },
-    { url: 'https://picsum.photos/seed/boda3/600/450', titulo: 'Ceremonia', categoria: 'Bodas' },
-    { url: '/images/quince/quince-paseo.jpg', titulo: 'Sesión al aire libre', categoria: '15 años' },
-    { url: 'https://picsum.photos/seed/boda5/600/450', titulo: 'Primer baile', categoria: 'Bodas' },
-    { url: '/images/quince/quince-vestido-azul.jpg', titulo: 'Vestido azul de quince', categoria: '15 años' },
+    { url: '/images/bodas/boda-jardin.jpg', titulo: 'Boda en el jardín', categoria: 'Bodas' },
+    { url: '/images/quince/quince-retrato.JPG', titulo: 'Retrato de quinceañera', categoria: '15 años' },
+    { url: '/images/bodas/boda-jardin-vestido.jpg', titulo: 'Celebración entre jardines', categoria: 'Bodas' },
+    { url: '/images/quince/quince-sesion-noche.JPG', titulo: 'Sesión de quince años', categoria: '15 años' },
+    { url: '/images/bodas/boda-ramo.jpg', titulo: 'Un día para recordar', categoria: 'Bodas' },
+    { url: '/images/quince/quince-torta.JPG', titulo: 'La torta de cumpleaños', categoria: '15 años' },
   ];
 
   servicios: ServicioDestacado[] = [
