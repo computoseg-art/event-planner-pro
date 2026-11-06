@@ -21,11 +21,11 @@ interface ServicioDestacado {
 export class GaleriaComponent {
   fotos: FotoEvento[] = [
     { url: 'https://picsum.photos/seed/boda1/600/450', titulo: 'Boda en jardín', categoria: 'Bodas' },
-    { url: 'https://picsum.photos/seed/quince2/600/450', titulo: 'Vals de quince', categoria: '15 años' },
+    { url: '/images/quince/quince-jardin.jpg', titulo: 'Quince en el jardín', categoria: '15 años' },
     { url: 'https://picsum.photos/seed/boda3/600/450', titulo: 'Ceremonia', categoria: 'Bodas' },
-    { url: 'https://picsum.photos/seed/quince4/600/450', titulo: 'Entrada al salón', categoria: '15 años' },
+    { url: '/images/quince/quince-paseo.jpg', titulo: 'Sesión al aire libre', categoria: '15 años' },
     { url: 'https://picsum.photos/seed/boda5/600/450', titulo: 'Primer baile', categoria: 'Bodas' },
-    { url: 'https://picsum.photos/seed/quince6/600/450', titulo: 'Sesión previa', categoria: '15 años' },
+    { url: '/images/quince/quince-vestido-azul.jpg', titulo: 'Vestido azul de quince', categoria: '15 años' },
   ];
 
   servicios: ServicioDestacado[] = [
