@@ -20,6 +20,7 @@ import {
   UploadPartCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { createInstallmentPlan } from './installment-plan.js';
 
 import dotenv from 'dotenv';
 
@@ -697,10 +698,19 @@ async function createPreference(req, res) {
       }
       continue;
     }
+    if (reservation.planCuotas) {
+      if (requestedId !== 'pago-general') {
+        return res.status(400).json({ error: 'Esta reserva tiene un plan de cuotas en efectivo.' });
+      }
+      continue;
+    }
 
     const total = Number(reservation.total);
     const paid = Number(reservation.pagado || 0);
-    const outstanding = total - paid;
+    const pendingCash = Object.values(reservation.pagosEfectivo || {})
+      .filter(item => item && ['pendiente_confirmacion', 'en_revision'].includes(item.estado))
+      .reduce((sum, item) => sum + Number(item.monto || 0), 0);
+    const outstanding = total - paid - pendingCash;
     if (!Number.isFinite(total) || !Number.isFinite(paid) || total <= 0 || outstanding <= 0) {
       continue;
     }
@@ -821,6 +831,7 @@ async function persistApprovedPayment(paymentId, payment, externalReference, int
     descripcion: `${intent.tipoPago === 'senia' ? 'Seña del 30 %' : 'Pago total/saldo'} de Mercado Pago`,
     usuario: intent.usuario,
     tipoPago: intent.tipoPago === 'senia' ? 'senia' : 'total',
+    metodoPago: 'mercado_pago',
     moneda: payment.currency_id || intent.moneda || 'UYU',
     reservas: intent.allocations.map((allocation) => {
       const reserva = allocation.reservaSnapshot || {};
@@ -1604,6 +1615,317 @@ app.put('/api/reservations/:reservationId', requireFirebaseAuth, async (req, res
         ? error.message
         : 'No se pudo actualizar la reserva. Inténtalo nuevamente.',
     });
+  }
+});
+
+app.post('/api/reservations/:reservationId/installment-plan', requireFirebaseAuth, async (req, res) => {
+  const reservationId = req.params.reservationId;
+  const owner = reservationOwnerForRequest(req, req.body?.usuario);
+  if (!validReservationId(reservationId) || !owner) {
+    return res.status(400).json({ error: 'El identificador o propietario de la reserva no es válido.' });
+  }
+
+  try {
+    const located = await findReservationForOwner(owner, reservationId, isAdmin(req.authenticatedEmail));
+    if (!located) return res.status(404).json({ error: 'No se encontró la reserva.' });
+
+    let rejection = '';
+    let plan = null;
+    const transaction = await located.reservationRef.transaction(current => {
+      rejection = '';
+      plan = null;
+      if (!current || typeof current !== 'object') {
+        rejection = 'missing';
+        return;
+      }
+      if (current.planCuotas) {
+        plan = current.planCuotas;
+        return current;
+      }
+      const total = Number(current.total);
+      const paid = Number(current.pagado || 0);
+      if (!current.seniaConfirmadaAt || !Number.isFinite(total) || !Number.isFinite(paid) || paid <= 0) {
+        rejection = 'deposit';
+        return;
+      }
+      if (paid >= total) {
+        rejection = 'settled';
+        return;
+      }
+      plan = createInstallmentPlan(total - paid, String(current.fecha || '').split('T')[0]);
+      if (!plan) {
+        rejection = 'no-months';
+        return;
+      }
+      return { ...current, planCuotas: plan };
+    });
+
+    if (!transaction.committed) {
+      if (rejection === 'missing') return res.status(404).json({ error: 'No se encontró la reserva.' });
+      if (rejection === 'deposit') {
+        return res.status(400).json({ error: 'El plan de cuotas está disponible después de confirmar la seña.' });
+      }
+      if (rejection === 'settled') return res.status(400).json({ error: 'La reserva ya está totalmente pagada.' });
+      if (rejection === 'no-months') {
+        return res.status(400).json({ error: 'No se puede crear el plan: debe haber cuotas mensuales y un importe mínimo de $0,01 por cuota.' });
+      }
+      throw new Error('Firebase no confirmó la creación del plan de cuotas.');
+    }
+
+    return res.status(200).json(plan);
+  } catch (error) {
+    console.error('No se pudo crear el plan de cuotas:', error.message);
+    return res.status(500).json({ error: 'No se pudo crear el plan de cuotas.' });
+  }
+});
+
+app.post('/api/reservations/:reservationId/cash-payments', requireFirebaseAuth, requireAdmin, async (req, res) => {
+  const reservationId = req.params.reservationId;
+  const owner = reservationOwnerForRequest(req, req.body?.usuario);
+  const amount = Number(req.body?.monto);
+  const cuotaId = typeof req.body?.cuotaId === 'string' ? req.body.cuotaId : '';
+  if (
+    !validReservationId(reservationId) ||
+    !owner ||
+    !Number.isFinite(amount) ||
+    amount <= 0 ||
+    Math.abs(toMinorUnits(amount) - amount * 100) > 0.000001
+  ) {
+    return res.status(400).json({ error: 'Los datos del pago en efectivo no son válidos.' });
+  }
+
+  try {
+    const located = await findReservationForOwner(owner, reservationId, true);
+    if (!located) return res.status(404).json({ error: 'No se encontró la reserva.' });
+    const paymentId = located.reservationRef.child('pagosEfectivo').push().key;
+    if (!paymentId) throw new Error('No se pudo generar el identificador del comprobante.');
+
+    let rejection = '';
+    let payment = null;
+    const transaction = await located.reservationRef.transaction(current => {
+      rejection = '';
+      payment = null;
+      if (!current || typeof current !== 'object') {
+        rejection = 'missing';
+        return;
+      }
+      const total = Number(current.total);
+      const paid = Number(current.pagado || 0);
+      if (!Number.isFinite(total) || !Number.isFinite(paid) || paid < 0 || paid >= total) {
+        rejection = 'balance';
+        return;
+      }
+      if (!current.seniaConfirmadaAt || paid <= 0) {
+        rejection = 'deposit';
+        return;
+      }
+      if (daysUntilReservationDate(String(current.fecha || '').split('T')[0]) < 3) {
+        rejection = 'deadline';
+        return;
+      }
+      const cashPayments = current.pagosEfectivo && typeof current.pagosEfectivo === 'object'
+        ? current.pagosEfectivo
+        : {};
+      const pendingAmount = Object.values(cashPayments)
+        .filter(item => item && ['pendiente_confirmacion', 'en_revision'].includes(item.estado))
+        .reduce((sum, item) => sum + toMinorUnits(item.monto || 0), 0);
+      if (toMinorUnits(amount) > toMinorUnits(total - paid) - pendingAmount) {
+        rejection = 'amount';
+        return;
+      }
+
+      if (cuotaId) {
+        const cuota = current.planCuotas?.cuotas?.find(item => item.id === cuotaId);
+        if (!cuota) {
+          rejection = 'installment';
+          return;
+        }
+        const cuotaPaid = Object.values(cashPayments)
+          .filter(item => item && item.cuotaId === cuotaId && item.estado === 'confirmado')
+          .reduce((sum, item) => sum + toMinorUnits(item.monto || 0), 0);
+        const cuotaPending = Object.values(cashPayments)
+          .filter(item =>
+            item &&
+            item.cuotaId === cuotaId &&
+            ['pendiente_confirmacion', 'en_revision'].includes(item.estado)
+          )
+          .reduce((sum, item) => sum + toMinorUnits(item.monto || 0), 0);
+        if (toMinorUnits(amount) > toMinorUnits(cuota.monto) - cuotaPaid - cuotaPending) {
+          rejection = 'installment-amount';
+          return;
+        }
+      }
+
+      payment = {
+        id: paymentId,
+        monto: amount,
+        moneda: 'UYU',
+        metodoPago: 'efectivo',
+        estado: 'pendiente_confirmacion',
+        fecha: new Date().toISOString(),
+        registradoPor: req.authenticatedEmail,
+        usuario: owner.email,
+        reservaId: reservationId,
+        cuotaId: cuotaId || null,
+        descripcion: cuotaId ? `Cuota ${cuotaId.replace('cuota-', '')}` : 'Pago en efectivo',
+      };
+      return {
+        ...current,
+        pagosEfectivo: { ...cashPayments, [paymentId]: payment },
+      };
+    });
+
+    if (!transaction.committed) {
+      if (rejection === 'missing') return res.status(404).json({ error: 'No se encontró la reserva.' });
+      if (rejection === 'balance') return res.status(400).json({ error: 'La reserva no tiene saldo pendiente.' });
+      if (rejection === 'deposit') return res.status(400).json({ error: 'El pago en efectivo está disponible después de confirmar la seña.' });
+      if (rejection === 'deadline') return res.status(400).json({ error: 'No se pueden registrar pagos a menos de 3 días del evento.' });
+      if (rejection === 'amount') return res.status(400).json({ error: 'El importe supera el saldo disponible, incluidos pagos pendientes de confirmación.' });
+      if (rejection === 'installment') return res.status(400).json({ error: 'La cuota indicada no existe en el plan.' });
+      if (rejection === 'installment-amount') return res.status(400).json({ error: 'El importe supera el saldo disponible de esa cuota.' });
+      throw new Error('Firebase no confirmó el registro del pago en efectivo.');
+    }
+    return res.status(201).json(payment);
+  } catch (error) {
+    console.error('No se pudo registrar el pago en efectivo:', error.message);
+    return res.status(500).json({ error: 'No se pudo registrar el pago en efectivo.' });
+  }
+});
+
+app.post('/api/reservations/:reservationId/cash-payments/:paymentId/:action', requireFirebaseAuth, async (req, res) => {
+  const { reservationId, paymentId, action } = req.params;
+  const owner = reservationOwnerForRequest(req, req.body?.usuario);
+  if (
+    !validReservationId(reservationId) ||
+    !validReservationId(paymentId) ||
+    !owner ||
+    !['confirm', 'dispute', 'resolve'].includes(action)
+  ) {
+    return res.status(400).json({ error: 'La acción o los datos del pago en efectivo no son válidos.' });
+  }
+  const admin = isAdmin(req.authenticatedEmail);
+  if ((action === 'resolve') !== admin) {
+    return res.status(403).json({ error: 'No tienes permiso para realizar esta acción.' });
+  }
+  const motivo =
+    typeof req.body?.motivo === 'string' ? req.body.motivo.trim().slice(0, 500) : '';
+  if (action === 'dispute' && !motivo) {
+    return res.status(400).json({ error: 'Describe la diferencia antes de reportarla.' });
+  }
+
+  try {
+    const located = await findReservationForOwner(owner, reservationId, admin);
+    if (!located) return res.status(404).json({ error: 'No se encontró la reserva.' });
+    const decision = req.body?.decision;
+    if (action === 'resolve' && !['confirm', 'reject'].includes(decision)) {
+      return res.status(400).json({ error: 'La resolución del pago no es válida.' });
+    }
+
+    let rejection = '';
+    let updatedPayment = null;
+    const transaction = await located.reservationRef.transaction(current => {
+      rejection = '';
+      updatedPayment = null;
+      const payments = current?.pagosEfectivo && typeof current.pagosEfectivo === 'object'
+        ? current.pagosEfectivo
+        : {};
+      const existingPayment = payments[paymentId];
+      if (!current || !existingPayment) {
+        rejection = 'missing';
+        return;
+      }
+      if (action === 'dispute') {
+        if (existingPayment.usuario !== req.authenticatedEmail) {
+          rejection = 'owner';
+          return;
+        }
+        if (existingPayment.estado !== 'pendiente_confirmacion') {
+          rejection = 'status';
+          return;
+        }
+        updatedPayment = {
+          ...existingPayment,
+          estado: 'en_revision',
+          reportadoAt: new Date().toISOString(),
+          motivo,
+        };
+        return { ...current, pagosEfectivo: { ...payments, [paymentId]: updatedPayment } };
+      }
+
+      const isAdminResolution = action === 'resolve';
+      if (isAdminResolution && existingPayment.estado !== 'en_revision') {
+        rejection = 'status';
+        return;
+      }
+      if (!isAdminResolution && existingPayment.usuario !== req.authenticatedEmail) {
+        rejection = 'owner';
+        return;
+      }
+      if (!isAdminResolution && existingPayment.estado === 'confirmado') {
+        updatedPayment = existingPayment;
+        return current;
+      }
+      if (!isAdminResolution && existingPayment.estado !== 'pendiente_confirmacion') {
+        rejection = 'status';
+        return;
+      }
+      if (isAdminResolution && decision === 'reject') {
+        updatedPayment = {
+          ...existingPayment,
+          estado: 'rechazado',
+          resueltoAt: new Date().toISOString(),
+          resueltoPor: req.authenticatedEmail,
+        };
+        return { ...current, pagosEfectivo: { ...payments, [paymentId]: updatedPayment } };
+      }
+
+      const amount = Number(existingPayment.monto);
+      const total = Number(current.total);
+      const paid = Number(current.pagado || 0);
+      if (
+        !Number.isFinite(amount) ||
+        !Number.isFinite(total) ||
+        !Number.isFinite(paid) ||
+        amount <= 0 ||
+        paid + amount > total + 0.005
+      ) {
+        rejection = 'balance';
+        return;
+      }
+      const confirmedAt = new Date().toISOString();
+      updatedPayment = {
+        ...existingPayment,
+        estado: 'confirmado',
+        confirmadoAt: confirmedAt,
+        confirmadoPor: req.authenticatedEmail,
+        pagadoAntes: paid,
+        saldoDespues: Math.max(0, Math.round((total - paid - amount) * 100) / 100),
+        ...(isAdminResolution ? { resueltoAt: confirmedAt, resueltoPor: req.authenticatedEmail } : {}),
+      };
+      const newPaid = Math.round((paid + amount) * 100) / 100;
+      return {
+        ...current,
+        pagado: newPaid,
+        estado: newPaid >= total
+          ? 'pagado'
+          : current.estado === 'caducada'
+            ? 'caducada'
+            : 'pendiente',
+        pagosEfectivo: { ...payments, [paymentId]: updatedPayment },
+      };
+    });
+
+    if (!transaction.committed) {
+      if (rejection === 'missing') return res.status(404).json({ error: 'No se encontró el pago en efectivo.' });
+      if (rejection === 'owner') return res.status(403).json({ error: 'Este pago no pertenece a tu cuenta.' });
+      if (rejection === 'status') return res.status(409).json({ error: 'El pago ya cambió de estado y no admite esta acción.' });
+      if (rejection === 'balance') return res.status(409).json({ error: 'El pago excede el saldo pendiente de la reserva.' });
+      throw new Error('Firebase no confirmó la actualización del pago en efectivo.');
+    }
+    return res.status(200).json(updatedPayment);
+  } catch (error) {
+    console.error('No se pudo actualizar el pago en efectivo:', error.message);
+    return res.status(500).json({ error: 'No se pudo actualizar el pago en efectivo.' });
   }
 });
 

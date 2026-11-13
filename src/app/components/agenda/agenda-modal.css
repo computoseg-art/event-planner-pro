@@ -456,3 +456,110 @@
     animation-duration: 1ms;
   }
 }
+
+.installment-plan-action,
+.installment-plan,
+.cash-register,
+.cash-payment-row {
+  display: grid;
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid #eee8e0;
+}
+
+.installment-plan-action p,
+.installment-plan > p,
+.cash-payment-note {
+  margin: 0;
+  color: #77716a;
+  font-size: 0.78rem;
+}
+
+.installment-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 8px 0;
+  border-top: 1px solid #eee8e0;
+  font-size: 0.8rem;
+}
+
+.installment-row > strong {
+  color: #332927;
+}
+
+.cash-register label {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.cash-register-controls,
+.cash-payment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cash-register-controls input {
+  width: min(100%, 150px);
+  padding: 8px;
+  border: 1px solid #ddd4ca;
+  border-radius: 3px;
+  background: #fffdfa;
+  color: #332927;
+}
+
+.btn-efectivo,
+.btn-report-cash {
+  padding: 8px 10px;
+  border: 1px solid #722f4d;
+  border-radius: 3px;
+  background: #722f4d;
+  color: #fffdfa;
+  font-size: 0.76rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.btn-report-cash {
+  border-color: #9b3434;
+  background: #fffdfa;
+  color: #9b3434;
+}
+
+.btn-efectivo:hover {
+  background: #57223a;
+}
+
+.btn-report-cash:hover {
+  background: #fbe6e6;
+}
+
+.btn-efectivo:disabled,
+.btn-report-cash:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.cash-status {
+  color: #94631b;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.cash-status.confirmed,
+.cash-status[data-status='confirmado'] {
+  color: #39734c;
+}
+
+.cash-status[data-status='en_revision'],
+.cash-status[data-status='rechazado'] {
+  color: #9b3434;
+}
+
+@media (max-width: 600px) {
+  .installment-row {
+    grid-template-columns: 1fr auto;
+  }
+}

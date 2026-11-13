@@ -10,7 +10,12 @@ import { Component, signal, computed, inject, OnInit, HostListener } from '@angu
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ReservaService, Reserva } from '../../services/reserva.service';
+import {
+  PagoEfectivoReserva,
+  ReservaService,
+  Reserva,
+  CuotaReserva,
+} from '../../services/reserva.service';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
 import { take } from 'rxjs';
@@ -37,6 +42,9 @@ export class AgendaComponent implements OnInit {
   categoriaPrevia = signal<'15_años' | 'bodas' | null>(null);
   categoriaServicios = signal<'15_años' | 'bodas' | 'extras' | null>(null);
   estaCerrando = signal<boolean>(false);
+  readonly montoEfectivo = signal<Record<string, number>>({});
+  readonly operacionEfectivo = signal<string | null>(null);
+  readonly creandoPlan = signal<string | null>(null);
 
   totalParaReserva = computed(() => this.cart.totalCarrito());
   pagoSenia = computed(() => this.cart.montoSenia());
@@ -71,6 +79,140 @@ export class AgendaComponent implements OnInit {
     const todayPart = (type: string) => Number(todayParts.find(part => part.type === type)?.value);
     const today = Date.UTC(todayPart('year'), todayPart('month') - 1, todayPart('day'));
     return Math.max(Math.floor((deadline - today) / 86400000), 0);
+  }
+
+  cuotasPosibles(fecha: string): number {
+    const [year, month] = fecha.split('T')[0].split('-').map(Number);
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Montevideo',
+      year: 'numeric',
+      month: '2-digit',
+    }).formatToParts(new Date());
+    const part = (type: string) => Number(parts.find((item) => item.type === type)?.value);
+    return Math.max((year - part('year')) * 12 + month - part('month'), 0);
+  }
+
+  pagosEfectivo(reserva: Reserva): PagoEfectivoReserva[] {
+    return Object.values(reserva.pagosEfectivo || {}).sort(
+      (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
+    );
+  }
+
+  cuotaPagada(reserva: Reserva, cuota: CuotaReserva): number {
+    return this.pagosEfectivo(reserva)
+      .filter((pago) => pago.cuotaId === cuota.id && pago.estado === 'confirmado')
+      .reduce((total, pago) => total + pago.monto, 0);
+  }
+
+  cuotaPendienteDeConfirmacion(reserva: Reserva, cuota: CuotaReserva): number {
+    return this.pagosEfectivo(reserva)
+      .filter(
+        (pago) =>
+          pago.cuotaId === cuota.id &&
+          ['pendiente_confirmacion', 'en_revision'].includes(pago.estado),
+      )
+      .reduce((total, pago) => total + pago.monto, 0);
+  }
+
+  saldoCuota(reserva: Reserva, cuota: CuotaReserva): number {
+    return Math.max(
+      0,
+      Math.round(
+        (cuota.monto -
+          this.cuotaPagada(reserva, cuota) -
+          this.cuotaPendienteDeConfirmacion(reserva, cuota)) *
+          100,
+      ) / 100,
+    );
+  }
+
+  setMontoEfectivo(reservaId: string, value: number): void {
+    this.montoEfectivo.update((values) => ({ ...values, [reservaId]: value }));
+  }
+
+  async crearPlanCuotas(reserva: Reserva): Promise<void> {
+    if (!reserva.id || this.creandoPlan()) return;
+    if (
+      !window.confirm(
+        'Al elegir este plan, el saldo se dividirá en cuotas mensuales y se abonará en efectivo. ¿Continuar?',
+      )
+    ) {
+      return;
+    }
+    this.creandoPlan.set(reserva.id);
+    try {
+      await this.rs.crearPlanCuotas(reserva);
+      alert('Se creó el plan de cuotas. La primera vence el próximo mes.');
+    } catch (error) {
+      console.error('No se pudo crear el plan de cuotas:', error);
+      alert(error instanceof Error ? error.message : 'No se pudo crear el plan de cuotas.');
+    } finally {
+      this.creandoPlan.set(null);
+    }
+  }
+
+  async registrarEfectivo(reserva: Reserva, cuota?: CuotaReserva): Promise<void> {
+    if (!reserva.id || this.operacionEfectivo()) return;
+    const amount = cuota ? this.saldoCuota(reserva, cuota) : Number(this.montoEfectivo()[reserva.id]);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      alert('Ingresa un importe válido para registrar.');
+      return;
+    }
+
+    this.operacionEfectivo.set(reserva.id);
+    try {
+      await this.rs.registrarPagoEfectivo(reserva, amount, cuota?.id);
+      this.setMontoEfectivo(reserva.id, 0);
+      alert('Pago registrado. El cliente debe confirmar el comprobante para que se acredite.');
+    } catch (error) {
+      console.error('No se pudo registrar el pago en efectivo:', error);
+      alert(error instanceof Error ? error.message : 'No se pudo registrar el pago en efectivo.');
+    } finally {
+      this.operacionEfectivo.set(null);
+    }
+  }
+
+  async actuarSobreEfectivo(
+    reserva: Reserva,
+    pago: PagoEfectivoReserva,
+    accion: 'confirm' | 'dispute' | 'resolve',
+    decision?: 'confirm' | 'reject',
+  ): Promise<void> {
+    if (!reserva.id || this.operacionEfectivo()) return;
+    const motivo =
+      accion === 'dispute'
+        ? window.prompt('Describe la diferencia para que el administrador pueda revisarla.')?.trim()
+        : undefined;
+    if (accion === 'dispute' && !motivo) return;
+    this.operacionEfectivo.set(pago.id);
+    try {
+      await this.rs.actualizarPagoEfectivo(reserva, pago, accion, decision, motivo);
+      const mensaje =
+        accion === 'dispute'
+          ? 'Se informó la diferencia. El pago quedó en revisión.'
+          : decision === 'reject'
+            ? 'El registro fue rechazado y no se acreditó.'
+            : 'Pago confirmado.';
+      alert(mensaje);
+    } catch (error) {
+      console.error('No se pudo actualizar el pago en efectivo:', error);
+      alert(error instanceof Error ? error.message : 'No se pudo actualizar el pago en efectivo.');
+    } finally {
+      this.operacionEfectivo.set(null);
+    }
+  }
+
+  etiquetaEstadoEfectivo(estado: PagoEfectivoReserva['estado']): string {
+    switch (estado) {
+      case 'pendiente_confirmacion':
+        return 'Pendiente de confirmación';
+      case 'en_revision':
+        return 'En revisión';
+      case 'confirmado':
+        return 'Confirmado';
+      case 'rechazado':
+        return 'Rechazado';
+    }
   }
 
   ngOnInit() {

@@ -40,6 +40,7 @@
           <div class="history-meta">
             <span>{{ pago.fecha | date: 'dd/MM/yyyy HH:mm' }}</span>
             <span>Pago #{{ pago.paymentId }}</span>
+            <span>Medio: {{ pago.metodoPago === 'efectivo' ? 'Efectivo' : 'Mercado Pago' }}</span>
           </div>
           @if (pago.reservas?.length) {
             <div class="history-events">
@@ -125,11 +126,19 @@
       </div>
       <div class="receipt-field">
         <span>Medio de pago</span>
-        <strong>Mercado Pago</strong>
+        <strong>{{ comprobante.metodoPago === 'efectivo' ? 'Efectivo' : 'Mercado Pago' }}</strong>
       </div>
       <div class="receipt-field">
         <span>Concepto</span>
-        <strong>{{ esSenia(comprobante) ? 'Seña del 30%' : 'Pago total o saldo' }}</strong>
+        <strong>
+          {{
+            esSenia(comprobante)
+              ? 'Seña del 30%'
+              : comprobante.metodoPago === 'efectivo'
+                ? comprobante.descripcion
+                : 'Pago total o saldo'
+          }}
+        </strong>
       </div>
     </div>
 
@@ -204,7 +213,7 @@
     <div class="receipt-total">
       <div>
         <span>Total recibido en esta operación</span>
-        <small>Pago confirmado por Mercado Pago</small>
+        <small>Pago confirmado por {{ comprobante.metodoPago === 'efectivo' ? 'ambas partes' : 'Mercado Pago' }}</small>
       </div>
       <strong>{{ formatoMonto(comprobante.monto, comprobante.moneda) }}</strong>
     </div>

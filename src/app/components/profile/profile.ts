@@ -27,7 +27,7 @@ export class ProfileComponent {
     const email = this.email();
     if (!email) return [];
     return this.reservasService
-      .historial()
+      .historialCompleto()
       .filter((pago) => pago.usuario?.trim().toLowerCase() === email)
       .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
   });

@@ -16,7 +16,41 @@ export interface Reserva {
   descuento?: number;
   pagado: number;
   seniaConfirmadaAt?: string;
+  planCuotas?: PlanCuotasReserva;
+  pagosEfectivo?: Record<string, PagoEfectivoReserva>;
   estado: 'pendiente' | 'pagado' | 'caducada' | 'completado';
+}
+
+export interface CuotaReserva {
+  id: string;
+  numero: number;
+  vencimiento: string;
+  monto: number;
+}
+
+export interface PlanCuotasReserva {
+  createdAt: string;
+  cuotas: CuotaReserva[];
+}
+
+export interface PagoEfectivoReserva {
+  id: string;
+  monto: number;
+  moneda: string;
+  metodoPago: 'efectivo';
+  estado: 'pendiente_confirmacion' | 'en_revision' | 'confirmado' | 'rechazado';
+  fecha: string;
+  registradoPor: string;
+  usuario: string;
+  reservaId: string;
+  cuotaId?: string | null;
+  descripcion: string;
+  confirmadoAt?: string;
+  reportadoAt?: string;
+  motivo?: string;
+  resueltoAt?: string;
+  pagadoAntes?: number;
+  saldoDespues?: number;
 }
 
 export interface PagoHistorial {
@@ -28,6 +62,7 @@ export interface PagoHistorial {
   usuario: string;
   externalReference?: string;
   tipoPago?: 'senia' | 'total';
+  metodoPago?: 'mercado_pago' | 'efectivo';
   moneda?: string;
   reservas?: DetallePagoReserva[];
 }
@@ -182,6 +217,34 @@ export class ReservaService {
   );
 
   historial = toSignal(this.todoElHistorial$, { initialValue: [] as PagoHistorial[] });
+  historialCompleto = computed(() => [
+    ...this.historial(),
+    ...this.reservas().flatMap((reserva) =>
+      Object.values(reserva.pagosEfectivo || {})
+        .filter((pago) => pago.estado === 'confirmado')
+        .map((pago) => ({
+          id: pago.id,
+          fecha: pago.confirmadoAt || pago.fecha,
+          monto: pago.monto,
+          paymentId: pago.id,
+          descripcion: pago.descripcion,
+          usuario: reserva.usuario,
+          tipoPago: 'total' as const,
+          metodoPago: 'efectivo' as const,
+          moneda: pago.moneda,
+          reservas: [{
+            id: reserva.id,
+            descripcion: reserva.descripcion,
+            fecha: reserva.fecha,
+            tipoEvento: reserva.tipoEvento,
+            monto: pago.monto,
+            total: reserva.total,
+            pagadoAntes: pago.pagadoAntes ?? Math.max(0, Number(reserva.pagado || 0) - pago.monto),
+            saldoDespues: pago.saldoDespues ?? Math.max(0, Number(reserva.total) - Number(reserva.pagado || 0)),
+          }],
+        })),
+    ),
+  ]);
 
   // --- SEÑALES COMPUTADAS ---
 
@@ -206,7 +269,7 @@ export class ReservaService {
 
   historialVisibles = computed(() => {
     const email = this.auth.usuarioLogueado();
-    const todos = this.historial();
+    const todos = this.historialCompleto();
     if (!email) return [];
     if (this.auth.esAdmin()) return todos;
     return todos.filter((h) => h.usuario?.toLowerCase() === email.toLowerCase());
@@ -232,11 +295,18 @@ deudaTotal = computed(() => {
       const estaCaducada = hoy > limitePago;
 
       // No se suma deuda de reservas vencidas o ya saldadas.
-      if (estaCaducada || ['caducada', 'pagado', 'completado'].includes(res.estado)) {
+      if (
+        estaCaducada ||
+        res.planCuotas ||
+        ['caducada', 'pagado', 'completado'].includes(res.estado)
+      ) {
         return acc;
       }
 
-      return acc + (Number(res.total) - Number(res.pagado || 0));
+      const pagosEfectivoPendientes = Object.values(res.pagosEfectivo || {})
+        .filter((pago) => ['pendiente_confirmacion', 'en_revision'].includes(pago.estado))
+        .reduce((total, pago) => total + Number(pago.monto || 0), 0);
+      return acc + Math.max(0, Number(res.total) - Number(res.pagado || 0) - pagosEfectivoPendientes);
     }, 0);
   });
 
@@ -357,6 +427,43 @@ deudaTotal = computed(() => {
       total: Number(res.total),
       descuento: Number(res.descuento || 0),
     });
+  }
+
+  async crearPlanCuotas(reserva: Reserva): Promise<PlanCuotasReserva> {
+    if (!reserva.id) throw new Error('La reserva no tiene un identificador válido.');
+    return this.requestReservationApi<PlanCuotasReserva>(
+      `/${encodeURIComponent(reserva.id)}/installment-plan`,
+      'POST',
+      { usuario: reserva.usuario },
+    );
+  }
+
+  async registrarPagoEfectivo(
+    reserva: Reserva,
+    monto: number,
+    cuotaId?: string,
+  ): Promise<PagoEfectivoReserva> {
+    if (!reserva.id) throw new Error('La reserva no tiene un identificador válido.');
+    return this.requestReservationApi<PagoEfectivoReserva>(
+      `/${encodeURIComponent(reserva.id)}/cash-payments`,
+      'POST',
+      { usuario: reserva.usuario, monto, cuotaId },
+    );
+  }
+
+  async actualizarPagoEfectivo(
+    reserva: Reserva,
+    pago: PagoEfectivoReserva,
+    accion: 'confirm' | 'dispute' | 'resolve',
+    decision?: 'confirm' | 'reject',
+    motivo?: string,
+  ): Promise<PagoEfectivoReserva> {
+    if (!reserva.id || !pago.id) throw new Error('El pago no tiene un identificador válido.');
+    return this.requestReservationApi<PagoEfectivoReserva>(
+      `/${encodeURIComponent(reserva.id)}/cash-payments/${encodeURIComponent(pago.id)}/${accion}`,
+      'POST',
+      { usuario: reserva.usuario, decision, motivo },
+    );
   }
 
   async eliminar(res: Reserva) {

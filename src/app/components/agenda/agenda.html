@@ -248,7 +248,162 @@
                   </span>
                 }
 
-                @if (res.total - (res.pagado || 0) > 0 && !auth.esAdmin() && !esReservaCaducada(res)) {
+                @if (
+                  !auth.esAdmin() &&
+                  res.seniaConfirmadaAt &&
+                  res.total - (res.pagado || 0) > 0 &&
+                  !res.planCuotas &&
+                  cuotasPosibles(res.fecha) > 0 &&
+                  !esReservaCaducada(res)
+                ) {
+                  <div class="installment-plan-action">
+                    <p>
+                      Podés pagar el saldo en {{ cuotasPosibles(res.fecha) }} cuotas mensuales
+                      desde el próximo mes hasta el mes del evento.
+                    </p>
+                    <button
+                      type="button"
+                      class="btn-efectivo"
+                      [disabled]="creandoPlan() === res.id"
+                      (click)="crearPlanCuotas(res); $event.stopPropagation()">
+                      {{ creandoPlan() === res.id ? 'Creando plan…' : 'Elegir plan de cuotas' }}
+                    </button>
+                  </div>
+                }
+
+                @if (
+                  !auth.esAdmin() &&
+                  res.seniaConfirmadaAt &&
+                  res.total - (res.pagado || 0) > 0 &&
+                  !esReservaCaducada(res)
+                ) {
+                  <p class="cash-payment-note">
+                    También podés pagar el saldo en efectivo. El administrador registrará el dinero
+                    recibido y luego confirmarás el comprobante desde esta reserva.
+                  </p>
+                }
+
+                @if (res.planCuotas?.cuotas?.length) {
+                  <div class="installment-plan">
+                    <strong>Plan de cuotas · pago en efectivo</strong>
+                    <p>Podés adelantar cuotas; la última vence el mes del evento.</p>
+                    @for (cuota of res.planCuotas!.cuotas; track cuota.id) {
+                      <div class="installment-row">
+                        <span>
+                          Cuota {{ cuota.numero }} ·
+                          {{ cuota.vencimiento | date: 'MMMM yyyy' : 'UTC' : 'es' | titlecase }}
+                        </span>
+                        <strong>${{ cuota.monto | number: '1.2-2' }}</strong>
+                        @if (cuotaPagada(res, cuota) >= cuota.monto) {
+                          <span class="cash-status confirmed">Pagada</span>
+                        } @else if (cuotaPendienteDeConfirmacion(res, cuota) > 0) {
+                          <span class="cash-status waiting">En confirmación</span>
+                        } @else {
+                          <span class="cash-status">Pendiente</span>
+                        }
+                        @if (
+                          auth.esAdmin() &&
+                          saldoCuota(res, cuota) > 0 &&
+                          !esReservaCaducada(res)
+                        ) {
+                          <button
+                            type="button"
+                            class="btn-efectivo"
+                            [disabled]="operacionEfectivo() === res.id"
+                            (click)="registrarEfectivo(res, cuota); $event.stopPropagation()">
+                            Registrar efectivo · ${{ saldoCuota(res, cuota) | number: '1.2-2' }}
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+
+                @if (
+                  auth.esAdmin() &&
+                  !res.planCuotas &&
+                  res.total - (res.pagado || 0) > 0 &&
+                  !esReservaCaducada(res)
+                ) {
+                  <div class="cash-register">
+                    <label [for]="'cash-amount-' + res.id">Registrar otro pago en efectivo ($)</label>
+                    <div class="cash-register-controls">
+                      <input
+                        [id]="'cash-amount-' + res.id"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        [ngModel]="montoEfectivo()[res.id!] || null"
+                        (ngModelChange)="setMontoEfectivo(res.id!, $event)"
+                        [disabled]="operacionEfectivo() === res.id" />
+                      <button
+                        type="button"
+                        class="btn-efectivo"
+                        [disabled]="operacionEfectivo() === res.id"
+                        (click)="registrarEfectivo(res); $event.stopPropagation()">
+                        Registrar
+                      </button>
+                    </div>
+                  </div>
+                }
+
+                @for (pago of pagosEfectivo(res); track pago.id) {
+                  <div class="cash-payment-row">
+                    <span>
+                      {{ pago.descripcion }} · ${{ pago.monto | number: '1.2-2' }} ·
+                      {{ pago.fecha | date: 'dd/MM/yyyy HH:mm' }} · Comprobante #{{ pago.id }}
+                    </span>
+                    @if (pago.motivo) {
+                      <span>Diferencia reportada: {{ pago.motivo }}</span>
+                    }
+                    <strong class="cash-status" [attr.data-status]="pago.estado">
+                      {{ etiquetaEstadoEfectivo(pago.estado) }}
+                    </strong>
+                    @if (!auth.esAdmin() && pago.estado === 'pendiente_confirmacion') {
+                      <div class="cash-payment-actions">
+                        <button
+                          type="button"
+                          class="btn-efectivo"
+                          [disabled]="operacionEfectivo() === pago.id"
+                          (click)="actuarSobreEfectivo(res, pago, 'confirm'); $event.stopPropagation()">
+                          Confirmo recepción
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-report-cash"
+                          [disabled]="operacionEfectivo() === pago.id"
+                          (click)="actuarSobreEfectivo(res, pago, 'dispute'); $event.stopPropagation()">
+                          Informar diferencia
+                        </button>
+                      </div>
+                    }
+                    @if (auth.esAdmin() && pago.estado === 'en_revision') {
+                      <div class="cash-payment-actions">
+                        <button
+                          type="button"
+                          class="btn-efectivo"
+                          [disabled]="operacionEfectivo() === pago.id"
+                          (click)="actuarSobreEfectivo(res, pago, 'resolve', 'confirm'); $event.stopPropagation()">
+                          Confirmar pago
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-report-cash"
+                          [disabled]="operacionEfectivo() === pago.id"
+                          (click)="actuarSobreEfectivo(res, pago, 'resolve', 'reject'); $event.stopPropagation()">
+                          Rechazar registro
+                        </button>
+                      </div>
+                    }
+                  </div>
+                }
+
+                @if (
+                  res.total - (res.pagado || 0) > 0 &&
+                  !auth.esAdmin() &&
+                  !res.planCuotas &&
+                  !esReservaCaducada(res)
+                ) {
                   <button
                     class="btn-pagar-solo"
                     (click)="pagarReservaIndividual(res); $event.stopPropagation()"
