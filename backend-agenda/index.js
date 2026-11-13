@@ -22,6 +22,7 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { createInstallmentPlan } from './installment-plan.js';
 import { findReservationEntry } from './reservation-lookup.js';
+import { runReservationTransaction } from './reservation-transaction.js';
 
 import dotenv from 'dotenv';
 
@@ -1633,7 +1634,7 @@ app.post('/api/reservations/:reservationId/installment-plan', requireFirebaseAut
 
     let rejection = '';
     let plan = null;
-    const transaction = await located.reservationRef.transaction(current => {
+    const transaction = await runReservationTransaction(located.reservationRef, current => {
       rejection = '';
       plan = null;
       if (!current || typeof current !== 'object') {
@@ -1663,7 +1664,7 @@ app.post('/api/reservations/:reservationId/installment-plan', requireFirebaseAut
     });
 
     if (!transaction.committed) {
-      if (rejection === 'missing') return res.status(404).json({ error: 'No se encontró la reserva.' });
+      if (rejection === 'missing') return res.status(404).json({ error: 'La reserva ya no está disponible. Actualiza la página.' });
       if (rejection === 'deposit') {
         return res.status(400).json({ error: 'El plan de cuotas está disponible después de confirmar la seña.' });
       }
@@ -1704,7 +1705,7 @@ app.post('/api/reservations/:reservationId/cash-payments', requireFirebaseAuth, 
 
     let rejection = '';
     let payment = null;
-    const transaction = await located.reservationRef.transaction(current => {
+    const transaction = await runReservationTransaction(located.reservationRef, current => {
       rejection = '';
       payment = null;
       if (!current || typeof current !== 'object') {
@@ -1778,7 +1779,7 @@ app.post('/api/reservations/:reservationId/cash-payments', requireFirebaseAuth, 
     });
 
     if (!transaction.committed) {
-      if (rejection === 'missing') return res.status(404).json({ error: 'No se encontró la reserva.' });
+      if (rejection === 'missing') return res.status(404).json({ error: 'La reserva ya no está disponible. Actualiza la página.' });
       if (rejection === 'balance') return res.status(400).json({ error: 'La reserva no tiene saldo pendiente.' });
       if (rejection === 'deposit') return res.status(400).json({ error: 'El pago en efectivo está disponible después de confirmar la seña.' });
       if (rejection === 'deadline') return res.status(400).json({ error: 'No se pueden registrar pagos a menos de 3 días del evento.' });
@@ -1825,7 +1826,7 @@ app.post('/api/reservations/:reservationId/cash-payments/:paymentId/:action', re
 
     let rejection = '';
     let updatedPayment = null;
-    const transaction = await located.reservationRef.transaction(current => {
+    const transaction = await runReservationTransaction(located.reservationRef, current => {
       rejection = '';
       updatedPayment = null;
       const payments = current?.pagosEfectivo && typeof current.pagosEfectivo === 'object'
