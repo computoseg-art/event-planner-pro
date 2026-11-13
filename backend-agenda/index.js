@@ -21,6 +21,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { createInstallmentPlan } from './installment-plan.js';
+import { findReservationEntry } from './reservation-lookup.js';
 
 import dotenv from 'dotenv';
 
@@ -496,26 +497,26 @@ async function findReservationForOwner(owner, reservationId, admin) {
   let reservationRef = db.ref(`reservas/${ownerKey}/${reservationId}`);
   let snapshot = await reservationRef.get();
   const directFound = snapshot.exists() && snapshot.val() && typeof snapshot.val() === 'object';
-  let adminScanPerformed = false;
+  let reservationScanPerformed = false;
   let scannedOwnerCount = 0;
+  let matchedByStoredId = false;
 
-  if (!directFound && admin) {
-    adminScanPerformed = true;
-    const allReservations = (await db.ref('reservas').get()).val() || {};
-    for (const [candidateOwnerKey, reservations] of Object.entries(allReservations)) {
+  if (!directFound) {
+    reservationScanPerformed = true;
+    const reservations = admin
+      ? (await db.ref('reservas').get()).val() || {}
+      : { [ownerKey]: (await db.ref(`reservas/${ownerKey}`).get()).val() || {} };
+    for (const [candidateOwnerKey, candidateReservations] of Object.entries(reservations)) {
       scannedOwnerCount += 1;
-      if (
-        !reservations ||
-        typeof reservations !== 'object' ||
-        !Object.prototype.hasOwnProperty.call(reservations, reservationId)
-      ) {
-        continue;
+      const match = findReservationEntry(candidateReservations, reservationId);
+      if (match) {
+        const [reservationKey] = match;
+        ownerKey = candidateOwnerKey;
+        matchedByStoredId = reservationKey !== reservationId;
+        reservationRef = db.ref(`reservas/${ownerKey}/${reservationKey}`);
+        snapshot = await reservationRef.get();
+        break;
       }
-
-      ownerKey = candidateOwnerKey;
-      reservationRef = db.ref(`reservas/${ownerKey}/${reservationId}`);
-      snapshot = await reservationRef.get();
-      break;
     }
   }
 
@@ -526,8 +527,9 @@ async function findReservationForOwner(owner, reservationId, admin) {
     reservationId,
     admin,
     directFound: Boolean(directFound),
-    adminScanPerformed,
+    reservationScanPerformed,
     scannedOwnerCount,
+    matchedByStoredId,
     found,
     requestedOwnerFingerprint: ownerFingerprint(owner.key),
     foundOwnerFingerprint: found ? ownerFingerprint(ownerKey) : null,
