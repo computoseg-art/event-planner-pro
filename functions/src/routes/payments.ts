@@ -4,12 +4,20 @@
 
 import { Router, Request, Response } from 'express';
 import { createHmac, timingSafeEqual } from 'crypto';
-import { getDatabase } from 'firebase-admin/database';
+import { getDatabase, Database } from 'firebase-admin/database';
 import * as functions from 'firebase-functions';
 import { MercadoPagoConfig, Payment, Preference } from 'mercadopago';
 import { verifyFirebaseAuth } from '../middleware/auth.js';
 
-const db = getDatabase();
+let db: Database | null = null;
+
+function getDb(): Database {
+  if (!db) {
+    db = getDatabase();
+  }
+  return db;
+}
+
 const router = Router();
 
 // Helpers
@@ -93,7 +101,7 @@ router.post('/create_preference', verifyFirebaseAuth, async (req: Request, res: 
 
     // Store intent in database
     const userKey = userDatabaseKey(req.user!.email!);
-    await db.ref(`pagos_pendientes/${reservationId}`).set({
+    await getDb().ref(`pagos_pendientes/${reservationId}`).set({
       usuario: req.user!.email!,
       monto: amount,
       estado: 'pending',
@@ -143,7 +151,7 @@ router.post('/confirm_payment', verifyFirebaseAuth, async (req: Request, res: Re
     }
 
     // Verify payment belongs to user
-    const intentSnapshot = await db.ref(`pagos_pendientes/${externalReference}`).get();
+    const intentSnapshot = await getDb().ref(`pagos_pendientes/${externalReference}`).get();
     const intent = intentSnapshot.val();
 
     if (
@@ -155,7 +163,7 @@ router.post('/confirm_payment', verifyFirebaseAuth, async (req: Request, res: Re
 
     // Apply payment to reservation
     const userKey = userDatabaseKey(req.user!.email!);
-    const reservationRef = db.ref(`reservas/${userKey}/${externalReference}`);
+    const reservationRef = getDb().ref(`reservas/${userKey}/${externalReference}`);
 
     await reservationRef.transaction((current: any) => {
       if (!current) return;
@@ -185,8 +193,8 @@ router.post('/confirm_payment', verifyFirebaseAuth, async (req: Request, res: Re
       estado: 'approved',
     };
 
-    await db.ref(`historial_pagos/${userKey}/${paymentId}`).set(historyData);
-    await db.ref(`pagos_pendientes/${externalReference}/estado`).set('approved');
+    await getDb().ref(`historial_pagos/${userKey}/${paymentId}`).set(historyData);
+    await getDb().ref(`pagos_pendientes/${externalReference}/estado`).set('approved');
 
     return res.json({ success: true, payment });
   } catch (error) {
@@ -228,8 +236,8 @@ router.post('/webhook', async (req: Request, res: Response) => {
 
     if (payment.status === 'approved' && payment.external_reference) {
       // Mark as approved in database
-      await db.ref(`pagos_pendientes/${payment.external_reference}/estado`).set('approved');
-      await db.ref(`pagos_aprovados/${paymentId}`).set({
+      await getDb().ref(`pagos_pendientes/${payment.external_reference}/estado`).set('approved');
+      await getDb().ref(`pagos_aprovados/${paymentId}`).set({
         paymentId,
         estado: 'approved',
         monto: payment.transaction_amount,

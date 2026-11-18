@@ -3,11 +3,19 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { getDatabase } from 'firebase-admin/database';
+import { getDatabase, Database } from 'firebase-admin/database';
 import * as functions from 'firebase-functions';
 import { verifyFirebaseAuth, requireAdmin } from '../middleware/auth.js';
 
-const db = getDatabase();
+let db: Database | null = null;
+
+function getDb(): Database {
+  if (!db) {
+    db = getDatabase();
+  }
+  return db;
+}
+
 const router = Router();
 
 // Helpers
@@ -39,7 +47,7 @@ function validReservationDate(date: string): boolean {
 router.get('/api/reservations', verifyFirebaseAuth, async (req: Request, res: Response) => {
   try {
     const userKey = userDatabaseKey(req.user!.email!);
-    const snapshot = await db.ref(`reservas/${userKey}`).get();
+    const snapshot = await getDb().ref(`reservas/${userKey}`).get();
     const reservations = snapshot.val() || {};
     
     return res.json(reservations);
@@ -82,11 +90,11 @@ router.post('/api/reservations', verifyFirebaseAuth, async (req: Request, res: R
       createdAt: new Date().toISOString(),
     };
 
-    const userRef = db.ref(`reservas/${userKey}/${reservationId}`);
+    const userRef = getDb().ref(`reservas/${userKey}/${reservationId}`);
     await userRef.set(reservationData);
 
     // Update fechas_ocupadas
-    await db.ref(`fechas_ocupadas/${reservationId}`).set(fecha);
+    await getDb().ref(`fechas_ocupadas/${reservationId}`).set(fecha);
 
     return res.status(201).json(reservationData);
   } catch (error) {
@@ -107,7 +115,7 @@ router.put('/api/reservations/:reservationId', verifyFirebaseAuth, async (req: R
     }
 
     const userKey = userDatabaseKey(req.user!.email!);
-    const reservationRef = db.ref(`reservas/${userKey}/${reservationId}`);
+    const reservationRef = getDb().ref(`reservas/${userKey}/${reservationId}`);
     const snapshot = await reservationRef.get();
 
     if (!snapshot.exists()) {
@@ -137,10 +145,10 @@ router.delete('/api/reservations/:reservationId', verifyFirebaseAuth, async (req
     }
 
     const userKey = userDatabaseKey(req.user!.email!);
-    const reservationRef = db.ref(`reservas/${userKey}/${reservationId}`);
+    const reservationRef = getDb().ref(`reservas/${userKey}/${reservationId}`);
     
     await reservationRef.remove();
-    await db.ref(`fechas_ocupadas/${reservationId}`).remove();
+    await getDb().ref(`fechas_ocupadas/${reservationId}`).remove();
 
     return res.status(204).send();
   } catch (error) {
@@ -154,7 +162,7 @@ router.delete('/api/reservations/:reservationId', verifyFirebaseAuth, async (req
  */
 router.post('/api/reservations/maintenance', verifyFirebaseAuth, requireAdmin, async (req: Request, res: Response) => {
   try {
-    const snapshot = await db.ref('reservas').get();
+    const snapshot = await getDb().ref('reservas').get();
     const allReservations = snapshot.val() || {};
     let updated = 0;
 
@@ -174,7 +182,7 @@ router.post('/api/reservations/maintenance', verifyFirebaseAuth, requireAdmin, a
         const paid = Number(res.pagado || 0);
 
         if (total > 0 && paid < total && daysUntil < 3 && res.estado !== 'caducada') {
-          const reservationRef = db.ref(`reservas/${userKey}/${reservationId}`);
+          const reservationRef = getDb().ref(`reservas/${userKey}/${reservationId}`);
           const transaction = await reservationRef.transaction((current: any) => {
             if (!current || typeof current !== 'object') return;
 

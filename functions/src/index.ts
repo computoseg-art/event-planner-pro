@@ -2,7 +2,6 @@ import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 
 // Import routes
 import reservationsRouter from './routes/reservations.js';
@@ -11,31 +10,27 @@ import contactRouter from './routes/contact.js';
 import galleryRouter from './routes/gallery.js';
 import { verifyFirebaseAuth } from './middleware/auth.js';
 
-// Load environment variables
-dotenv.config();
+// Provide defaults for development/emulator mode
+const getEnv = (key: string, defaultValue?: string): string => {
+  return process.env[key] || defaultValue || '';
+};
 
-// Validate required environment variables
-const requiredEnv = [
-  'MP_ACCESS_TOKEN',
-  'MP_WEBHOOK_SECRET',
-  'FIREBASE_DATABASE_URL',
-  'CLIENT_URL',
-  'BACKEND_PUBLIC_URL',
-  'ADMIN_EMAILS',
-  'BREVO_API_KEY',
-  'EMAIL_FROM',
-  'EMAIL_TO',
-];
-
-for (const env of requiredEnv) {
-  if (!process.env[env]) {
-    throw new Error(`Missing required environment variable: ${env}`);
-  }
-}
+// Get environment with defaults
+const env = {
+  MP_ACCESS_TOKEN: getEnv('MP_ACCESS_TOKEN', 'dummy-token'),
+  MP_WEBHOOK_SECRET: getEnv('MP_WEBHOOK_SECRET', 'dummy-secret'),
+  FIREBASE_DATABASE_URL: getEnv('FIREBASE_DATABASE_URL', 'https://fotos-44002-default-rtdb.firebaseio.com'),
+  CLIENT_URL: getEnv('CLIENT_URL', 'http://localhost:4200'),
+  BACKEND_PUBLIC_URL: getEnv('BACKEND_PUBLIC_URL', 'http://localhost:5001'),
+  ADMIN_EMAILS: getEnv('ADMIN_EMAILS', 'admin@example.com'),
+  BREVO_API_KEY: getEnv('BREVO_API_KEY', 'dummy-brevo-key'),
+  EMAIL_FROM: getEnv('EMAIL_FROM', 'noreply@example.com'),
+  EMAIL_TO: getEnv('EMAIL_TO', 'admin@example.com'),
+};
 
 // Initialize Firebase Admin SDK
 admin.initializeApp({
-  databaseURL: process.env.FIREBASE_DATABASE_URL,
+  databaseURL: env.FIREBASE_DATABASE_URL,
 });
 
 // Create Express app
@@ -43,7 +38,7 @@ const app = express();
 
 // CORS configuration
 const allowedOrigins = new Set([
-  process.env.CLIENT_URL,
+  env.CLIENT_URL,
   'https://fotos-44002.web.app',
   'https://fotos-44002.firebaseapp.com',
   'http://localhost:4200',

@@ -3,11 +3,19 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { getDatabase } from 'firebase-admin/database';
+import { getDatabase, Database } from 'firebase-admin/database';
 import * as functions from 'firebase-functions';
 import { verifyFirebaseAuth, requireGalleryAdmin } from '../middleware/auth.js';
 
-const db = getDatabase();
+let db: Database | null = null;
+
+function getDb(): Database {
+  if (!db) {
+    db = getDatabase();
+  }
+  return db;
+}
+
 const router = Router();
 
 /**
@@ -29,7 +37,7 @@ router.get('/api/gallery/storage-status', verifyFirebaseAuth, requireGalleryAdmi
     }
 
     // Get storage usage from database
-    const usageSnapshot = await db.ref('b2_storage_usage').get();
+    const usageSnapshot = await getDb().ref('b2_storage_usage').get();
     const usage = usageSnapshot.val() || {};
 
     return res.json({
@@ -51,7 +59,7 @@ router.get('/api/gallery/storage-status', verifyFirebaseAuth, requireGalleryAdmi
 router.get('/api/gallery/sessions', verifyFirebaseAuth, async (req: Request, res: Response) => {
   try {
     const uid = req.user!.uid;
-    const sessionsSnapshot = await db.ref(`b2_galerias/${uid}`).get();
+    const sessionsSnapshot = await getDb().ref(`b2_galerias/${uid}`).get();
     const sessions = sessionsSnapshot.val() || {};
 
     return res.json(sessions);
@@ -84,7 +92,7 @@ router.post('/api/gallery/sessions', verifyFirebaseAuth, requireGalleryAdmin, as
       createdBy: req.user!.email,
     };
 
-    await db.ref(`b2_galerias/${uid}/${sessionId}`).set(sessionData);
+    await getDb().ref(`b2_galerias/${uid}/${sessionId}`).set(sessionData);
 
     return res.status(201).json(sessionData);
   } catch (error) {
@@ -101,7 +109,7 @@ router.get('/api/gallery/sessions/:sessionId/media', verifyFirebaseAuth, async (
     const { sessionId } = req.params;
     const uid = req.user!.uid;
 
-    const mediaSnapshot = await db.ref(`b2_galerias/${uid}/${sessionId}/media`).get();
+    const mediaSnapshot = await getDb().ref(`b2_galerias/${uid}/${sessionId}/media`).get();
     const media = mediaSnapshot.val() || {};
 
     return res.json(media);
@@ -119,7 +127,7 @@ router.delete('/api/gallery/sessions/:sessionId/media/:mediaId', verifyFirebaseA
     const { sessionId, mediaId } = req.params;
     const uid = req.user!.uid;
 
-    await db.ref(`b2_galerias/${uid}/${sessionId}/media/${mediaId}`).remove();
+    await getDb().ref(`b2_galerias/${uid}/${sessionId}/media/${mediaId}`).remove();
 
     return res.status(204).send();
   } catch (error) {
