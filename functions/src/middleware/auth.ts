@@ -3,13 +3,14 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import * as admin from 'firebase-admin';
+import { getAuth, DecodedIdToken } from 'firebase-admin/auth';
+import { getDatabase } from 'firebase-admin/database';
 import * as functions from 'firebase-functions';
 
 declare global {
   namespace Express {
     interface Request {
-      user?: admin.auth.DecodedIdToken;
+      user?: DecodedIdToken;
       uid?: string;
     }
   }
@@ -31,7 +32,7 @@ export async function verifyFirebaseAuth(
   }
 
   try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
+    const decodedToken = await getAuth().verifyIdToken(token);
     req.user = decodedToken;
     req.uid = decodedToken.uid;
     next();
