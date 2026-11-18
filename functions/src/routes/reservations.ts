@@ -42,9 +42,9 @@ function validReservationDate(date: string): boolean {
 }
 
 /**
- * GET /api/reservations - List reservations for authenticated user
+ * GET /reservations - List reservations for authenticated user
  */
-router.get('/api/reservations', verifyFirebaseAuth, async (req: Request, res: Response) => {
+router.get('/reservations', verifyFirebaseAuth, async (req: Request, res: Response) => {
   try {
     const userKey = userDatabaseKey(req.user!.email!);
     const snapshot = await getDb().ref(`reservas/${userKey}`).get();
@@ -58,9 +58,9 @@ router.get('/api/reservations', verifyFirebaseAuth, async (req: Request, res: Re
 });
 
 /**
- * POST /api/reservations - Create new reservation
+ * POST /reservations - Create new reservation
  */
-router.post('/api/reservations', verifyFirebaseAuth, async (req: Request, res: Response) => {
+router.post('/reservations', verifyFirebaseAuth, async (req: Request, res: Response) => {
   try {
     const { fecha, descripcion, tipoEvento, servicios, total, pagado } = req.body;
 
@@ -104,9 +104,9 @@ router.post('/api/reservations', verifyFirebaseAuth, async (req: Request, res: R
 });
 
 /**
- * PUT /api/reservations/:reservationId - Update reservation
+ * PUT /reservations/:reservationId - Update reservation
  */
-router.put('/api/reservations/:reservationId', verifyFirebaseAuth, async (req: Request, res: Response) => {
+router.put('/reservations/:reservationId', verifyFirebaseAuth, async (req: Request, res: Response) => {
   try {
     const { reservationId } = req.params;
     
@@ -134,9 +134,9 @@ router.put('/api/reservations/:reservationId', verifyFirebaseAuth, async (req: R
 });
 
 /**
- * DELETE /api/reservations/:reservationId - Delete reservation
+ * DELETE /reservations/:reservationId - Delete reservation
  */
-router.delete('/api/reservations/:reservationId', verifyFirebaseAuth, async (req: Request, res: Response) => {
+router.delete('/reservations/:reservationId', verifyFirebaseAuth, async (req: Request, res: Response) => {
   try {
     const { reservationId } = req.params;
 
@@ -158,9 +158,9 @@ router.delete('/api/reservations/:reservationId', verifyFirebaseAuth, async (req
 });
 
 /**
- * POST /api/reservations/maintenance - Admin: Check and update expired reservations
+ * POST /reservations/maintenance - Admin: Check and update expired reservations
  */
-router.post('/api/reservations/maintenance', verifyFirebaseAuth, requireAdmin, async (req: Request, res: Response) => {
+router.post('/reservations/maintenance', verifyFirebaseAuth, requireAdmin, async (req: Request, res: Response) => {
   try {
     const snapshot = await getDb().ref('reservas').get();
     const allReservations = snapshot.val() || {};

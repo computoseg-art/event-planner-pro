@@ -73,11 +73,11 @@ app.get('/', (req, res) => {
   });
 });
 
-// Mount routers
-app.use(reservationsRouter);
-app.use(paymentsRouter);
-app.use(contactRouter);
-app.use(galleryRouter);
+// Mount routers under /api prefix
+app.use('/api', reservationsRouter);
+app.use('/api', paymentsRouter);
+app.use('/api', contactRouter);
+app.use('/api', galleryRouter);
 
 // Error handling middleware
 app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

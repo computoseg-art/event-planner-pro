@@ -3,7 +3,7 @@
   "description": "Firebase Cloud Functions for Event Planner Pro",
   "type": "module",
   "engines": {
-    "node": "20"
+    "node": "24"
   },
   "scripts": {
     "build": "tsc",

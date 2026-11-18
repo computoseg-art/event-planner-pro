@@ -16,9 +16,9 @@ interface ContactFormData {
 }
 
 /**
- * POST /api/contact - Send contact form via Brevo
+ * POST /contact - Send contact form via Brevo
  */
-router.post('/api/contact', async (req: Request, res: Response) => {
+router.post('/contact', async (req: Request, res: Response) => {
   try {
     const { nombre, email, telefono, asunto, mensaje } = req.body as ContactFormData;
 

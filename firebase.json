@@ -5,7 +5,7 @@
   "functions": {
     "source": "functions",
     "codebase": "default",
-    "runtime": "nodejs20",
+    "runtime": "nodejs24",
     "ignore": [
       "node_modules",
       ".git",

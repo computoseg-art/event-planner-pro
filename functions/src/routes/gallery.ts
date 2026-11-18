@@ -19,9 +19,9 @@ function getDb(): Database {
 const router = Router();
 
 /**
- * GET /api/gallery/storage-status - Check B2 storage configuration and usage
+ * GET /gallery/storage-status - Check B2 storage configuration and usage
  */
-router.get('/api/gallery/storage-status', verifyFirebaseAuth, requireGalleryAdmin, async (_req: Request, res: Response) => {
+router.get('/gallery/storage-status', verifyFirebaseAuth, requireGalleryAdmin, async (_req: Request, res: Response) => {
   try {
     // Check if B2 is configured
     const b2Configured =
@@ -54,9 +54,9 @@ router.get('/api/gallery/storage-status', verifyFirebaseAuth, requireGalleryAdmi
 });
 
 /**
- * GET /api/gallery/sessions - List gallery sessions for authenticated user
+ * GET /gallery/sessions - List gallery sessions for authenticated user
  */
-router.get('/api/gallery/sessions', verifyFirebaseAuth, async (req: Request, res: Response) => {
+router.get('/gallery/sessions', verifyFirebaseAuth, async (req: Request, res: Response) => {
   try {
     const uid = req.user!.uid;
     const sessionsSnapshot = await getDb().ref(`b2_galerias/${uid}`).get();
@@ -70,9 +70,9 @@ router.get('/api/gallery/sessions', verifyFirebaseAuth, async (req: Request, res
 });
 
 /**
- * POST /api/gallery/sessions - Create new gallery session (admin only)
+ * POST /gallery/sessions - Create new gallery session (admin only)
  */
-router.post('/api/gallery/sessions', verifyFirebaseAuth, requireGalleryAdmin, async (req: Request, res: Response) => {
+router.post('/gallery/sessions', verifyFirebaseAuth, requireGalleryAdmin, async (req: Request, res: Response) => {
   try {
     const { titulo, fecha, descripcion } = req.body;
 
@@ -102,9 +102,9 @@ router.post('/api/gallery/sessions', verifyFirebaseAuth, requireGalleryAdmin, as
 });
 
 /**
- * GET /api/gallery/sessions/:sessionId/media - List media in gallery session
+ * GET /gallery/sessions/:sessionId/media - List media in gallery session
  */
-router.get('/api/gallery/sessions/:sessionId/media', verifyFirebaseAuth, async (req: Request, res: Response) => {
+router.get('/gallery/sessions/:sessionId/media', verifyFirebaseAuth, async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.params;
     const uid = req.user!.uid;
@@ -120,9 +120,9 @@ router.get('/api/gallery/sessions/:sessionId/media', verifyFirebaseAuth, async (
 });
 
 /**
- * DELETE /api/gallery/sessions/:sessionId/media/:mediaId - Delete media from session
+ * DELETE /gallery/sessions/:sessionId/media/:mediaId - Delete media from session
  */
-router.delete('/api/gallery/sessions/:sessionId/media/:mediaId', verifyFirebaseAuth, requireGalleryAdmin, async (req: Request, res: Response) => {
+router.delete('/gallery/sessions/:sessionId/media/:mediaId', verifyFirebaseAuth, requireGalleryAdmin, async (req: Request, res: Response) => {
   try {
     const { sessionId, mediaId } = req.params;
     const uid = req.user!.uid;
