@@ -141,12 +141,14 @@
         <button
           type="button"
           [class.active]="activeCollection === 'favorites'"
+          [disabled]="favoriteMediaCount === 0"
           (click)="setCollection('favorites')">
           Favoritos ({{ favoriteMediaCount }})
         </button>
         <button
           type="button"
           [class.active]="activeCollection === 'hidden'"
+          [disabled]="hiddenMediaCount === 0"
           (click)="setCollection('hidden')">
           Ocultos ({{ hiddenMediaCount }})
         </button>

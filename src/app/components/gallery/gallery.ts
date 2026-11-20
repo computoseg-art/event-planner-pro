@@ -421,6 +421,12 @@ export class GalleryComponent implements OnInit, OnDestroy {
   }
 
   setCollection(collection: 'gallery' | 'favorites' | 'hidden'): void {
+    if (
+      (collection === 'favorites' && this.favoriteMediaCount === 0) ||
+      (collection === 'hidden' && this.hiddenMediaCount === 0)
+    ) {
+      return;
+    }
     this.activeCollection = collection;
     this.currentMediaIndex = 0;
   }
