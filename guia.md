@@ -1,223 +1,193 @@
-# Guía de configuración y publicación en producción
+# Guía de configuración y publicación
 
-Esta aplicación se publica en **Firebase Hosting** y usa un backend Express en **Render**. Firebase administra el acceso y la Realtime Database; Render conecta la aplicación con Mercado Pago y Brevo, y la galería almacena sus archivos en Backblaze B2. En esta guía, “Brave” se interpreta como **Brevo**, el proveedor de correo transaccional usado por el formulario de contacto.
+Esta guía describe la arquitectura vigente de **Firebase Functions v2**.
+Render no se usa.
 
-## 1. Arquitectura en producción
+## Arquitectura
 
 ```text
-Navegador
-  ├─ Firebase Hosting: sirve la aplicación Angular
-  ├─ Firebase Authentication: registra e identifica al usuario
-  ├─ Firebase Realtime Database: reservas, fechas y datos asociados
-  └─ Render (API Express)
-       ├─ Firebase Admin SDK: valida usuarios y realiza operaciones privilegiadas
-       ├─ Mercado Pago: crea preferencias y verifica pagos/webhooks
-       ├─ Brevo: envía los mensajes del formulario de contacto
-       └─ Backblaze B2: almacena archivos privados de galerías
+Firebase Hosting
+  └─ Angular
+      └─ /api/* rewrite
+          └─ Firebase Function "api" (Express)
+              ├─ Firebase Authentication/Admin
+              ├─ Realtime Database
+              ├─ Mercado Pago
+              ├─ Brevo
+              └─ Backblaze B2
+
+Cloud Scheduler
+  └─ reservationMaintenance cada 15 minutos
 ```
 
-El frontend nunca debe contener claves privadas, secretos de webhooks, tokens de Mercado Pago, contraseñas OAuth ni credenciales de cuenta de servicio. Los secretos pertenecen a las variables de entorno de Render (y a `backend-agenda/.env` solo para desarrollo local). La configuración Firebase del frontend sí se distribuye en el JavaScript del navegador: no es una credencial de administrador; el acceso se protege con Authentication y las reglas de Realtime Database.
+Los secretos nunca deben agregarse al frontend. La configuración web de
+Firebase puede distribuirse con Angular porque su acceso está protegido por
+Authentication y las reglas de Realtime Database.
 
-## 2. Antes de configurar servicios
+## Requisitos de acceso
 
-1. Confirma que tienes acceso a Firebase Console, Render, Mercado Pago, Brevo y Google Cloud.
-2. Usa el proyecto Firebase **`fotos-44002`** para Hosting, Authentication y Realtime Database.
-3. En este repositorio, `.firebaserc` tiene `fotos-44002` como proyecto predeterminado. En comandos de publicación, especifica también `--project fotos-44002` para confirmar explícitamente el destino.
-4. Conserva como dominios de producción los que ya están configurados en la aplicación:
-   - Frontend: `https://fotos-44002.web.app`
-   - Backend: `https://event-planner-pro-k978.onrender.com`
-5. Si cambia cualquiera de esos dominios, actualiza también las variables `CLIENT_URL` o `BACKEND_PUBLIC_URL` según corresponda y revisa la lista CORS del backend, las URLs de retorno de pagos y el webhook de Mercado Pago.
+- Proyecto Firebase `fotos-44002`
+- Permisos para desplegar Hosting, Functions, Database y Secrets
+- Acceso a Mercado Pago, Brevo y Backblaze B2
 
-## 3. Firebase
+El proyecto predeterminado está definido en `.firebaserc`.
 
-### 3.1 Authentication
+## Variables
 
-En Firebase Console, abre el proyecto `fotos-44002`:
+### Secretos de Firebase
 
-1. En **Authentication → Sign-in method**, habilita los proveedores que la aplicación ofrece: correo/contraseña y Google.
-2. En **Authentication → Settings → Authorized domains**, comprueba que estén autorizados `fotos-44002.web.app` y `fotos-44002.firebaseapp.com`. Añade otros dominios solo si realmente se usan.
-3. Crea o verifica las cuentas administradoras en Authentication. Los administradores actuales están definidos en el frontend y en `database.rules.json`; sus correos deben coincidir también con `ADMIN_EMAILS` en Render. Cambiar solo esta variable no agrega un nuevo administrador en toda la aplicación.
+Crear con `firebase functions:secrets:set`:
 
-### 3.2 Realtime Database y reglas
-
-1. Verifica que Realtime Database esté creada en el proyecto `fotos-44002`.
-2. Revisa `database.rules.json` antes de publicar. Las reglas permiten a cada usuario leer sus propios datos y reservan las escrituras de reservas, pagos e índices de disponibilidad al backend con Firebase Admin SDK y a los administradores autorizados.
-3. Publica las reglas con:
-
-   ```powershell
-   firebase deploy --only database --project fotos-44002
-   ```
-
-No abras la base de datos con reglas públicas. Los usuarios crean, modifican y eliminan reservas mediante la API autenticada de Render; el backend conserva el correo autenticado, calcula los importes desde `shared/catalogo-servicios.json` y no acepta del navegador cambios en `pagado`, `estado` ni marcadores de pagos. El historial de pagos y el índice de disponibilidad tampoco admiten escrituras de clientes. Despliega primero el backend y el frontend actualizados y luego las reglas; si las reglas se aplican antes, la versión antigua del frontend que escribe directamente en Realtime Database dejará de poder guardar reservas.
-
-### 3.3 Configuración Firebase del frontend
-
-Los valores de `firebase` se obtienen en **Configuración del proyecto → General → Tus aplicaciones → aplicación web**. Deben corresponder al proyecto `fotos-44002` y estar en:
-
-- `src/environments/environment.ts`: desarrollo local.
-- `src/environments/environment.prod.ts`: compilación de producción.
-
-Propiedades esperadas:
-
-| Propiedad | Valor de Firebase |
+| Variable | Uso |
 |---|---|
-| `apiKey` | Clave de la aplicación web Firebase |
-| `authDomain` | Dominio de Authentication, normalmente `fotos-44002.firebaseapp.com` |
-| `databaseURL` | URL de Realtime Database del proyecto |
-| `projectId` | `fotos-44002` |
-| `storageBucket` | Bucket indicado para la aplicación web en Firebase |
-| `messagingSenderId` | Remitente indicado en la configuración web |
-| `appId` | ID de la aplicación web |
-| `measurementId` | ID de Analytics, si está configurado |
+| `MP_ACCESS_TOKEN` | Credencial de Mercado Pago |
+| `MP_WEBHOOK_SECRET` | Verificación de firma del webhook |
+| `BREVO_API_KEY` | Envío transaccional |
+| `B2_KEY_ID` | Application Key ID de B2 |
+| `B2_APPLICATION_KEY` | Secreto de la Application Key de B2 |
 
-En producción, `environment.prod.ts` debe tener `production: true` y `apiUrl` debe apuntar a la URL base pública de Render, sin `/api` al final. Angular sustituye automáticamente `environment.ts` por `environment.prod.ts` al compilar con `--configuration production`.
+La función `api` debe declarar esos secretos. La función programada declara
+`BREVO_API_KEY` para los recordatorios.
 
-## 4. Variables del backend: Render
+### Variables de entorno no secretas
 
-En Render, abre el servicio web del backend → **Environment**. La configuración habitual es:
+Se cargan desde `functions/.env.fotos-44002` durante el despliegue:
 
-- **Root Directory:** `backend-agenda`
-- **Build Command:** `npm ci`
-- **Start Command:** `npm start`
-- **Runtime:** Node.js
+| Variable | Valor esperado |
+|---|---|
+| `CLIENT_URL` | `https://fotos-44002.web.app` |
+| `BACKEND_PUBLIC_URL` | `https://fotos-44002.web.app/api` |
+| `ADMIN_EMAILS` | Administradores separados por coma |
+| `EMAIL_FROM` | Remitente verificado en Brevo |
+| `EMAIL_FROM_NAME` | `BSfotografia & Videografia` |
+| `EMAIL_TO` | Buzón receptor |
+| `CONTACT_PHONE` | Teléfono incluido en avisos |
+| `B2_BUCKET_NAME` | Bucket privado |
+| `B2_ENDPOINT` | Endpoint S3 compatible de B2 |
+| `B2_REGION` | Región del bucket |
 
-Agrega las variables de la tabla. Los secretos se ingresan directamente en el panel de Render; no los pegues en el repositorio, en `guia.md` ni en el chat. Render proporciona `PORT` al servicio.
+Use `functions/.env.example` como plantilla. No agregue `.env` reales al Git.
 
-### 4.1 Variables necesarias para arrancar el backend
+## Authentication
 
-El backend termina el arranque con error si falta cualquiera de estas seis variables:
+1. Habilite correo/contraseña y Google si ambos se ofrecen.
+2. Autorice `fotos-44002.web.app` y `fotos-44002.firebaseapp.com`.
+3. Cree las cuentas administradoras.
+4. Mantenga alineados los correos en:
+   - `ADMIN_EMAILS`
+   - `src/app/services/auth.service.ts`
+   - reglas administrativas de `database.rules.json`
 
-| Variable | Cómo obtener/configurarla | Uso |
-|---|---|---|
-| `MP_ACCESS_TOKEN` | En Mercado Pago Developers, crea/consulta las credenciales de la aplicación. Usa `TEST-...` para pruebas; para operar en vivo, usa la credencial de producción `APP_USR-...`. | Autentica las solicitudes del backend a Mercado Pago. El servidor rechaza valores que no empiecen por `TEST-` o `APP_USR-`. |
-| `MP_WEBHOOK_SECRET` | En Mercado Pago, abre la configuración de Webhooks de la aplicación y copia la clave secreta de firma. | Verifica que las notificaciones de pago recibidas por Render sean auténticas. No es el access token. |
-| `FIREBASE_SERVICE_ACCOUNT_JSON` | En Google Cloud/Firebase, crea una cuenta de servicio con acceso administrativo necesario para Firebase Admin SDK en `fotos-44002`. Pega el **JSON completo** como valor secreto de Render, conservando los saltos de línea escapados dentro de `private_key`. Verifica que `project_id` sea `fotos-44002`. | Permite al backend validar tokens de Firebase y administrar datos autorizados. No uses aquí el objeto `firebase` del frontend ni una clave web. |
-| `FIREBASE_DATABASE_URL` | Copia la URL de Realtime Database desde Firebase Console. Para este proyecto es `https://fotos-44002-default-rtdb.firebaseio.com`. | Indica al SDK Admin qué base de datos usar. |
-| `CLIENT_URL` | Origen de Firebase Hosting: `https://fotos-44002.web.app`. Sin ruta, `/agenda` ni barra final. | Configura el origen permitido para CORS y los destinos de retorno de la experiencia de pagos. |
-| `BACKEND_PUBLIC_URL` | URL pública asignada al servicio de Render: `https://event-planner-pro-k978.onrender.com`. Sin barra final. | Se usa para generar enlaces y registrar la URL del webhook de pagos. |
+`ADMIN_EMAILS` no crea cuentas ni cambia por sí solo los permisos del frontend.
 
-**Cómo introducir `FIREBASE_SERVICE_ACCOUNT_JSON`:** en Render pega el contenido JSON como valor de una sola variable. No publiques el archivo JSON ni lo incluyas en commits. Si una clave privada se compartió accidentalmente, revócala en Google Cloud y genera otra.
+## Realtime Database
 
-### 4.2 Variables de funcionalidad
+Las operaciones privilegiadas pasan por la API. El cliente puede observar
+datos permitidos, pero no debe escribir directamente reservas, pagos,
+historial o fechas ocupadas.
 
-Estas variables no bloquean el arranque en todos los casos, pero son necesarias para las funciones indicadas:
+Despliegue de reglas:
 
-| Variable | Configuración | Función / observaciones |
-|---|---|---|
-| `BREVO_API_KEY` | Crea una clave API transaccional en Brevo y guárdala como secreto. | Autoriza al backend a enviar el correo del formulario mediante la API HTTPS de Brevo. Sin ella, contacto devuelve servicio temporalmente no disponible. |
-| `EMAIL_FROM` | Dirección de remitente verificada en Brevo. | Remitente efectivo de los mensajes. Debe estar validado por Brevo. |
-| `EMAIL_FROM_NAME` | Por ejemplo, `BSfotografia & Videografia`. | Nombre visible del remitente. Si se omite, el backend usa ese nombre por defecto. |
-| `EMAIL_TO` | Buzón que recibirá los formularios; configura explícitamente el destinatario vigente del negocio. | El visitante no puede elegir el destinatario. Si se omite, actualmente hay un destinatario predeterminado en el backend. |
-| `ADMIN_EMAILS` | Correos separados por coma, en minúscula o separados por coma normal, por ejemplo `admin@dominio.com,otro@dominio.com`. | Autoriza operaciones administrativas del backend, especialmente la gestión de galerías. Mantén la lista alineada con los administradores codificados en frontend y `database.rules.json`; esta variable por sí sola no crea administradores en esos otros componentes. |
-| `B2_KEY_ID` | ID de una Application Key limitada al bucket de galerías. | Permite al backend acceder a B2; no uses la Master Application Key. |
-| `B2_APPLICATION_KEY` | Secreto de esa Application Key. | Guárdalo solo en Render y en el `.env` local protegido. |
-| `B2_BUCKET_NAME` | Nombre del bucket privado de galerías. | Bucket donde se almacenan los archivos de sesiones. |
-| `B2_ENDPOINT` | Endpoint S3 Compatible de la región del bucket, por ejemplo `https://s3.us-east-005.backblazeb2.com`. | Destino de las operaciones S3 del backend y de las cargas multipartes. |
-| `B2_REGION` | Región del bucket, por ejemplo `us-east-005`. | Región utilizada para firmar las operaciones S3. |
-| `PORT` | No la definas manualmente en Render; Render provee este valor. Para ejecución local se usa normalmente `3000`. | Puerto HTTP en el que escucha Express. |
+```powershell
+firebase deploy --only database --project fotos-44002
+```
 
-El correo usa `BREVO_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME` y `EMAIL_TO`. Las variables SMTP antiguas (`EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`, `EMAIL_PASS`) ya no se usan. No es necesario abrir puertos SMTP: el backend llama por HTTPS a Brevo.
+## Mercado Pago
 
-### 4.3 Guardar y desplegar en Render
+Configure credenciales de prueba o producción del mismo aplicativo y el secreto
+de firma correspondiente.
 
-1. Añade las variables de arranque y las necesarias para las funciones que habilitarás.
-2. Guarda los cambios. Render reiniciará o volverá a desplegar el servicio; revisa **Events** y **Logs**.
-3. Confirma que el servicio quede disponible antes de publicar el frontend.
-4. Prueba la raíz del backend en el navegador: `https://event-planner-pro-k978.onrender.com/`. Una respuesta HTTP 200 confirma que el servicio está despierto, pero no verifica por sí sola pagos, correo o galerías.
-5. Para problemas de arranque, busca en los logs `Faltan variables de entorno requeridas`. Para errores de correo busca `Brevo rechazó el correo de contacto`; nunca copies tokens o secretos a tickets públicos.
+Webhook vigente:
 
-## 5. Integración de Mercado Pago
+```text
+https://fotos-44002.web.app/api/webhook
+```
 
-No es un requisito general usar credenciales de producción (`APP_USR-...`) para ejecutar o probar este backend en local. El código acepta tanto tokens de prueba (`TEST-...`) como tokens de producción y verifica que el tipo de credencial coincida con el modo del pago. Para pruebas, usa credenciales de prueba de la misma aplicación de Mercado Pago y las cuentas/tarjetas de prueba correspondientes; no uses la cuenta real para simular una compra.
+Habilite los eventos de pagos. El backend:
 
-Hay una diferencia entre probar el checkout y verificar el flujo completo de notificaciones. El backend envía `notification_url` a `BACKEND_PUBLIC_URL`; si ejecutas el backend en tu computadora, Mercado Pago no puede notificar directamente a `localhost`. Para una prueba integral, usa una URL HTTPS pública temporal que reenvíe al backend local (por ejemplo, un túnel de desarrollo) y configúrala como `BACKEND_PUBLIC_URL`; alternativamente, prueba contra un despliegue de pruebas separado. Revisa también `CLIENT_URL`, porque define a dónde vuelve el navegador después del checkout. No dejes que las pruebas con credenciales TEST actualicen datos o notifiquen clientes desde el backend productivo.
+1. Crea una intención y una preferencia.
+2. Verifica que el monto, moneda y usuario correspondan.
+3. Valida la firma del webhook.
+4. Aplica el pago exactamente una vez.
+5. Registra historial y envía notificaciones.
 
-Si Mercado Pago rechaza una operación concreta, revisa el mensaje de error y las restricciones actuales de la cuenta, país, credenciales y usuarios de prueba. Eso no significa por sí solo que el backend requiera claves de producción. No sustituyas un token `TEST-...` por uno `APP_USR-...` para resolver un error de pruebas: las credenciales de producción pueden crear cobros reales.
+No actualice `pagado` manualmente salvo conciliación documentada de operaciones
+reales aprobadas. Para pago de seña se requiere al menos cinco días.
 
-1. Configura `MP_ACCESS_TOKEN` y `MP_WEBHOOK_SECRET` de la misma aplicación/cuenta de Mercado Pago.
-2. En el panel de Mercado Pago, registra como URL de notificaciones:
+## Brevo
 
-   ```text
-   https://event-planner-pro-k978.onrender.com/webhook
-   ```
+1. Verifique el remitente o dominio.
+2. Cree una API key transaccional.
+3. Guarde la clave con `firebase functions:secrets:set BREVO_API_KEY`.
+4. Configure `EMAIL_FROM` y `EMAIL_TO`.
+5. Si activa “Authorized IPs”, desactive el bloqueo para la API o configure IP
+   estática de salida; Cloud Functions puede cambiar de IP.
+6. Revise que `EMAIL_TO` no esté bloqueado o dado de baja en Brevo.
 
-3. Habilita el evento de pagos y configura la firma secreta correspondiente en `MP_WEBHOOK_SECRET`.
-4. El frontend solicita la operación al backend. El backend crea la preferencia y devuelve el enlace de pago; el navegador no decide por sí solo que una reserva está pagada.
-5. Al recibir una notificación, Render valida la firma y consulta el pago a Mercado Pago. También vuelve a verificarlo al retorno del usuario. Solo una aprobación confirmada por Mercado Pago permite actualizar el estado y el historial en Firebase.
-6. Antes de cobrar de verdad, prueba el flujo completo con credenciales y cuentas de prueba. Confirma importes, reservas afectadas, notificaciones y reglas de la base de datos.
+Una respuesta HTTP exitosa indica que Brevo aceptó el mensaje; revise el log
+transaccional para confirmar entrega.
 
-Los usuarios autenticados pueden abrir **Mi perfil** desde el navbar para ver sus reservas, el historial de pagos confirmados y el total abonado. Desde cada pago se puede abrir el diálogo de impresión y elegir **Guardar como PDF** para descargar un comprobante interno con el detalle del evento, importe abonado, total y descuento registrado. Este comprobante no reemplaza una factura fiscal. Los pagos anteriores a esta función pueden no tener detalle de reserva, pero conservan su importe, fecha e identificador de operación.
+## Backblaze B2
 
-**Precios durante las pruebas:** el catálogo compartido en `backend-agenda/catalogo-servicios.json` mantiene el precio de checkout en `$1` mientras se prueba la aplicación. El frontend muestra el catálogo y el backend usa ese mismo archivo para calcular y validar los importes; los valores que envía el navegador no son la fuente del precio. Los importes promocionales son informativos y no deben confundirse con lo cobrado. Antes de habilitar cobros reales, actualiza este catálogo compartido; usa primero credenciales de prueba de Mercado Pago. No cambies solo el texto promocional.
+Use una Application Key limitada al bucket, con permisos de lectura, escritura
+y borrado.
 
-## 6. Integración de Brevo (formulario de contacto)
+Configure:
 
-1. En Brevo, completa la verificación del remitente o dominio.
-2. Crea una clave API transaccional y ponla en `BREVO_API_KEY` en Render.
-3. Define `EMAIL_FROM` con una dirección verificada, `EMAIL_FROM_NAME` con el nombre del negocio y `EMAIL_TO` con el buzón receptor.
-4. Guarda las variables y espera a que Render reinicie el backend.
-5. Envía un mensaje de prueba desde el sitio publicado solo cuando quieras verificar el envío real. La solicitud puede generar un correo; una respuesta HTTP exitosa indica que Brevo aceptó el envío, no necesariamente que llegó a la bandeja de entrada.
+- `B2_KEY_ID`
+- `B2_APPLICATION_KEY`
+- `B2_BUCKET_NAME`
+- `B2_ENDPOINT`
+- `B2_REGION`
 
-El backend valida nombre, email y mensaje, aplica un límite de solicitudes por IP y envía el contenido a `EMAIL_TO`. El email ingresado por el visitante se usa como `Reply-To`, nunca como destinatario. Si falla, revisa los logs del backend y el estado del remitente/API key en Brevo.
+La carga se realiza en partes de 64 MB directamente del navegador mediante URLs
+firmadas. La aplicación limita cada archivo a 100 GB y el contador global
+configurado a 9 GB. El bucket debe exponer `ETag` mediante CORS.
 
-## 7. Integración de Backblaze B2 (galerías)
-
-1. Crea un bucket privado en Backblaze B2 y una Application Key restringida a ese bucket, con permisos de lectura, escritura y borrado necesarios para la galería.
-2. Configura `B2_KEY_ID`, `B2_APPLICATION_KEY`, `B2_BUCKET_NAME`, `B2_ENDPOINT` y `B2_REGION` en Render. Para pruebas locales, usa los mismos nombres en `backend-agenda/.env`; nunca pongas estas claves en Angular o Git.
-3. Configura en el bucket la regla CORS para el origen HTTPS de Hosting y la S3 Compatible API. El navegador debe poder leer `ETag` para completar las cargas multipartes.
-4. En `/galeria`, el administrador puede comprobar la conexión, crear sesiones y subir archivos. Firebase Authentication sigue usando Google como proveedor de inicio de sesión; no depende del almacenamiento de galerías.
-5. Mantén `ADMIN_EMAILS` sincronizada. El backend comprueba permisos; ocultar botones en Angular no es un control de acceso.
-
-La galería guarda metadatos de sesiones en Realtime Database y los archivos en el bucket privado. Las cargas multipartes se realizan desde el navegador con URLs firmadas de corta duración. Esta aplicación ya no consulta, crea ni modifica álbumes en Google Photos. Quitar esa integración del código no borra archivos ni álbumes que ya existan en una cuenta de Google.
-
-## 8. Compilar y publicar el frontend en Firebase Hosting
-
-Desde la raíz del repositorio, instala dependencias si hace falta y compila para producción:
+## Compilar y publicar
 
 ```powershell
 npm ci
-npm run build -- --configuration production
+npm --prefix functions ci
+npm run build
+npm --prefix functions run build
+firebase deploy --only functions,hosting --project fotos-44002
 ```
 
-El directorio de salida configurado en `firebase.json` es `dist/novedades/browser`. Publica Hosting con el proyecto explícito:
+Firebase crea/actualiza:
+
+- `api`: endpoint HTTPS
+- `reservationMaintenance`: tarea cada 15 minutos
+
+Para publicar todo lo versionable:
 
 ```powershell
-firebase deploy --only hosting --project fotos-44002
+firebase deploy --only functions,hosting,database --project fotos-44002
 ```
 
-Para publicar reglas y Hosting juntos, primero revisa los cambios y luego ejecuta:
+## Verificación
+
+- `https://fotos-44002.web.app/api/` responde con `status: ok`.
+- Crear reserva y comprobar correo.
+- Confirmar seña y saldo de Mercado Pago.
+- Registrar pago en efectivo y confirmarlo desde la cuenta cliente.
+- Crear plan de cuotas cuando exista al menos un mes futuro.
+- Probar carga, favoritos, ocultos y borrado de galería.
+- Revisar `reservationMaintenance` en logs.
+- Revisar logs:
 
 ```powershell
-firebase deploy --only database,hosting --project fotos-44002
+firebase functions:log --project fotos-44002
 ```
 
-El `--project fotos-44002` confirma explícitamente el destino de publicación, aunque ya esté configurado como proyecto predeterminado en `.firebaserc`.
+## Diagnóstico
 
-## 9. Verificación posterior al despliegue
-
-- Abre `https://fotos-44002.web.app` y confirma que carga la página pública.
-- Prueba registro e inicio de sesión con una cuenta de prueba y revisa Authentication.
-- Comprueba que el usuario solo pueda leer/escribir sus datos permitidos en Realtime Database.
-- Abre agenda/reservas y confirma que las solicitudes al backend usan `https://event-planner-pro-k978.onrender.com`, no `localhost`.
-- Prueba contacto solo si está permitido generar un email real; revisa respuesta y logs de Brevo/Render.
-- Prueba galerías con la cuenta autorizada y confirma que el backend rechaza acciones de usuarios no administradores.
-- Prueba pagos con credenciales de prueba y verifica tanto la notificación como el estado final consultado por el backend.
-- Revisa la consola del navegador, **Render → Logs** y Firebase Console. No compartas tokens, claves privadas, refresh tokens ni el JSON de la cuenta de servicio al solicitar ayuda.
-
-## 10. Problemas frecuentes
-
-| Síntoma | Qué revisar |
+| Síntoma | Revisar |
 |---|---|
-| Render no inicia | Variables obligatorias de la sección 4.1, JSON válido de la cuenta de servicio y `project_id: fotos-44002`. |
-| El navegador muestra error CORS | `CLIENT_URL`, origen real del sitio y lista CORS del backend. Deben coincidir exactamente, incluyendo `https` y el dominio. |
-| El frontend intenta `localhost:3000` en producción | `environment.prod.ts` y que se haya compilado con `--configuration production`. |
-| Login bloqueado | Proveedor habilitado en Authentication, dominio autorizado y proyecto web correcto en `environment.prod.ts`. |
-| Firebase devuelve `Permission denied` | Reglas desplegadas, usuario autenticado, correo/clave del usuario y permisos de administrador coherentes en reglas, frontend y `ADMIN_EMAILS`. |
-| Mercado Pago no actualiza una reserva | Token y modo correctos, webhook registrado, firma correspondiente en `MP_WEBHOOK_SECRET`, logs y consulta del pago. No marques pagos manualmente como aprobados. |
-| Contacto devuelve servicio temporalmente no disponible | `BREVO_API_KEY`, `EMAIL_FROM` válido/verificado y variables guardadas en el servicio Render desplegado. |
-| Brevo rechaza el correo | Remitente/dominio verificado, clave API activa y logs de Render; revisa también la bandeja de spam del destinatario. |
-| La galería no conecta o falla al subir | Valores `B2_*`, permisos de la Application Key, región/endpoint del bucket y regla CORS para el dominio de Hosting. |
-
-## 11. Publicación de cambios
-
-Antes de desplegar, revisa `git status` y no agregues archivos `.env`, JSON de cuentas de servicio, tokens ni credenciales. Después de guardar los cambios en la rama que corresponda, publica primero el backend si cambió su código o sus variables y luego compila/publica Hosting. Las instrucciones exactas de Git dependen de la rama de trabajo activa; evita cambiar o fusionar ramas sin verificar el estado del repositorio.
+| 401 en API | Sesión Firebase y token Bearer |
+| 403 administrativo | `ADMIN_EMAILS` y correo autenticado |
+| `Brevo no envió` | Clave, remitente, destinatario bloqueado e IPs |
+| Pago aprobado sin saldo | ID de reserva, intent y `pagosMercadoPago` |
+| Webhook rechazado | `MP_WEBHOOK_SECRET` y URL pública |
+| B2 no inicia carga | Secrets, CORS, cuota y `ETag` |
+| Agenda desactualizada | Logs de `api` y `reservationMaintenance` |

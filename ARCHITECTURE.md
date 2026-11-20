@@ -1,253 +1,93 @@
-# Arquitectura: Event Planner Pro con Firebase Functions v2
+# Arquitectura
 
-## 📐 Diagrama general
+## Componentes
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Angular 20 Frontend                    │
-│            (fotos-44002.web.app/dist/novedades)             │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-                    Firebase Auth & ID Token
-                           │
-        ┌──────────────────┴──────────────────┐
-        │                                     │
-        ▼                                     ▼
-  ┌──────────────────┐              ┌─────────────────────────┐
-  │  Realtime DB     │              │  Cloud Functions        │
-  │  (Firebase)      │◄─────────────┤  Express API v2         │
-  │                  │   Admin SDK  │  (Node.js 20)           │
-  │  ├─ reservas     │              │                         │
-  │  ├─ historiales  │              │  ├─ Reservations       │
-  │  ├─ galeria      │              │  ├─ Payments (MP)      │
-  │  └─ rules.json   │              │  ├─ Webhooks           │
-  └──────────────────┘              │  ├─ Gallery (B2)       │
-                                    │  └─ Notifications      │
-                                    └────────┬────────────────┘
-                                             │
-                     ┌───────────────────────┼───────────────────────┐
-                     ▼                       ▼                       ▼
-            ┌──────────────────┐   ┌──────────────────┐   ┌──────────────────┐
-            │  Mercado Pago    │   │  Brevo (Email)   │   │  Backblaze B2    │
-            │  (Payments)      │   │  (Notif. Mail)   │   │  (Galería)       │
-            │                  │   │                  │   │                  │
-            │ ├─ Create pref.  │   │ ├─ Reservations │   │ ├─ Upload media  │
-            │ ├─ Confirm pmt.  │   │ ├─ Payments     │   │ ├─ List files    │
-            │ └─ Webhooks      │   │ ├─ Reminders    │   │ └─ Signed URLs   │
-            └──────────────────┘   │ └─ Confirmations│   │                  │
-                                   └──────────────────┘   └──────────────────┘
+```text
+Usuario
+  ↓
+Firebase Hosting + Angular
+  ├─ Firebase Authentication
+  ├─ Realtime Database en lectura
+  └─ /api/* → Function api
+                    ├─ reservations
+                    ├─ payments
+                    ├─ contact
+                    └─ gallery
+
+Cloud Scheduler → reservationMaintenance
 ```
 
-## 🔄 Flujos principales
+## Despliegues
 
-### 1. Crear reserva
-
-```
-Cliente Angular
-     │
-     ├─ POST /api/reservations (token + datos)
-     │
-     └─►Cloud Functions
-         │
-         ├─ Verify token (Firebase Auth)
-         ├─ Validate data (catalog, dates)
-         ├─ Write to DB (Realtime)
-         ├─ Send email (Brevo)
-         │
-         └─ Return reservation data
-```
-
-### 2. Pago con Mercado Pago
-
-```
-Cliente Angular
-     │
-     ├─ POST /create_preference (token + monto)
-     │
-     └─►Cloud Functions
-         │
-         ├─ Verify token
-         ├─ Create MP preference
-         └─ Return preferenceId + init_point
-            │
-            └─►Cliente → Mercado Pago (checkout)
-                       │
-                       └─►Webhook /webhook (MP notifications)
-                            │
-                            ├─ Verify signature
-                            ├─ Confirm payment in DB
-                            ├─ Send receipt (Brevo)
-                            └─ Update reservation status
-```
-
-### 3. Galería (B2 + Gallery)
-
-```
-Admin Angular
-     │
-     ├─ POST /api/gallery/sessions (crea evento)
-     │
-     └─►Cloud Functions
-         │
-         ├─ Verify admin token
-         ├─ Create session in DB
-         └─ Return sessionId
-            │
-            └─ Admin → POST /api/gallery/uploads/:uploadToken/part-urls
-                       │
-                       └─►Cloud Functions
-                           │
-                           ├─ Sign B2 upload URL
-                           └─ Return S3 presigned URLs
-                              │
-                              └─ Browser (multipart upload → B2)
-                                 │
-                                 └─ POST /api/gallery/uploads/:uploadToken/complete
-                                    │
-                                    └─►Cloud Functions
-                                        │
-                                        ├─ Verify upload
-                                        ├─ Update DB
-                                        └─ Return media metadata
-```
-
-## 🔐 Seguridad
-
-### Autenticación
-
-```
-Request
-├─ Authorization: Bearer <FIREBASE_ID_TOKEN>
-│
-└─►Cloud Functions
-   │
-   ├─ Extract token
-   ├─ Call admin.auth().verifyIdToken()
-   ├─ Decode uid + email
-   └─ Attach to request.user
-
-Endpoints protegidos
-├─ verifyFirebaseAuth (todos)
-├─ requireAdmin (admin-only)
-└─ requireGalleryAdmin (gallery-only)
-```
-
-### Almacenamiento
-
-- **Secretos MP, Brevo, B2** → Cloud Secret Manager (no en código)
-- **Service Account** → Google Cloud IAM (identidad automática)
-- **Realtime DB Rules** → `database.rules.json` (granular)
-
-## 📊 Comparativa: Render vs Cloud Functions
-
-| Aspecto | Render | Cloud Functions v2 |
+| Función | Trigger | Responsabilidad |
 |---|---|---|
-| **Despliegue** | `git push` | `firebase deploy` |
-| **Escalado** | Manual/Auto | Automático |
-| **Cold start** | 20-30s | 1-2s |
-| **Secretos** | Env vars | Cloud Secret Mgr |
-| **Logs** | Dashboard Render | Firebase Console |
-| **Precio** | Desde $7/mes | Per-invocation |
-| **Límite** | Conexiones simultaneas | 540s timeout |
-| **Recomendado** | Dev/staging | Producción |
+| `api` | HTTPS | API Express autenticada y rutas públicas de contacto/webhook |
+| `reservationMaintenance` | `every 15 minutes`, Uruguay | Vencimientos y recordatorios de saldo |
 
-## 🚀 Despliegue
+Ambas usan Node.js 24. TypeScript compila con `NodeNext`.
 
-### Local (emulador)
+## Flujos
 
-```bash
-cd functions
-npm ci
-firebase emulators:start --only functions
-# http://localhost:5001/fotos-44002/us-central1/api
+### Reservas
+
+1. Angular envía los servicios seleccionados.
+2. La Function vuelve a validar catálogo, categoría, fecha y descripción.
+3. Calcula total y descuento en servidor.
+4. Reserva atómicamente la fecha y guarda la reserva.
+5. Envía el aviso por Brevo.
+
+### Mercado Pago
+
+1. Se crea una preferencia con intención persistida.
+2. Mercado Pago redirige al usuario y envía webhook.
+3. El backend verifica token, modo, firma, importe y usuario.
+4. Aplica el pago una vez mediante `pagosMercadoPago/<paymentId>`.
+5. Actualiza saldo, historial y correos.
+
+### Efectivo
+
+1. El administrador registra el comprobante.
+2. El pago queda `pendiente_confirmacion`.
+3. El cliente confirma o informa una diferencia.
+4. Solo al confirmar se acredita `pagado`.
+5. El administrador resuelve los pagos en revisión.
+
+### Galería
+
+1. Admin crea sesión para un cliente registrado.
+2. Backblaze B2 recibe una carga multipart mediante URL firmada.
+3. Firebase guarda metadatos, no los archivos.
+4. El cliente consulta URLs temporales de visualización/descarga.
+5. Favoritos y ocultos se guardan en Realtime Database por cuenta.
+
+## Datos principales
+
+```text
+reservas/<usuario>/<reserva>
+fechas_ocupadas/<reserva>
+historial_pagos/<usuario>/<paymentId>
+pagos_pendientes/<externalReference>
+notificaciones_reservas/<usuario>/<reserva>
+notificaciones_pagos/<paymentId>/<tipo>
+recordatorios_senia/<usuario>/<reserva>
+b2_galerias/<uid>/<session>/media/<mediaId>
+b2_pending_uploads/<uploadToken>
+b2_storage_usage
+gallery_b2_preferences/<uid>/<session>/<mediaId>
 ```
 
-### Staging
+## Seguridad
 
-```bash
-firebase deploy --only functions --project fotos-44002
-# https://fotos-44002.cloudfunctions.net/api (URL temporal)
-```
+- Firebase ID token obligatorio en rutas de reservas, pagos privados y galería.
+- Middleware administrativo para efectivo y administración de B2.
+- Catálogo y precios validados de nuevo en servidor.
+- Firmas de webhook de Mercado Pago.
+- Secretos solo en Secret Manager.
+- Contacto con límite de cinco mensajes cada 15 minutos.
+- B2 privado; las URLs firmadas son temporales.
 
-### Producción
+## Entornos
 
-```bash
-# 1. Configurar secretos en Cloud Secret Manager
-# 2. Verificar reglas de Realtime DB
-# 3. Deploy
-firebase deploy --only functions --project fotos-44002
-
-# 4. Actualizar frontend para usar /api (via firebase.json rewrites)
-# 5. Monitorear logs
-firebase functions:log --project fotos-44002 --follow
-```
-
-## 🔍 Monitoreo
-
-### Métricas en Firebase Console
-
-- Número de invocaciones
-- Latencia (p50, p95, p99)
-- Tasa de errores
-- Uso de memoria
-- Duración de ejecución
-
-### Logs
-
-```bash
-# Tail en tiempo real
-firebase functions:log --follow
-
-# Grep de errores
-firebase functions:log | grep -i error
-
-# Formato JSON
-firebase functions:log --json
-```
-
-## 🔄 CI/CD
-
-Sugerencia: usar GitHub Actions
-
-```yaml
-# .github/workflows/deploy-functions.yml
-on:
-  push:
-    branches: [main]
-    paths: ['functions/**']
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 20
-      - run: npm ci --prefix functions
-      - run: npm run build --prefix functions
-      - uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          projectId: fotos-44002
-          channelId: live
-```
-
-## 📋 Checklist de producción
-
-- [ ] Secretos configurados en Cloud Secret Manager
-- [ ] Reglas de Realtime DB validadas
-- [ ] Webhook Mercado Pago configurado
-- [ ] CORS correcto en frontend URL
-- [ ] Logging y monitoreo activados
-- [ ] Backup de datos validado
-- [ ] Testing de flujos críticos (pago, galería)
-- [ ] Capacidad de rollback verificada
-- [ ] Documentación actualizada
-- [ ] On-call rotation si corresponde
-
----
-
-**Versión:** 1.0  
-**Última actualización:** 2026-11-18  
-**Estado:** 🟡 Pre-producción
+- Desarrollo: `environment.ts` y emuladores opcionales.
+- Producción: `environment.prod.ts`, Hosting y Functions.
+- `backend-agenda/` es referencia histórica y no recibe tráfico de producción.

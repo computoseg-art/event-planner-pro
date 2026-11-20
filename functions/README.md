@@ -1,96 +1,55 @@
-# Firebase Cloud Functions - Setup & Deployment
+# Firebase Cloud Functions
 
-## 📋 Descripción
+Código backend vigente de Event Planner Pro. Se compila con TypeScript, Node.js
+24, ESM y resolución `NodeNext`.
 
-Este directorio contiene las **Firebase Cloud Functions v2** para Event Planner Pro.
+## Exports
 
-La API Express migrada desde `backend-agenda/` se ejecuta como una Cloud Function invocable por HTTP, proporcionando:
+- `api`: Firebase Functions v2 HTTPS + Express
+- `reservationMaintenance`: Cloud Scheduler cada 15 minutos
 
-- 🔐 Autenticación con Firebase ID tokens
-- 💳 Integración Mercado Pago con webhooks
-- 📅 Gestión de reservas y disponibilidad
-- 🖼️ Galería con Backblaze B2
-- 📧 Notificaciones por Brevo
+## Instalar y compilar
 
-## 🚀 Inicio rápido
-
-### 1. Instalar dependencias
-
-```bash
+```powershell
 cd functions
 npm ci
+npm run build
 ```
 
-### 2. Configurar secretos
+## Estructura
 
-Crear un archivo `.env` en `functions/` (basado en `.env.example`):
-
-```bash
-cp .env.example .env
-# Edita .env con credenciales reales (solo prueba local)
+```text
+src/
+  index.ts
+  middleware/auth.ts
+  routes/contact.ts
+  routes/gallery.ts
+  routes/payments.ts
+  routes/reservations.ts
+  services/catalogo-servicios.ts
+  services/installment-plan.ts
 ```
 
-### 3. Ejecutar emulador local
+## Rutas
 
-```bash
-firebase emulators:start --only functions
-```
+Todas se publican detrás de `/api` salvo la ruta raíz de la función.
 
-Accede a `http://localhost:5001/fotos-44002/us-central1/api`
-
-### 4. Testing
-
-```bash
-npm test
-```
-
-### 5. Desplegar a producción
-
-```bash
-firebase deploy --only functions --project fotos-44002
-```
-
-## 📂 Estructura
-
-```
-functions/
-├── src/
-│   ├── index.ts                 # Cloud Function + Express app
-│   ├── middleware/
-│   │   └── auth.ts              # Autenticación Firebase
-│   ├── services/
-│   │   ├── installment-plan.ts  # Planes de cuotas
-│   │   └── catalogo-servicios.ts # Catálogo de servicios
-│   └── routes/
-│       ├── reservations.ts      # Endpoints de reservas
-│       ├── payments.ts          # Pagos Mercado Pago
-│       └── gallery.ts           # Galería y uploads
-├── package.json
-├── tsconfig.json
-├── .env.example                 # Variables de entorno
-├── .gitignore
-└── README.md
-```
-
-## 🔐 Variables de entorno
-
-| Variable | Descripción | Tipo |
+| Método | Ruta | Acceso |
 |---|---|---|
-| `MP_ACCESS_TOKEN` | Token de Mercado Pago | Secret |
-| `MP_WEBHOOK_SECRET` | Firma de webhooks MP | Secret |
-| `CLIENT_URL` | URL del frontend | Public |
-| `ADMIN_EMAILS` | Correos administradores | Public |
-| `BREVO_API_KEY` | Clave API Brevo | Secret |
-| `EMAIL_FROM` | Remitente de correos | Public |
-| `B2_*` | Credenciales Backblaze B2 | Secret |
+| POST | `/api/contact` | Público con rate limit |
+| GET/POST | `/api/reservations` | Autenticado |
+| PUT/DELETE | `/api/reservations/:id` | Autenticado, con control de propietario/admin |
+| POST | `/api/reservations/:id/installment-plan` | Autenticado |
+| POST | `/api/reservations/:id/cash-payments` | Administrador |
+| POST | `/api/reservations/:id/cash-payments/:paymentId/:action` | Propietario/admin según acción |
+| POST | `/api/create_preference` | Autenticado |
+| POST | `/api/confirm_payment` | Autenticado |
+| POST | `/api/webhook` | Firma de Mercado Pago |
+| GET/POST | `/api/gallery/*` | Autenticado; operaciones admin protegidas |
 
-### Configurar secretos en Cloud Secret Manager
+## Secretos
 
-Los secretos sensibles se declaran en `src/index.ts` con `defineSecret` y se
-vinculan a la función mediante `secrets`. Después de declararlos, crea cada uno
-con Firebase CLI:
-
-```bash
+```powershell
 firebase functions:secrets:set MP_ACCESS_TOKEN
 firebase functions:secrets:set MP_WEBHOOK_SECRET
 firebase functions:secrets:set BREVO_API_KEY
@@ -98,114 +57,44 @@ firebase functions:secrets:set B2_KEY_ID
 firebase functions:secrets:set B2_APPLICATION_KEY
 ```
 
-Cada comando solicita el valor de forma interactiva y no lo guarda en el código
-ni en la terminal. Selecciona el proyecto `fotos-44002` y vuelve a desplegar la
-función:
+Las variables públicas están documentadas en `../guia.md` y en `.env.example`.
 
-```bash
+## Emulador
+
+```powershell
+firebase emulators:start --only functions
+```
+
+URL local aproximada:
+
+```text
+http://localhost:5001/fotos-44002/us-central1/api
+```
+
+## Despliegue
+
+```powershell
+npm run build
 firebase deploy --only functions --project fotos-44002
 ```
 
-Las variables no secretas (`CLIENT_URL`, `BACKEND_PUBLIC_URL`, `ADMIN_EMAILS`,
-`EMAIL_FROM`, `EMAIL_TO`, `B2_BUCKET_NAME`,
-`B2_ENDPOINT` y `B2_REGION`) pueden configurarse como variables de entorno de
-la función. Durante desarrollo local continúan leyendo `functions/.env`, que no
-debe versionarse.
+Para una ruta concreta:
 
-## 🧪 Testing local
-
-### Crear preferencia de pago
-
-```bash
-curl -X POST http://localhost:5001/fotos-44002/us-central1/api/create_preference \
-  -H "Authorization: Bearer <FIREBASE_ID_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "reservationId": "res-123",
-    "amount": 5000,
-    "description": "Fotografía de Boda"
-  }'
+```powershell
+firebase deploy --only functions:api --project fotos-44002
+firebase deploy --only functions:reservationMaintenance --project fotos-44002
 ```
 
-### Listar reservas
+## Logs
 
-```bash
-curl http://localhost:5001/fotos-44002/us-central1/api/api/reservations \
-  -H "Authorization: Bearer <FIREBASE_ID_TOKEN>"
-```
-
-## 📊 Logs y monitoreo
-
-### Ver logs en Cloud Functions
-
-```bash
+```powershell
 firebase functions:log --project fotos-44002
 ```
 
-### Tail de logs en tiempo real
+## Notas
 
-```bash
-firebase functions:log --project fotos-44002 --follow
-```
-
-## 🔄 Migración desde Render
-
-| Paso | Render | Cloud Functions |
-|---|---|---|
-| Despliegue | `git push heroku main` | `firebase deploy` |
-| Secretos | Variables de entorno en Heroku | Cloud Secret Manager |
-| Logs | Heroku dashboard | Firebase Console / CLI |
-| Escaling | Manual/Auto | Automático |
-| Cold start | Visible | Generalmente invisible |
-
-## ⚡ Tipps de rendimiento
-
-- **Cold starts:** Functions v2 son rápidas; primer request puede tardar 1-2s
-- **Conexión a BD:** Reutiliza conexión con `admin.database()` globalmente
-- **Memoria:** Aumenta si el compilado de TypeScript es grande
-- **Timeout:** Functions tienen límite de 540s; acorta operaciones largas
-
-## 🚨 Troubleshooting
-
-### "PERMISSION_DENIED: Permission 'cloudfunctions.functions.create' denied"
-
-Necesitas permisos en Cloud IAM. Verifica:
-
-```bash
-gcloud projects get-iam-policy fotos-44002
-```
-
-### "Firebase service account not found"
-
-El emulador local puede no tener acceso a credenciales. Usa:
-
-```bash
-export GOOGLE_APPLICATION_CREDENTIALS=path/to/serviceAccountKey.json
-firebase emulators:start
-```
-
-### "Database ref permission denied"
-
-Revisa `database.rules.json` y asegúrate que `fotos-44002-...` tenga acceso.
-
-## 🔗 Referencias
-
-- [Firebase Cloud Functions docs](https://firebase.google.com/docs/functions)
-- [Express.js guide](https://expressjs.com/)
-- [Firebase Admin SDK](https://firebase.google.com/docs/database/admin/start)
-- [Mercado Pago API](https://www.mercadopago.com.ar/developers/es/reference)
-
-## 📝 Próximos pasos
-
-- [ ] Migrar endpoints de `backend-agenda/index.js` → `routes/*.ts`
-- [ ] Configurar Cloud Secret Manager
-- [ ] Validar webhook de Mercado Pago
-- [ ] Probar flujo de galería completo
-- [ ] Deploy staging
-- [ ] Deploy producción
-
----
-
-**Rama:** `functions`  
-**Estado:** 🟡 En desarrollo  
-**Última actualización:** 2026-11-18
+- No hay dependencia operativa de Render.
+- No use `firebase functions:config:set`; esta aplicación usa secretos definidos
+  con `defineSecret` y variables de entorno.
+- `lib/` es generado y no se versiona.
+- `index.js` reexporta `api` y `reservationMaintenance` desde `lib/index.js`.

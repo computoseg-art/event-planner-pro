@@ -1,111 +1,99 @@
-# 📅 BSfotografia & Videografia — Sistema de Gestión de Reservas
+# BSfotografia & Videografia
 
-![Angular](https://img.shields.io/badge/Angular-19+-DD0031?style=for-the-badge&logo=angular&logoColor=white)
-![Firebase](https://img.shields.io/badge/Firebase-Realtime%20DB-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+Aplicación Angular para gestionar reservas, pagos y galerías privadas de eventos.
 
-**BSfotografia & Videografia** es una aplicación de gestión de reservas para servicios de fotografía, video y celebraciones. Permite a los clientes reservar fechas y servicios de forma intuitiva, mientras que ofrece a los administradores control sobre la agenda y el estado financiero de cada evento.
+## Producción
 
----
+- **Frontend:** Firebase Hosting, `https://fotos-44002.web.app`
+- **API:** Firebase Cloud Functions v2, bajo `/api` en el mismo dominio de Hosting
+- **Autenticación:** Firebase Authentication
+- **Datos:** Firebase Realtime Database
+- **Pagos:** Mercado Pago
+- **Correo:** Brevo
+- **Galerías:** Backblaze B2 mediante URLs firmadas
+- **Tareas:** Cloud Scheduler ejecuta `reservationMaintenance` cada 15 minutos
 
-## 🌟 Características Principales
+Render no forma parte del despliegue actual. El directorio `backend-agenda/`
+se conserva como referencia histórica y su servidor no debe publicarse.
 
-### 🔐 Autenticación Segura
+## Funcionalidades
 
-- Registro e inicio de sesión integrados con **Firebase Auth**.
-- Diferenciación de roles entre **Clientes** y **Administradores**.
+- Agenda de reservas con control de disponibilidad.
+- Catálogo validado en servidor, precios, descuentos y seña.
+- Pago de seña o saldo mediante Mercado Pago.
+- Registro y confirmación de pagos en efectivo, incluidos planes de cuotas.
+- Avisos por correo de reservas y pagos.
+- Historial y comprobante de pagos.
+- Recordatorios automáticos y vencimiento de reservas.
+- Galerías privadas por cliente, favoritos, ocultos y carga multipart.
+- Panel administrativo protegido por Firebase Auth y `ADMIN_EMAILS`.
 
-### 📅 Calendario Inteligente e Interactivo
+## Requisitos
 
-- **Bloqueo Automático:** Las fechas ocupadas se marcan visualmente para evitar duplicados.
-- **Visualización Diferenciada:** Los clientes pueden identificar sus propias reservas (en color verde) frente a fechas ocupadas por terceros (en rojo).
-- **Formatos Estandarizados:** Manejo preciso de fechas para evitar errores de zona horaria.
+- Node.js 24
+- npm
+- Firebase CLI
+- Acceso al proyecto Firebase `fotos-44002`
 
-### 🛒 Catálogo y Carrito Dinámico
+## Desarrollo local
 
-- **Selección por Categorías:** El usuario elige primero el tipo de evento (Bodas, 15 Años, etc.) para filtrar los servicios compatibles.
-- **Cálculo en Tiempo Real:** Cálculo automático de totales, montos de seña mínima y saldos pendientes.
-- **Servicios Extras:** Posibilidad de añadir complementos generales a cualquier tipo de reserva.
-- **Catálogo centralizado:** Los servicios, precios promocionales y condiciones del presupuesto de 15 años se mantienen en `src/app/services/catalogo-servicios.ts`. Los precios promocionales son informativos; el importe de la reserva y el pago se toma del campo `precio` del catálogo y se mantiene en `$ 1` mientras se prueba la aplicación.
-- **Acceso separado de la portada:** La página promocional es pública en `/home`; el inicio de sesión y registro están en `/login`.
-
-### 👤 Panel Administrativo (Admin Mode)
-
-- **Identificación de Clientes:** Los administradores pueden ver el email del usuario que realizó cada reserva.
-- **Control de Pagos:** Herramientas para actualizar montos abonados y supervisar la deuda total del sistema.
-- **Sincronización Instantánea:** Gracias a Firebase Realtime Database, cualquier cambio se refleja sin recargar la página.
-
----
-
-## 🛠️ Tecnologías Utilizadas
-
-- **Frontend:** [Angular 19+](https://angular.io/) utilizando **Signals** para una reactividad eficiente, RxJS Interop y componentes Standalone.
-- **Backend / DB:** [Firebase Realtime Database](https://firebase.google.com/products/realtime-database).
-- **Autenticación:** Firebase Authentication (Email/Password).
-- **Estilos:** CSS3 nativo con metodología modular y diseño responsivo.
-
----
-
-## 🚀 Instalación y Configuración
-
-Sigue estos pasos para ejecutar el proyecto en tu entorno local:
-
-1.  **Clonar el repositorio:**
-
-    ```bash
-    git clone [https://github.com/tu-usuario/event-planner-pro.git](https://github.com/tu-usuario/event-planner-pro.git)
-    cd event-planner-pro
-    ```
-
-2.  **Instalar dependencias:**
-
-    ```bash
-    npm install
-    ```
-
-3.  **Configurar Firebase:**
-    Asegúrate de configurar tus credenciales en el archivo `src/environments/environment.ts`:
-
-    ```typescript
-    export const environment = {
-      firebase: {
-        apiKey: 'TU_API_KEY',
-        authDomain: 'TU_PROYECTO.firebaseapp.com',
-        databaseURL: 'https://TU_PROYECTO.firebaseio.com',
-        projectId: 'TU_PROYECTO_ID',
-        storageBucket: 'TU_PROYECTO.appspot.com',
-        messagingSenderId: 'TU_SENDER_ID',
-        appId: 'TU_APP_ID',
-      },
-    };
-    ```
-
-4.  **Ejecutar servidor de desarrollo:**
-    ```bash
-    ng serve
-    ```
-    Navega a `http://localhost:4200/`.
-
----
-
-## 📂 Estructura de Datos (Firebase)
-
-El proyecto utiliza una estructura anidada por usuario para optimizar la seguridad y velocidad:
-
-```json
-{
-  "reservas": {
-    "usuario_codificado": {
-      "reserva_id": {
-        "fecha": "YYYY-MM-DD",
-        "descripcion": "Boda de Maria",
-        "tipoEvento": "bodas",
-        "servicios": [...],
-        "total": 15000,
-        "pagado": 5000,
-        "usuario": "cliente@correo.com"
-      }
-    }
-  }
-}
+```powershell
+npm ci
+npm run build
+npm start
 ```
+
+Angular utiliza `src/environments/environment.ts`; su `apiUrl` local debe apuntar
+al servidor que se esté usando. Para probar Functions:
+
+```powershell
+cd functions
+npm ci
+npm run build
+cd ..
+firebase emulators:start --only functions
+```
+
+## Despliegue
+
+```powershell
+npm run build
+npm --prefix functions run build
+firebase deploy --only functions,hosting --project fotos-44002
+```
+
+Si cambian reglas de Realtime Database:
+
+```powershell
+firebase deploy --only database --project fotos-44002
+```
+
+## Configuración
+
+Los secretos se administran con Firebase Secret Manager:
+
+```powershell
+firebase functions:secrets:set MP_ACCESS_TOKEN
+firebase functions:secrets:set MP_WEBHOOK_SECRET
+firebase functions:secrets:set BREVO_API_KEY
+firebase functions:secrets:set B2_KEY_ID
+firebase functions:secrets:set B2_APPLICATION_KEY
+```
+
+La guía completa de variables y publicación está en [guia.md](./guia.md).
+La arquitectura está en [ARCHITECTURE.md](./ARCHITECTURE.md).
+
+## Estructura
+
+```text
+src/                         Aplicación Angular
+functions/src/               Cloud Functions TypeScript
+functions/src/routes/        Reservas, pagos, contacto y galería
+functions/src/services/      Catálogo y planes de cuotas
+database.rules.json          Reglas de Realtime Database
+firebase.json                Hosting, Functions y rewrites
+backend-agenda/              Implementación histórica; no desplegar
+```
+
+No publiques `.env`, claves de cuenta de servicio, tokens de Mercado Pago,
+credenciales B2 ni claves API de Brevo.
