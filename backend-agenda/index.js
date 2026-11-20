@@ -2018,14 +2018,19 @@ app.post('/confirm_payment', requireFirebaseUser, async (req, res) => {
   try {
     paymentId = String(req.body?.payment_id || '');
     externalReference = String(req.body?.external_reference || '');
-    if (!/^\d+$/.test(paymentId) || !/^[0-9a-f-]{36}$/i.test(externalReference)) {
+    if (!/^\d+$/.test(paymentId)) {
       return res.status(400).json({ error: 'Faltan los datos para verificar el pago.' });
     }
 
     payment = await paymentClient.get({ id: paymentId });
-    if (payment.external_reference !== externalReference) {
+    const paymentExternalReference = String(payment.external_reference || '');
+    if (
+      !/^[0-9a-f-]{36}$/i.test(paymentExternalReference) ||
+      (externalReference && paymentExternalReference !== externalReference)
+    ) {
       return res.status(400).json({ error: 'El pago no corresponde a esta operación.' });
     }
+    externalReference = paymentExternalReference;
 
     const intentSnapshot = await db.ref(`pagos_pendientes/${externalReference}`).get();
     const intent = intentSnapshot.val();

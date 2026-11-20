@@ -105,11 +105,12 @@ export class ReservaService {
         return of([]);
       }
 
-      this.runReservationMaintenance(u.uid);
-
       const esAdmin = ['admin@gmail.com', 'estebangarriga@gmail.com'].includes(
         u.email.toLowerCase()
       );
+      if (esAdmin) {
+        this.runReservationMaintenance(u.uid);
+      }
       const emailSanitizado = u.email.toLowerCase().replace(/\./g, ',');
       const dbPath = esAdmin ? 'reservas' : `reservas/${emailSanitizado}`;
 
@@ -365,9 +366,9 @@ deudaTotal = computed(() => {
       },
       body: JSON.stringify(body),
     });
-    const data = await response.json();
+    const data = response.status === 204 ? undefined : await response.json();
     if (!response.ok) {
-      throw new Error(data.error || 'No se pudo completar la operación de reserva.');
+      throw new Error(data?.error || 'No se pudo completar la operación de reserva.');
     }
     return data as T;
   }
@@ -479,7 +480,7 @@ deudaTotal = computed(() => {
 
   private async postPago(path: string, body: object) {
     const idToken = await this.auth.obtenerIdToken();
-    const response = await fetch(`${environment.apiUrl}/${path}`, {
+    const response = await fetch(`${environment.apiUrl}/api/${path}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -529,10 +530,10 @@ deudaTotal = computed(() => {
     }
   }
 
-  async confirmarPago(paymentId: string, externalReference: string) {
+  async confirmarPago(paymentId: string, externalReference?: string) {
     return this.postPago('confirm_payment', {
       payment_id: paymentId,
-      external_reference: externalReference,
+      ...(externalReference ? { external_reference: externalReference } : {}),
     });
   }
 

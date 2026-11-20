@@ -78,25 +78,39 @@ functions/
 |---|---|---|
 | `MP_ACCESS_TOKEN` | Token de Mercado Pago | Secret |
 | `MP_WEBHOOK_SECRET` | Firma de webhooks MP | Secret |
-| `FIREBASE_DATABASE_URL` | URL de Realtime DB | Public |
 | `CLIENT_URL` | URL del frontend | Public |
 | `ADMIN_EMAILS` | Correos administradores | Public |
 | `BREVO_API_KEY` | Clave API Brevo | Secret |
 | `EMAIL_FROM` | Remitente de correos | Public |
 | `B2_*` | Credenciales Backblaze B2 | Secret |
 
-### Configurar secretos en GCP
+### Configurar secretos en Cloud Secret Manager
+
+Los secretos sensibles se declaran en `src/index.ts` con `defineSecret` y se
+vinculan a la función mediante `secrets`. Después de declararlos, crea cada uno
+con Firebase CLI:
 
 ```bash
-# Usar Firebase CLI
-firebase functions:config:set \
-  mp.access_token="APP_USR-..." \
-  mp.webhook_secret="tu-secreto" \
-  brevo.api_key="xkeysib-..."
-
-# O usar Cloud Secret Manager
-gcloud secrets create mp-access-token --data-file=- <<< "..."
+firebase functions:secrets:set MP_ACCESS_TOKEN
+firebase functions:secrets:set MP_WEBHOOK_SECRET
+firebase functions:secrets:set BREVO_API_KEY
+firebase functions:secrets:set B2_KEY_ID
+firebase functions:secrets:set B2_APPLICATION_KEY
 ```
+
+Cada comando solicita el valor de forma interactiva y no lo guarda en el código
+ni en la terminal. Selecciona el proyecto `fotos-44002` y vuelve a desplegar la
+función:
+
+```bash
+firebase deploy --only functions --project fotos-44002
+```
+
+Las variables no secretas (`CLIENT_URL`, `BACKEND_PUBLIC_URL`, `ADMIN_EMAILS`,
+`EMAIL_FROM`, `EMAIL_TO`, `B2_BUCKET_NAME`,
+`B2_ENDPOINT` y `B2_REGION`) pueden configurarse como variables de entorno de
+la función. Durante desarrollo local continúan leyendo `functions/.env`, que no
+debe versionarse.
 
 ## 🧪 Testing local
 

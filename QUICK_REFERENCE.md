@@ -36,7 +36,6 @@ En **Runtime environment variables**, agrega estas 14:
 | 11 | CLIENT_URL | https://fotos-44002.web.app |
 | 12 | BACKEND_PUBLIC_URL | https://fotos-44002.firebaseapp.com/api |
 | 13 | ADMIN_EMAILS | estebangarriga@gmail.com |
-| 14 | FIREBASE_DATABASE_URL | https://fotos-44002-default-rtdb.firebaseio.com |
 
 ## 6️⃣ Click DEPLOY
 

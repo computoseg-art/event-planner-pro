@@ -114,7 +114,6 @@ B2_REGION                 = us-east-005
 CLIENT_URL                = https://fotos-44002.web.app
 BACKEND_PUBLIC_URL        = https://fotos-44002.firebaseapp.com/api
 ADMIN_EMAILS              = estebangarriga@gmail.com
-FIREBASE_DATABASE_URL     = https://fotos-44002-default-rtdb.firebaseio.com
 ```
 
 7. Click **Deploy**

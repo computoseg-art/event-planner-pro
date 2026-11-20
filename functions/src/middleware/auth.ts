@@ -49,9 +49,13 @@ export async function verifyFirebaseAuth(
  * Middleware: Require admin role
  */
 export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
-  const adminEmails = process.env.ADMIN_EMAILS?.split(',') ?? [];
-  
-  if (!req.user?.email || !adminEmails.includes(req.user.email)) {
+  const adminEmails = (process.env.ADMIN_EMAILS ?? '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+  const userEmail = req.user?.email?.trim().toLowerCase();
+
+  if (!userEmail || !adminEmails.includes(userEmail)) {
     res.status(403).json({ error: 'Admin access required' });
     return;
   }
@@ -67,9 +71,13 @@ export function requireGalleryAdmin(
   res: Response,
   next: NextFunction
 ): void {
-  const galleryAdminEmails = process.env.ADMIN_EMAILS?.split(',') ?? [];
-  
-  if (!req.user?.email || !galleryAdminEmails.includes(req.user.email)) {
+  const galleryAdminEmails = (process.env.ADMIN_EMAILS ?? '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+  const userEmail = req.user?.email?.trim().toLowerCase();
+
+  if (!userEmail || !galleryAdminEmails.includes(userEmail)) {
     res.status(403).json({ error: 'Gallery admin access required' });
     return;
   }

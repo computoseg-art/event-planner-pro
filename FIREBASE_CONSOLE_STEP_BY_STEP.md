@@ -143,7 +143,6 @@ Copia y pega cada una:
 | 11 | `CLIENT_URL` | `https://fotos-44002.web.app` |
 | 12 | `BACKEND_PUBLIC_URL` | `https://fotos-44002.firebaseapp.com/api` |
 | 13 | `ADMIN_EMAILS` | `estebangarriga@gmail.com` |
-| 14 | `FIREBASE_DATABASE_URL` | `https://fotos-44002-default-rtdb.firebaseio.com` |
 
 ---
 
@@ -167,7 +166,6 @@ B2_REGION                 us-east-005
 CLIENT_URL                https://fotos-44002...
 BACKEND_PUBLIC_URL        https://fotos-44002...
 ADMIN_EMAILS              estebangarriga@...
-FIREBASE_DATABASE_URL     https://fotos-44002...
 ```
 
 **Cuenta: Deberían ser 14 variables en total.**

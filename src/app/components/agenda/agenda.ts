@@ -219,14 +219,35 @@ export class AgendaComponent implements OnInit {
     this.route.queryParams.pipe(take(1)).subscribe((params) => {
       const paymentId = params['payment_id'] || params['collection_id'];
       const externalReference = params['external_reference'];
+      const paymentStatus = params['status'] || params['collection_status'];
+      const hasPaymentReturn = [
+        'payment_id',
+        'collection_id',
+        'external_reference',
+        'status',
+        'collection_status',
+      ].some((key) => key in params);
 
-      if (paymentId && externalReference) {
-        this.confirmarRetornoPago(String(paymentId), String(externalReference));
+      if (paymentStatus === 'null' && paymentId === 'null') {
+        alert('El pago fue cancelado o no se completó. No se registró ningún cargo en tu reserva.');
+        void this.router.navigate([], { queryParams: {}, replaceUrl: true });
+        return;
+      }
+
+      const normalizedPaymentId = String(paymentId || '');
+      const normalizedExternalReference = String(externalReference || '');
+      if (/^\d+$/.test(normalizedPaymentId)) {
+        const validExternalReference = /^[0-9a-f-]{36}$/i.test(normalizedExternalReference)
+          ? normalizedExternalReference
+          : undefined;
+        void this.confirmarRetornoPago(normalizedPaymentId, validExternalReference);
+      } else if (hasPaymentReturn) {
+        void this.router.navigate([], { queryParams: {}, replaceUrl: true });
       }
     });
   }
 
-  private async confirmarRetornoPago(paymentId: string, externalReference: string) {
+  private async confirmarRetornoPago(paymentId: string, externalReference?: string) {
     let pagoConfirmado = false;
 
     try {

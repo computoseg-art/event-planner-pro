@@ -1,1 +1,1 @@
-export { api } from './lib/index.js';
+export { api, reservationMaintenance } from './lib/index.js';

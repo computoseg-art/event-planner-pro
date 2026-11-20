@@ -1,7 +1,7 @@
 // src/environments/environment.prod.ts
 export const environment = {
   production: true,
-  apiUrl: 'https://event-planner-pro-k978.onrender.com',
+  apiUrl: 'https://fotos-44002.web.app',
   firebase: {
     apiKey: "AIzaSyC6h5sZScNZIWxj_y38EU_Po6fvz3GpzRY",
     authDomain: "fotos-44002.firebaseapp.com",
