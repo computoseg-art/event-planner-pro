@@ -1,7 +1,6 @@
 # Guía de configuración y publicación
 
 Esta guía describe la arquitectura vigente de **Firebase Functions v2**.
-Render no se usa.
 
 ## Arquitectura
 
@@ -89,7 +88,7 @@ historial o fechas ocupadas.
 Despliegue de reglas:
 
 ```powershell
-firebase deploy --only database --project fotos-44002
+npx firebase-tools deploy --only database --project fotos-44002
 ```
 
 ## Mercado Pago
@@ -151,7 +150,7 @@ npm ci
 npm --prefix functions ci
 npm run build
 npm --prefix functions run build
-firebase deploy --only functions,hosting --project fotos-44002
+npx firebase-tools deploy --only functions,hosting --project fotos-44002
 ```
 
 Firebase crea/actualiza:
@@ -162,12 +161,14 @@ Firebase crea/actualiza:
 Para publicar todo lo versionable:
 
 ```powershell
-firebase deploy --only functions,hosting,database --project fotos-44002
+npx firebase-tools deploy --only functions,hosting,database --project fotos-44002
 ```
 
 ## Verificación
 
-- `https://fotos-44002.web.app/api/` responde con `status: ok`.
+- La URL directa de la Function `api` responde con `status: ok`.
+- `https://fotos-44002.web.app/api/reservations` responde `401` sin token,
+  confirmando que el rewrite llega a la Function y protege la ruta.
 - Crear reserva y comprobar correo.
 - Confirmar seña y saldo de Mercado Pago.
 - Registrar pago en efectivo y confirmarlo desde la cuenta cliente.
@@ -177,7 +178,7 @@ firebase deploy --only functions,hosting,database --project fotos-44002
 - Revisar logs:
 
 ```powershell
-firebase functions:log --project fotos-44002
+npx firebase-tools functions:log --project fotos-44002
 ```
 
 ## Diagnóstico

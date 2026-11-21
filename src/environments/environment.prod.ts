@@ -1,4 +1,3 @@
-// src/environments/environment.prod.ts
 export const environment = {
   production: true,
   apiUrl: 'https://fotos-44002.web.app',

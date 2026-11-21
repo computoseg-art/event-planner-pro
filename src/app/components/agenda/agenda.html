@@ -1,9 +1,4 @@
 <div class="agenda-wrapper">
-  <!-- <header class="agenda-header">
-    <span>Bienvenido, <strong>{{ auth.usuarioLogueado() }}</strong></span>
-    <button (click)="auth.logout()" class="btn-salir">Cerrar Sesión</button>
-  </header> -->
-
   <div class="main-layout">
     <section class="calendario-section">
       <div class="calendario-header">
@@ -58,7 +53,6 @@
         {{ auth.esAdmin() ? 'Todas las Reservas' : 'Mis Reservas' }}
       </h3>
 
-      <!-- Botón de Deuda Global -->
       @if (rs.deudaTotal() > 0 && !auth.esAdmin()) {
         <div class="pago-general-container">
           <button
@@ -100,7 +94,6 @@
               }
             </div>
 
-            <!-- MODO EDICIÓN / EXPANDIDO (Solo si la reserva no está bloqueada) -->
             @if (reservaExpandida() === res.id && !esReservaBloqueada(res)) {
               <div class="edit-form">
                 <label>Descripción:</label>
@@ -230,7 +223,6 @@
 
             }
 
-            <!-- MODO COLAPSADO: Pie de tarjeta con botón de pago individual o mensaje según el estado -->
             @if (reservaExpandida() !== res.id) {
               <div class="card-footer-mini">
                 <span>Total: ${{ res.total | number }}</span>

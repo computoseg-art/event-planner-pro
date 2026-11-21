@@ -1,11 +1,3 @@
-// src/app/components/agenda/agenda.ts
-
-//Este componente maneja la agenda de reservas de eventos en la aplicación.
-//Proporciona funcionalidades para seleccionar fechas, agregar y actualizar reservas,
-//procesar pagos y verificar el estado de las reservas.
-//También incluye validaciones para bloquear días ocupados o con menos de 3 días de anticipación,
-// y para determinar si una reserva está pagada o caducada.
-
 import { Component, signal, computed, inject, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -268,15 +260,12 @@ export class AgendaComponent implements OnInit {
     }
   }
 
-  // --- VALIDACIONES DE FECHA Y SEGURIDAD ---
-
   esDiaOcupado(fecha: string): boolean {
     if (!fecha) return false;
     const fechaLimpia = fecha.split('T')[0];
     return this.rs.fechasOcupadas().has(fechaLimpia);
   }
 
-  // REGLA 1: Verificar si un día está deshabilitado (ocupado o con menos de 3 días de anticipación)
   esDiaBloqueado(dia: string): boolean {
     if (!dia) return true;
 
@@ -287,10 +276,8 @@ export class AgendaComponent implements OnInit {
     fechaMaxima.setHours(0, 0, 0, 0);
     if (fechaEvaluada > fechaMaxima) return true;
 
-    // 1. Si ya está ocupado
     if (this.esDiaOcupado(dia)) return true;
 
-    // 2. Control de los 3 días mínimos de anticipación
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
 
@@ -305,7 +292,6 @@ export class AgendaComponent implements OnInit {
     const total = Number(reserva.total || 0);
     const pagado = Number(reserva.pagado || 0);
 
-    // Si ya está 100% saldada, no caduca
     if (pagado >= total) return false;
     if (reserva.estado === 'caducada') return true;
 
@@ -316,7 +302,6 @@ export class AgendaComponent implements OnInit {
     const fechaEvento = new Date(year, month - 1, day);
     fechaEvento.setHours(0, 0, 0, 0);
 
-    // Fecha límite de pago = 3 días antes del evento
     const fechaLimite = new Date(fechaEvento);
     fechaLimite.setDate(fechaEvento.getDate() - 3);
 
@@ -331,7 +316,6 @@ export class AgendaComponent implements OnInit {
     return total > 0 && pagado >= total ? 'pagado' : 'pendiente';
   }
 
-  // REGLA 3: Verificar si una reserva está completada o caducada (bloqueada para edición)
   esReservaBloqueada(res: Reserva): boolean {
     const esCompletada =
       res.estado === 'pagado' ||
@@ -343,8 +327,6 @@ export class AgendaComponent implements OnInit {
     // Una seña fija el precio y los servicios; los admin conservan permisos de edición.
     return (esCompletada || tienePagos || esCaducada) && !this.auth.esAdmin();
   }
-
-  // --- NAVEGACIÓN Y CALENDARIO ---
 
   getFechaCabecera() {
     return this.fechaHoy();
@@ -455,7 +437,6 @@ export class AgendaComponent implements OnInit {
   toggleEditar(id: string) {
     const res = this.rs.reservas().find((r) => r.id === id);
 
-    // Impedir desplegar el panel de edición si está completada o caducada
     if (res && this.esReservaBloqueada(res)) {
       return;
     }
@@ -530,7 +511,7 @@ export class AgendaComponent implements OnInit {
       alert(
         avisoEnviado
           ? '¡Reserva confirmada! Se envió el aviso por correo.'
-          : 'La reserva quedó guardada, pero no se pudo enviar el aviso por correo. Revisa la configuración del correo en Render.'
+          : 'La reserva quedó guardada, pero no se pudo enviar el aviso por correo. Revisa la configuración de correo de Firebase Functions.'
       );
       this.cerrarConAnimacion();
     } catch (e) {

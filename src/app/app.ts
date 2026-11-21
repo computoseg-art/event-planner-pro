@@ -24,7 +24,6 @@ export class App {
     this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe((event: any) => {
-        // Oculta el navbar si la URL es /login o la raíz cuando redirige al login
         const esLogin = event.urlAfterRedirects.includes('/login');
         this.mostrarNavbar.set(!esLogin);
       });

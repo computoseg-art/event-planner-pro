@@ -4,13 +4,11 @@ import type { CategoriaServicio, ServicioExtra } from './catalogo-servicios';
 
 @Injectable({ providedIn: 'root' })
 export class CartService {
-  // Catálogo agrupado por tipo de evento
   readonly serviciosDisponibles = signal<ServicioExtra[]>([...CATALOGO_SERVICIOS]);
 
   categoriaSeleccionada = signal<CategoriaServicio>('extras');
   serviciosSeleccionados = signal<ServicioExtra[]>([]);
 
-  // Filtra los servicios según la categoría que el usuario clickea
   serviciosFiltrados = computed(() =>
     this.serviciosDisponibles().filter((s) => s.categoria === this.categoriaSeleccionada()),
   );

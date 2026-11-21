@@ -48,17 +48,5 @@
     "typescript": "~5.9.2"
   },
   "description": "![Angular](https://img.shields.io/badge/Angular-19+-DD0031?style=for-the-badge&logo=angular&logoColor=white)\r ![Firebase](https://img.shields.io/badge/Firebase-Realtime%20DB-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)\r ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)",
-  "main": "index.js",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/computoseg-art/Calendario.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/computoseg-art/Calendario/issues"
-  },
-  "homepage": "https://github.com/computoseg-art/Calendario#readme"
+  "license": "UNLICENSED"
 }

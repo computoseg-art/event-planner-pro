@@ -278,11 +278,8 @@ export class ReservaService {
 
 deudaTotal = computed(() => {
   return this.reservasVisibles().reduce((acc, res) => {
-      // Verificamos si la reserva está caducada por fecha o por estado
-      // (Asumiendo que las comparas con la fecha del evento o un indicador de caducidad)
       const fechaEvento = res.fecha ? res.fecha.split('T')[0].trim() : '';
 
-      // El saldo debe pagarse como máximo tres días antes del evento.
       const [year, month, day] = fechaEvento.split('-').map(Number);
       const dEvento = new Date(year, month - 1, day);
       dEvento.setHours(0, 0, 0, 0);
@@ -295,7 +292,6 @@ deudaTotal = computed(() => {
 
       const estaCaducada = hoy > limitePago;
 
-      // No se suma deuda de reservas vencidas o ya saldadas.
       if (
         estaCaducada ||
         res.planCuotas ||

@@ -1,9 +1,3 @@
-// src/app/services/auth.service.ts
-
-//Este servicio maneja la autenticación de usuarios en la aplicación, incluyendo inicio de sesión,
-//registro y cierre de sesión. Por google, email y contraseña.
-//También proporciona señales reactivas para el estado del usuario y verifica si el usuario es admin.
-
 import { Injectable, computed, inject, NgZone, Injector, runInInjectionContext } from '@angular/core';
 import {
   Auth,
@@ -48,7 +42,6 @@ export class AuthService {
 
   esAdminGaleria = computed(() => this.usuarioLogueado() === 'admin@gmail.com');
 
-  // --- LOGIN CON GOOGLE ---
   async loginConGoogle() {
     try {
       await setPersistence(this.auth, browserSessionPersistence);
@@ -67,20 +60,17 @@ export class AuthService {
     }
   }
 
-  // --- LOGIN CON EMAIL / CONTRASEÑA ---
   async login(email: string, pass: string) {
     try {
-      // 1. Configurar la persistencia antes de autenticar
       await setPersistence(this.auth, browserSessionPersistence);
 
-      // 2. Iniciar sesión
       await runInInjectionContext(this.injector, async () => {
         await signInWithEmailAndPassword(this.auth, email, pass);
       });
 
       this.afterAuthentication();
     } catch (e: any) {
-      console.error('Error exacto de Firebase Auth:', e); // Imprime el error real en consola
+      console.error('Error exacto de Firebase Auth:', e);
 
       let mensaje = 'Error al iniciar sesión.';
       switch (e.code) {

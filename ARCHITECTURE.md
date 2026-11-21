@@ -90,4 +90,3 @@ gallery_b2_preferences/<uid>/<session>/<mediaId>
 
 - Desarrollo: `environment.ts` y emuladores opcionales.
 - Producción: `environment.prod.ts`, Hosting y Functions.
-- `backend-agenda/` es referencia histórica y no recibe tráfico de producción.

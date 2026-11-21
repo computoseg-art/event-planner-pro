@@ -23,7 +23,7 @@ export class ContactoComponent {
   private readonly apiUrl = `${environment.apiUrl}/api`;
   private readonly errorServidorNoDisponible = environment.production
     ? 'No se pudo conectar con el servidor de contacto. Inténtalo nuevamente en unos minutos.'
-    : `No se pudo conectar con el backend local (${environment.apiUrl}). Inicia backend-agenda con las variables configuradas en backend-agenda/.env y vuelve a intentarlo.`;
+    : `No se pudo conectar con Firebase Functions (${environment.apiUrl}). Inicia el emulador de Functions y vuelve a intentarlo.`;
 
   enviarFormulario() {
     if (this.enviando()) return;

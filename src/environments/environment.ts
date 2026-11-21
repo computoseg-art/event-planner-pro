@@ -1,10 +1,7 @@
-// src/environments/environment.prod.ts
 export const environment = {
   production: false,
-  // Backend local corriendo con Express (Node.js)
-  apiUrl: 'http://localhost:3000',
+  apiUrl: 'http://localhost:5001/fotos-44002/us-central1',
 
-  // Configuración de Firebase
   firebase: {
     apiKey: "AIzaSyC6h5sZScNZIWxj_y38EU_Po6fvz3GpzRY",
     authDomain: "fotos-44002.firebaseapp.com",

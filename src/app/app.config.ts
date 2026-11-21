@@ -5,7 +5,6 @@ import { routes } from './app.routes';
 import { registerLocaleData } from '@angular/common';
 import localeEs from '@angular/common/locales/es';
 
-// Firebase
 import { provideFirebaseApp, initializeApp } from '@angular/fire/app';
 import { provideDatabase, getDatabase } from '@angular/fire/database';
 import { provideAuth, getAuth } from '@angular/fire/auth';

@@ -8,8 +8,10 @@ module.exports = {
     "eslint:recommended",
   ],
   parserOptions: {
-    ecmaVersion: 2020,
+    ecmaVersion: "latest",
+    sourceType: "module",
   },
+  ignorePatterns: ["lib/", "node_modules/"],
   rules: {
     "no-restricted-globals": ["error", "name", "length"],
     "no-await-in-loop": "warn",

@@ -1,4 +1,4 @@
-import catalogoServicios from '../../../backend-agenda/catalogo-servicios.json';
+import catalogoServicios from '../data/catalogo-servicios.json';
 
 export type CategoriaServicio = '15_años' | 'bodas' | 'extras';
 

@@ -1,5 +1,4 @@
 <header class="navbar">
-  <!-- BRANDING -->
   <div class="nav-brand" [routerLink]="(auth.user$ | async) ? '/eventos' : '/home'">
     <img
       class="brand-logo"
@@ -10,7 +9,6 @@
       fetchpriority="high" />
   </div>
 
-  <!-- NAVEGACIÓN DESKTOP -->
   <nav class="nav-links desktop-only">
     <a routerLink="/home" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">Inicio</a>
     @if (auth.user$ | async) {
@@ -26,7 +24,6 @@
     }
   </nav>
 
-  <!-- ACCIONES DESKTOP -->
   <div class="nav-actions desktop-only">
     @if (auth.user$ | async) {
       <button routerLink="/agenda" class="cart-btn" title="Ver Reservas">
@@ -52,7 +49,6 @@
     }
   </div>
 
-  <!-- BOTÓN HAMBURGUESA (MÓVIL) -->
   <button class="hamburger-btn mobile-only" (click)="toggleMenu()" aria-label="Abrir menú">
     <svg class="icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       @if (menuAbierto()) {
@@ -63,7 +59,6 @@
     </svg>
   </button>
 
-  <!-- DESPLEGABLE MÓVIL -->
   <div class="mobile-menu" [class.open]="menuAbierto()">
     <nav class="mobile-nav-links">
       <a routerLink="/home" (click)="cerrarMenu()" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Inicio</a>

@@ -11,9 +11,6 @@
 # Firebase cache & build artifacts
 .firebase/
 fotos-44002-default-rtdb-export.json
-backend-agenda/serviceAccountKey.json
-backend-agenda/credentials.json
-
 
 # Compiled output
 /dist

@@ -13,9 +13,6 @@ Aplicación Angular para gestionar reservas, pagos y galerías privadas de event
 - **Galerías:** Backblaze B2 mediante URLs firmadas
 - **Tareas:** Cloud Scheduler ejecuta `reservationMaintenance` cada 15 minutos
 
-Render no forma parte del despliegue actual. El directorio `backend-agenda/`
-se conserva como referencia histórica y su servidor no debe publicarse.
-
 ## Funcionalidades
 
 - Agenda de reservas con control de disponibilidad.
@@ -51,7 +48,7 @@ cd functions
 npm ci
 npm run build
 cd ..
-firebase emulators:start --only functions
+npx firebase-tools emulators:start --only functions
 ```
 
 ## Despliegue
@@ -59,13 +56,13 @@ firebase emulators:start --only functions
 ```powershell
 npm run build
 npm --prefix functions run build
-firebase deploy --only functions,hosting --project fotos-44002
+npx firebase-tools deploy --only functions,hosting --project fotos-44002
 ```
 
 Si cambian reglas de Realtime Database:
 
 ```powershell
-firebase deploy --only database --project fotos-44002
+npx firebase-tools deploy --only database --project fotos-44002
 ```
 
 ## Configuración
@@ -92,7 +89,7 @@ functions/src/routes/        Reservas, pagos, contacto y galería
 functions/src/services/      Catálogo y planes de cuotas
 database.rules.json          Reglas de Realtime Database
 firebase.json                Hosting, Functions y rewrites
-backend-agenda/              Implementación histórica; no desplegar
+src/app/data/                Catálogo consumido por el frontend
 ```
 
 No publiques `.env`, claves de cuenta de servicio, tokens de Mercado Pago,

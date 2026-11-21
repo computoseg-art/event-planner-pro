@@ -62,7 +62,7 @@ Las variables públicas están documentadas en `../guia.md` y en `.env.example`.
 ## Emulador
 
 ```powershell
-firebase emulators:start --only functions
+npx firebase-tools emulators:start --only functions
 ```
 
 URL local aproximada:
@@ -75,25 +75,24 @@ http://localhost:5001/fotos-44002/us-central1/api
 
 ```powershell
 npm run build
-firebase deploy --only functions --project fotos-44002
+npx firebase-tools deploy --only functions --project fotos-44002
 ```
 
 Para una ruta concreta:
 
 ```powershell
-firebase deploy --only functions:api --project fotos-44002
-firebase deploy --only functions:reservationMaintenance --project fotos-44002
+npx firebase-tools deploy --only functions:api --project fotos-44002
+npx firebase-tools deploy --only functions:reservationMaintenance --project fotos-44002
 ```
 
 ## Logs
 
 ```powershell
-firebase functions:log --project fotos-44002
+npx firebase-tools functions:log --project fotos-44002
 ```
 
 ## Notas
 
-- No hay dependencia operativa de Render.
 - No use `firebase functions:config:set`; esta aplicación usa secretos definidos
   con `defineSecret` y variables de entorno.
 - `lib/` es generado y no se versiona.
