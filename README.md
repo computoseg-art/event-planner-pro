@@ -79,6 +79,8 @@ firebase functions:secrets:set B2_APPLICATION_KEY
 
 La guía completa de variables y publicación está en [guia.md](./guia.md).
 La arquitectura está en [ARCHITECTURE.md](./ARCHITECTURE.md).
+Para entregar una instalación nueva a otro cliente, usa
+[GUIA_ENTREGA_CLIENTE.md](./GUIA_ENTREGA_CLIENTE.md).
 
 ## Estructura
 
